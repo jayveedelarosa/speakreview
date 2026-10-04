@@ -21,7 +21,8 @@
         <p class="subtitle">AI-Powered Speech Performance Analysis</p>
     </header>
 
-    <div class="tab-bar" role="tablist" aria-label="Sections">
+    <!-- Stage 4: remove "hidden" here and on the History tab and panel to show the tabs -->
+    <div class="tab-bar" role="tablist" aria-label="Sections" hidden>
         <button type="button" class="tab" id="tabPractice" role="tab" aria-selected="true" aria-controls="panelPractice">Practice</button>
         <!-- Stage 4: remove "hidden" to show the History tab -->
         <button type="button" class="tab" id="tabHistory" role="tab" aria-selected="false" aria-controls="panelHistory" tabindex="-1" hidden>History</button>
@@ -43,6 +44,7 @@
 
                 <section class="card step" id="stepSpeak" aria-labelledby="stepSpeakTitle">
                     <h2 class="card-title" id="stepSpeakTitle">Speak</h2>
+                    <p class="card-helper">Upload an MP3 of your speech, up to 10 minutes and 25 MB.</p>
 
                     <!-- Stage 3: live recording option (mic button, preparation countdown, stopwatch) goes here -->
 
@@ -58,6 +60,7 @@
                         </label>
 
                         <span id="fileName" class="file-name">No File Chosen</span>
+                        <p class="drop-hint">or drag an MP3 here</p>
                     </div>
 
                     <button type="button" id="uploadBtn" class="btn-primary">Begin Analysis</button>

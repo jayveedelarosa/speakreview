@@ -133,6 +133,12 @@ h1 {
     color: var(--text-main);
 }
 
+.card-helper {
+    margin: -8px 0 20px;
+    font-size: 14px;
+    color: var(--text-sec);
+}
+
 /* Hidden step cards are skipped by the counter, so the visible steps are always numbered 1, 2, 3... */
 .step {
     counter-increment: step;
@@ -238,6 +244,12 @@ h1 {
 .file-name.has-file {
     color: var(--gold);
     font-weight: 500;
+}
+
+.drop-hint {
+    margin: 12px 0 0;
+    font-size: 13px;
+    color: var(--text-sec);
 }
 
 /* ---------- Main action button ---------- */
