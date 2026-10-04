@@ -31,86 +31,106 @@
 
     <main>
         <section id="panelPractice" role="tabpanel" aria-labelledby="tabPractice">
-            <div class="steps">
+            <div class="practice-layout">
+                <div class="setup-column">
+                    <div class="steps">
 
-                <section class="card step" id="stepTopic" aria-labelledby="stepTopicTitle">
-                    <h2 class="card-title" id="stepTopicTitle">Topic <span class="optional-tag">Optional</span></h2>
+                        <div class="setup-options">
+                            <section class="step" id="stepTopic" aria-labelledby="stepTopicTitle">
+                                <h2 class="card-title" id="stepTopicTitle">Topic <span class="optional-tag">Optional</span></h2>
 
-                    <label for="topicInput" class="field-label">Speech topic</label>
-                    <div class="topic-row">
-                        <input type="text" id="topicInput" class="text-input" maxlength="120" placeholder="Type your own topic, or get a random one" autocomplete="off">
-                        <button type="button" id="clearTopicBtn" class="btn-small" hidden>Clear</button>
-                    </div>
+                                <label for="topicInput" class="field-label">Speech topic</label>
+                                <div class="topic-row">
+                                    <textarea id="topicInput" class="text-input topic-textarea" rows="1" maxlength="120" placeholder="Type your own topic, or get a random one" autocomplete="off"></textarea>
+                                    <button type="button" id="clearTopicBtn" class="btn-small" hidden>Clear</button>
+                                </div>
 
-                    <p id="topicBadge" class="topic-badge-row" hidden>
-                        <span id="topicBadgeType" class="topic-badge"></span>
-                        <span id="topicBadgeHint" class="topic-hint"></span>
-                    </p>
+                                <p id="topicBadge" class="topic-badge-row" hidden>
+                                    <span id="topicBadgeType" class="topic-badge"></span>
+                                    <span id="topicBadgeHint" class="topic-hint"></span>
+                                </p>
+                                <p id="topicAnnounce" class="visually-hidden" aria-live="polite"></p>
 
-                    <button type="button" id="randomTopicBtn" class="btn-secondary">Random topic</button>
-                </section>
+                                <button type="button" id="randomTopicBtn" class="btn-secondary">Random topic</button>
+                            </section>
 
-                <section class="card step" id="stepTime" aria-labelledby="stepTimeTitle">
-                    <h2 class="card-title" id="stepTimeTitle">Time limit <span class="optional-tag">Optional</span></h2>
-                    <p class="card-helper">Speeches can be up to 10 minutes long.</p>
+                            <section class="step" id="stepTime" aria-labelledby="stepTimeTitle">
+                                <h2 class="card-title" id="stepTimeTitle">Time limit <span class="optional-tag">Optional</span></h2>
+                                <p class="card-helper">Speeches can be up to 10 minutes long.</p>
 
-                    <fieldset class="choice-group">
-                        <legend class="visually-hidden">Time limit</legend>
-                        <label class="choice"><input type="radio" name="timeLimit" value="0" checked><span>Untimed</span></label>
-                        <label class="choice"><input type="radio" name="timeLimit" value="60"><span>1 min</span></label>
-                        <label class="choice"><input type="radio" name="timeLimit" value="180"><span>3 min</span></label>
-                        <label class="choice"><input type="radio" name="timeLimit" value="300"><span>5 min</span></label>
-                        <label class="choice"><input type="radio" name="timeLimit" value="custom"><span>Custom</span></label>
-                    </fieldset>
+                                <fieldset class="choice-group">
+                                    <legend class="visually-hidden">Time limit</legend>
+                                    <label class="choice"><input type="radio" name="timeLimit" value="0" checked><span>Untimed</span></label>
+                                    <label class="choice"><input type="radio" name="timeLimit" value="60"><span>1 min</span></label>
+                                    <label class="choice"><input type="radio" name="timeLimit" value="180"><span>3 min</span></label>
+                                    <label class="choice"><input type="radio" name="timeLimit" value="300"><span>5 min</span></label>
+                                    <label class="choice"><input type="radio" name="timeLimit" value="custom"><span>Custom</span></label>
+                                </fieldset>
 
-                    <div id="customTime" class="custom-time" hidden>
-                        <div class="custom-fields">
-                            <div class="custom-field">
-                                <label for="customMinutes" class="field-label">Minutes</label>
-                                <input type="number" id="customMinutes" class="text-input" min="0" max="10" step="1" value="2" inputmode="numeric" aria-describedby="customTimeError">
-                            </div>
-                            <div class="custom-field">
-                                <label for="customSeconds" class="field-label">Seconds</label>
-                                <input type="number" id="customSeconds" class="text-input" min="0" max="59" step="1" value="0" inputmode="numeric" aria-describedby="customTimeError">
-                            </div>
+                                <div id="customTime" class="custom-time" hidden>
+                                    <div class="custom-fields">
+                                        <div class="custom-field">
+                                            <label for="customMinutes" class="field-label">Minutes</label>
+                                            <div class="stepper">
+                                                <button type="button" class="stepper-btn" data-target="customMinutes" data-step="-1" aria-label="Decrease minutes">−</button>
+                                                <input type="number" id="customMinutes" class="text-input" min="0" max="10" step="1" value="2" inputmode="numeric" aria-describedby="customTimeError">
+                                                <button type="button" class="stepper-btn" data-target="customMinutes" data-step="1" aria-label="Increase minutes">+</button>
+                                            </div>
+                                        </div>
+                                        <div class="custom-field">
+                                            <label for="customSeconds" class="field-label">Seconds</label>
+                                            <div class="stepper">
+                                                <button type="button" class="stepper-btn" data-target="customSeconds" data-step="-1" aria-label="Decrease seconds">−</button>
+                                                <input type="number" id="customSeconds" class="text-input" min="0" max="59" step="1" value="0" inputmode="numeric" aria-describedby="customTimeError">
+                                                <button type="button" class="stepper-btn" data-target="customSeconds" data-step="1" aria-label="Increase seconds">+</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p id="customTimeError" class="field-error" aria-live="polite"></p>
+                                </div>
+                            </section>
                         </div>
-                        <p id="customTimeError" class="field-error" aria-live="polite"></p>
+
+                        <section class="step" id="stepSpeak" aria-labelledby="stepSpeakTitle">
+                            <h2 class="card-title" id="stepSpeakTitle">Speak</h2>
+                            <p class="card-helper">Upload an MP3 of your speech, up to 10 minutes and 25 MB.</p>
+
+                            <!-- Stage 3: live recording option (mic button, preparation countdown, stopwatch) goes here -->
+
+                            <div class="upload-box" id="dropZone">
+                                <input type="file" id="audioFile" class="file-input-hidden" accept=".mp3,audio/mpeg">
+                                <label for="audioFile" class="file-picker-btn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                        <polyline points="17 8 12 3 7 8"/>
+                                        <line x1="12" y1="3" x2="12" y2="15"/>
+                                    </svg>
+                                    Choose File
+                                </label>
+
+                                <span id="fileName" class="file-name">No File Chosen</span>
+                                <p id="lengthLine" class="length-line" hidden></p>
+                                <p class="drop-hint">or drag an MP3 here</p>
+                            </div>
+
+                            <button type="button" id="uploadBtn" class="btn-primary">Begin Analysis</button>
+
+                            <p id="status" role="status" aria-live="polite"></p>
+                            <p id="waitNote" class="wait-note" style="display:none;">Longer speeches can take a few minutes to analyze. Please keep this page open.</p>
+
+                            <p class="privacy-note">Recordings are used only to create your feedback.<br>They are deleted automatically after 7 days, and results after 30 days.</p>
+                        </section>
+
                     </div>
-                </section>
+                </div>
 
-                <section class="card step" id="stepSpeak" aria-labelledby="stepSpeakTitle">
-                    <h2 class="card-title" id="stepSpeakTitle">Speak</h2>
-                    <p class="card-helper">Upload an MP3 of your speech, up to 10 minutes and 25 MB.</p>
-
-                    <!-- Stage 3: live recording option (mic button, preparation countdown, stopwatch) goes here -->
-
-                    <div class="upload-box" id="dropZone">
-                        <input type="file" id="audioFile" class="file-input-hidden" accept=".mp3,audio/mpeg">
-                        <label for="audioFile" class="file-picker-btn">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                <polyline points="17 8 12 3 7 8"/>
-                                <line x1="12" y1="3" x2="12" y2="15"/>
-                            </svg>
-                            Choose File
-                        </label>
-
-                        <span id="fileName" class="file-name">No File Chosen</span>
-                        <p id="lengthLine" class="length-line" hidden></p>
-                        <p class="drop-hint">or drag an MP3 here</p>
+                <div class="results-column">
+                    <div class="results-panel" id="resultsPanel">
+                        <p id="resultPlaceholder" class="result-placeholder">Your feedback will appear here.</p>
+                        <section id="result" class="result-card" aria-label="Results" style="display:none;">
+                        </section>
                     </div>
-
-                    <button type="button" id="uploadBtn" class="btn-primary">Begin Analysis</button>
-
-                    <p id="status" role="status" aria-live="polite"></p>
-                    <p id="waitNote" class="wait-note" style="display:none;">Longer speeches can take a few minutes to analyze. Please keep this page open.</p>
-
-                    <p class="privacy-note">Recordings are used only to create your feedback.<br>They are deleted automatically after 7 days, and results after 30 days.</p>
-                </section>
-
-                <section id="result" class="card result-card" aria-label="Results" style="display:none;">
-                </section>
-
+                </div>
             </div>
         </section>
 

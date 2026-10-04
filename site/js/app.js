@@ -19,6 +19,9 @@ const TOPIC_TYPE_INFO = {
     imagine:  { label: "Imagine",  hint: "Think on your feet" }
 };
 
+// Pauses between topics in the random topic roll, getting longer so it slows down (770 ms in total)
+const ROLL_DELAYS_MS = [40, 40, 45, 50, 60, 70, 85, 100, 125, 155];
+
 const uploadBtn = document.getElementById("uploadBtn");
 const statusText = document.getElementById("status");
 const waitNote = document.getElementById("waitNote");
@@ -38,8 +41,12 @@ const customTime = document.getElementById("customTime");
 const customMinutes = document.getElementById("customMinutes");
 const customSeconds = document.getElementById("customSeconds");
 const customTimeError = document.getElementById("customTimeError");
+const topicAnnounce = document.getElementById("topicAnnounce");
+const resultsPanel = document.getElementById("resultsPanel");
+const resultPlaceholder = document.getElementById("resultPlaceholder");
+const stepperButtons = document.querySelectorAll(".stepper-btn");
 // Every topic and time control, so they can be locked while a speech is being analyzed
-const optionControls = document.querySelectorAll("#stepTopic input, #stepTopic button, #stepTime input");
+const optionControls = document.querySelectorAll("#stepTopic textarea, #stepTopic button, #stepTime input, #stepTime button");
 
 uploadBtn.addEventListener("click", upload);
 
@@ -166,28 +173,111 @@ function updateClearButton() {
     clearTopicBtn.hidden = topicInput.value === "";
 }
 
+let isRolling = false;         // true while the random topic animation is running
+
+// Makes the topic box tall enough for its text, up to 3 lines (after that it scrolls)
+function fitTopicHeight() {
+    const style = getComputedStyle(topicInput);
+    const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.5;
+    const borders = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+    const padding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+    const maxHeight = lineHeight * 3 + padding + borders;
+
+    topicInput.style.height = "auto";
+    const needed = topicInput.scrollHeight + borders;
+    topicInput.style.height = Math.min(needed, maxHeight) + "px";
+    topicInput.style.overflowY = needed > maxHeight ? "auto" : "hidden";
+}
+
+function prefersReducedMotion() {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 function pickRandomTopic() {
+    if (isRolling) return;
+
+    // The final topic is chosen first. Keep picking until it differs from the last one.
     let index;
-    // Keep picking until the topic differs from the last one
     do {
         index = Math.floor(Math.random() * TOPICS.length);
     } while (TOPICS.length > 1 && index === lastTopicIndex);
-
     lastTopicIndex = index;
-    randomTopic = TOPICS[index];
-    topicInput.value = randomTopic.text;
-    showTopicBadge(randomTopic.type);
+    const finalTopic = TOPICS[index];
+
+    if (prefersReducedMotion()) {
+        landTopic(finalTopic);
+    } else {
+        rollToTopic(finalTopic);
+    }
+}
+
+// Slot machine effect: other topics flick past, slowing down, then the chosen one lands
+function rollToTopic(finalTopic) {
+    isRolling = true;
+    topicBadge.hidden = true;
+    topicInput.readOnly = true;
+    topicInput.setAttribute("aria-busy", "true");   // tells screen readers to wait for the final text
+    topicInput.classList.add("rolling");
+    randomTopicBtn.disabled = true;
+    clearTopicBtn.disabled = true;
+    uploadBtn.disabled = true;                      // so a half-rolled topic can't be sent
+
+    let step = 0;
+    let shownIndex = -1;
+    function showNext() {
+        if (step >= ROLL_DELAYS_MS.length) {
+            landTopic(finalTopic);
+            return;
+        }
+        // Any other topic, not the previous flick and not the final one
+        let next;
+        do {
+            next = Math.floor(Math.random() * TOPICS.length);
+        } while (TOPICS.length > 2 && (next === shownIndex || TOPICS[next] === finalTopic));
+        shownIndex = next;
+        topicInput.value = TOPICS[next].text;
+        setTimeout(showNext, ROLL_DELAYS_MS[step]);
+        step++;
+    }
+    showNext();
+}
+
+function landTopic(topic) {
+    randomTopic = topic;
+    topicInput.value = topic.text;
+    topicInput.classList.remove("rolling");
+    topicInput.removeAttribute("aria-busy");
+    topicInput.readOnly = false;
+    isRolling = false;
+
+    showTopicBadge(topic.type);
+    topicAnnounce.textContent = topic.text;         // the only topic screen readers hear
     updateClearButton();
+    fitTopicHeight();
     randomTopicBtn.textContent = "New topic";
+
+    randomTopicBtn.disabled = isBusy;
+    clearTopicBtn.disabled = isBusy;
+    uploadBtn.disabled = isBusy || !getTimeLimit().valid;
 }
 
 randomTopicBtn.addEventListener("click", pickRandomTopic);
 
+// The topic is one line of text, so Enter must not add a new line
+topicInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") e.preventDefault();
+});
+
 // Any edit turns the topic into the user's own topic
 topicInput.addEventListener("input", () => {
+    // Pasted text can contain line breaks, so turn them into spaces
+    if (/[\r\n]/.test(topicInput.value)) {
+        topicInput.value = topicInput.value.replace(/[\r\n]+/g, " ");
+    }
     randomTopic = null;
     topicBadge.hidden = true;
     updateClearButton();
+    fitTopicHeight();
 });
 
 clearTopicBtn.addEventListener("click", () => {
@@ -195,8 +285,12 @@ clearTopicBtn.addEventListener("click", () => {
     randomTopic = null;
     topicBadge.hidden = true;
     updateClearButton();
+    fitTopicHeight();
     topicInput.focus();
 });
+
+window.addEventListener("resize", fitTopicHeight);
+fitTopicHeight();
 
 // ---------------------------
 // Time limit
@@ -234,13 +328,26 @@ function onTimeChange() {
     customMinutes.setAttribute("aria-invalid", String(!valid));
     customSeconds.setAttribute("aria-invalid", String(!valid));
 
-    if (!isBusy) uploadBtn.disabled = !valid;
+    if (!isBusy && !isRolling) uploadBtn.disabled = !valid;
     renderLengthLine();
 }
 
 timeRadios.forEach(radio => radio.addEventListener("change", onTimeChange));
 customMinutes.addEventListener("input", onTimeChange);
 customSeconds.addEventListener("input", onTimeChange);
+
+// − and + buttons beside the custom minutes and seconds boxes
+stepperButtons.forEach(button => {
+    button.addEventListener("click", () => {
+        const input = document.getElementById(button.dataset.target);
+        const step = Number(button.dataset.step);
+        const current = /^\d+$/.test(input.value.trim()) ? Number(input.value) : 0;
+        // Stay inside the box's own min and max (minutes 0 to 10, seconds 0 to 59)
+        const next = Math.min(Number(input.max), Math.max(Number(input.min), current + step));
+        input.value = String(next);
+        onTimeChange();
+    });
+});
 
 // ---------------------------
 // Length line under the file name
@@ -291,6 +398,22 @@ function setOptionsDisabled(disabled) {
         control.disabled = disabled;
     });
 }
+
+// ---------------------------
+// Results column
+// ---------------------------
+// Keeps the results in view while scrolling (wide screens only, see styles.css),
+// but only when they fit in the window, so long feedback is never cut off
+function updateResultsSticky() {
+    resultsPanel.classList.toggle("is-sticky", resultsPanel.offsetHeight <= window.innerHeight - 48);
+}
+
+// ResizeObserver calls the function whenever the results area changes size
+if ("ResizeObserver" in window) {
+    new ResizeObserver(updateResultsSticky).observe(resultsPanel);
+}
+window.addEventListener("resize", updateResultsSticky);
+updateResultsSticky();
 
 // ---------------------------
 // Upload and analysis
@@ -453,6 +576,7 @@ function escapeHtml(value) {
 
 function displayResult(data) {
     resultBox.style.display = "block";
+    resultPlaceholder.hidden = true;
 
     const confidenceRaw = Number(data.avg_confidence);
     const confidenceScore = Number.isFinite(confidenceRaw) ? Math.round(confidenceRaw * 100) : 0;

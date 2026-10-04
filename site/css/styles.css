@@ -8,6 +8,7 @@
     --text-muted: #cbd5e1;
     --ok: #4ade80;
     --over: #f87171;
+    --divider: rgba(255, 255, 255, 0.08);
 }
 
 * {
@@ -39,9 +40,9 @@ body {
 /* ---------- Page layout (mobile first) ---------- */
 .app {
     width: 100%;
-    max-width: 640px;
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 32px 16px 48px;
+    padding: 20px 16px 40px;
     animation: slideUp 0.6s ease-out;
 }
 
@@ -50,14 +51,19 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* Compact header: title and subtitle on one line, wrapping on phones */
 .app-header {
-    text-align: center;
-    margin-bottom: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--divider);
 }
 
 h1 {
     margin: 0;
-    font-size: 32px;
+    font-size: 24px;
     font-weight: 700;
     background: linear-gradient(to right, #ffffff, var(--gold));
     -webkit-background-clip: text;
@@ -67,8 +73,8 @@ h1 {
 }
 
 .subtitle {
-    margin: 8px 0 0;
-    font-size: 13px;
+    margin: 0;
+    font-size: 12px;
     color: var(--text-sec);
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -109,41 +115,37 @@ h1 {
     box-shadow: inset 0 -2px 0 var(--gold);
 }
 
-/* ---------- Step cards ---------- */
+/* ---------- Steps (no boxes: sections sit on the page, split by thin lines) ---------- */
 .steps {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
     counter-reset: step;
-}
-
-.card {
-    background: var(--bg-card);
-    padding: 24px 16px;
-    border-radius: 20px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .card-title {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin: 0 0 20px;
-    font-size: 18px;
+    gap: 10px;
+    margin: 0 0 12px;
+    font-size: 16px;
     font-weight: 700;
     color: var(--text-main);
 }
 
 .card-helper {
-    margin: -8px 0 20px;
+    margin: -4px 0 12px;
     font-size: 14px;
     color: var(--text-sec);
 }
 
-/* Hidden step cards are skipped by the counter, so the visible steps are always numbered 1, 2, 3... */
+/* Hidden steps are skipped by the counter, so the visible steps are always numbered 1, 2, 3... */
 .step {
     counter-increment: step;
+    min-width: 0;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--divider);
+}
+
+.steps > .step:last-child {
+    border-bottom: none;
 }
 
 .step .card-title::before {
@@ -152,12 +154,61 @@ h1 {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    width: 32px;
-    height: 32px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     background: var(--gold);
     color: #000;
+    font-size: 13px;
+}
+
+/* Topic and Time sit side by side only when this area is wide enough.
+   A container query is like a media query, but it checks this box's width instead of the screen's. */
+.setup-column {
+    container-type: inline-size;
+}
+
+@container (min-width: 760px) {
+    .setup-options {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        column-gap: 32px;
+    }
+}
+
+/* ---------- Two-column layout ---------- */
+.results-column {
+    padding-top: 20px;
+    border-top: 1px solid var(--divider);
+}
+
+.result-placeholder {
+    margin: 0;
     font-size: 15px;
+    color: var(--text-sec);
+}
+
+@media (min-width: 1024px) {
+    .practice-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        column-gap: 40px;
+        align-items: start;
+    }
+
+    .results-column {
+        align-self: stretch;
+        padding-top: 20px;
+        padding-left: 40px;
+        border-top: none;
+        border-left: 1px solid var(--divider);
+    }
+
+    /* Added by app.js only when the results fit in the window */
+    .results-panel.is-sticky {
+        position: sticky;
+        top: 24px;
+    }
 }
 
 /* ---------- Upload / drop zone ---------- */
@@ -165,7 +216,7 @@ h1 {
     position: relative;
     border: 2px dashed rgba(226, 184, 87, 0.2);
     border-radius: 16px;
-    padding: 32px 16px;
+    padding: 24px 16px;
     text-align: center;
     background: rgba(15, 23, 42, 0.4);
 }
@@ -372,12 +423,28 @@ h1 {
 /* The topic box with the Clear button beside it */
 .topic-row {
     display: flex;
+    align-items: flex-start;
     gap: 8px;
 }
 
 .topic-row .text-input {
     flex: 1;
     min-width: 0;
+}
+
+/* Grows with its text (app.js sets the height). Only the border color animates,
+   so the height doesn't slide around on every change. */
+.topic-textarea {
+    display: block;
+    resize: none;
+    overflow-y: hidden;
+    line-height: 1.5;
+    transition: border-color 0.3s ease;
+}
+
+/* Dimmed while the random topics flick past */
+.topic-textarea.rolling {
+    color: var(--text-sec);
 }
 
 .btn-secondary,
@@ -503,12 +570,56 @@ h1 {
 
 .custom-fields {
     display: flex;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 12px 20px;
 }
 
-.custom-field {
-    flex: 1;
-    max-width: 120px;
+/* A number box with − and + buttons on each side */
+.stepper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.stepper .text-input {
+    width: 56px;
+    text-align: center;
+    /* Firefox: hide the built-in up/down arrows */
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+/* Chrome, Edge and Safari: hide the built-in up/down arrows */
+.stepper .text-input::-webkit-inner-spin-button,
+.stepper .text-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.stepper-btn {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid rgba(226, 184, 87, 0.5);
+    border-radius: 50%;
+    background: rgba(226, 184, 87, 0.08);
+    color: var(--gold);
+    font: inherit;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.stepper-btn:hover {
+    background: rgba(226, 184, 87, 0.16);
+    border-color: var(--gold);
+}
+
+.stepper-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .field-error {
@@ -551,8 +662,14 @@ h1 {
 }
 
 /* ---------- Results ---------- */
+/* The results area checks its own width to decide how many tiles fit in a row */
+.results-panel {
+    container-type: inline-size;
+}
+
 .result-details {
-    margin: -8px 0 16px;
+    max-width: 70ch;
+    margin: 0 0 16px;
 }
 
 .result-detail {
@@ -635,10 +752,8 @@ h1 {
 }
 
 .feedback-area {
-    background: rgba(255, 255, 255, 0.03);
-    padding: 20px 16px;
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 20px;
+    border-top: 1px solid var(--divider);
 }
 
 .feedback-area h3 {
@@ -648,6 +763,7 @@ h1 {
 }
 
 .feedback-content {
+    max-width: 70ch;
     font-size: 15px;
     line-height: 1.7;
     color: var(--text-muted);
@@ -661,15 +777,11 @@ h1 {
 /* ---------- Larger screens ---------- */
 @media (min-width: 481px) {
     .app {
-        padding: 48px 24px 64px;
-    }
-
-    .card {
-        padding: 32px;
+        padding: 24px 24px 48px;
     }
 
     .upload-box {
-        padding: 40px 20px;
+        padding: 28px 20px;
     }
 
     /* Show the file name beside the Choose File button */
@@ -680,13 +792,16 @@ h1 {
         margin-top: 0;
         margin-left: 12px;
     }
+}
 
-    .feedback-area {
-        padding: 24px;
+@media (min-width: 1024px) {
+    .app {
+        padding: 32px 32px 48px;
     }
 }
 
-@media (min-width: 600px) {
+/* Three tiles in a row once the results area is at least 420px wide */
+@container (min-width: 420px) {
     .metrics-grid {
         grid-template-columns: repeat(3, 1fr);
     }
