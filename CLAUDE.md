@@ -2,6 +2,7 @@
 
 ## Structure and deploy
 - Website files live in `site/` (`site/index.html`, `site/css/styles.css`, `site/js/app.js`).
+- Speech topics live in `site/js/topics.js` (global `TOPICS` array).
 - GitHub Actions (`.github/workflows/deploy.yml`) deploys them with `aws s3 sync` whenever `site/**` changes.
 
 ## Do not change unless asked
@@ -9,6 +10,7 @@
 
 ## Security
 - Every value from the API or typed by a user must go through `escapeHtml()` before being put into HTML.
+- Topic text is user input (typed or returned by the API), so always escape it.
 - Prefer `textContent` over `innerHTML`.
 - Limits enforced on the page (file size, duration, etc.) must also be enforced on the server. The page checks are only for convenience.
 

@@ -10,6 +10,7 @@
 <meta property="og:url" content="https://speakreview.jayveedelarosa.dev">
 
 <link rel="stylesheet" href="css/styles.css">
+<script src="js/topics.js" defer></script>
 <script src="js/app.js" defer></script>
 </head>
 
@@ -32,14 +33,49 @@
         <section id="panelPractice" role="tabpanel" aria-labelledby="tabPractice">
             <div class="steps">
 
-                <!-- Stage 2: remove "hidden" to show the Topic step -->
-                <section class="card step" id="stepTopic" aria-labelledby="stepTopicTitle" hidden>
-                    <h2 class="card-title" id="stepTopicTitle">Topic</h2>
+                <section class="card step" id="stepTopic" aria-labelledby="stepTopicTitle">
+                    <h2 class="card-title" id="stepTopicTitle">Topic <span class="optional-tag">Optional</span></h2>
+
+                    <label for="topicInput" class="field-label">Speech topic</label>
+                    <div class="topic-row">
+                        <input type="text" id="topicInput" class="text-input" maxlength="120" placeholder="Type your own topic, or get a random one" autocomplete="off">
+                        <button type="button" id="clearTopicBtn" class="btn-small" hidden>Clear</button>
+                    </div>
+
+                    <p id="topicBadge" class="topic-badge-row" hidden>
+                        <span id="topicBadgeType" class="topic-badge"></span>
+                        <span id="topicBadgeHint" class="topic-hint"></span>
+                    </p>
+
+                    <button type="button" id="randomTopicBtn" class="btn-secondary">Random topic</button>
                 </section>
 
-                <!-- Stage 2: remove "hidden" to show the Time step -->
-                <section class="card step" id="stepTime" aria-labelledby="stepTimeTitle" hidden>
-                    <h2 class="card-title" id="stepTimeTitle">Time</h2>
+                <section class="card step" id="stepTime" aria-labelledby="stepTimeTitle">
+                    <h2 class="card-title" id="stepTimeTitle">Time limit <span class="optional-tag">Optional</span></h2>
+                    <p class="card-helper">Speeches can be up to 10 minutes long.</p>
+
+                    <fieldset class="choice-group">
+                        <legend class="visually-hidden">Time limit</legend>
+                        <label class="choice"><input type="radio" name="timeLimit" value="0" checked><span>Untimed</span></label>
+                        <label class="choice"><input type="radio" name="timeLimit" value="60"><span>1 min</span></label>
+                        <label class="choice"><input type="radio" name="timeLimit" value="180"><span>3 min</span></label>
+                        <label class="choice"><input type="radio" name="timeLimit" value="300"><span>5 min</span></label>
+                        <label class="choice"><input type="radio" name="timeLimit" value="custom"><span>Custom</span></label>
+                    </fieldset>
+
+                    <div id="customTime" class="custom-time" hidden>
+                        <div class="custom-fields">
+                            <div class="custom-field">
+                                <label for="customMinutes" class="field-label">Minutes</label>
+                                <input type="number" id="customMinutes" class="text-input" min="0" max="10" step="1" value="2" inputmode="numeric" aria-describedby="customTimeError">
+                            </div>
+                            <div class="custom-field">
+                                <label for="customSeconds" class="field-label">Seconds</label>
+                                <input type="number" id="customSeconds" class="text-input" min="0" max="59" step="1" value="0" inputmode="numeric" aria-describedby="customTimeError">
+                            </div>
+                        </div>
+                        <p id="customTimeError" class="field-error" aria-live="polite"></p>
+                    </div>
                 </section>
 
                 <section class="card step" id="stepSpeak" aria-labelledby="stepSpeakTitle">
@@ -60,6 +96,7 @@
                         </label>
 
                         <span id="fileName" class="file-name">No File Chosen</span>
+                        <p id="lengthLine" class="length-line" hidden></p>
                         <p class="drop-hint">or drag an MP3 here</p>
                     </div>
 
