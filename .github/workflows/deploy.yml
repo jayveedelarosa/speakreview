@@ -4,7 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - "index.html"
+      - "site/**"
+      - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
 permissions:
@@ -24,5 +25,5 @@ jobs:
           role-to-assume: arn:aws:iam::651323680251:role/github-deploy-public-speaking-coach
           aws-region: us-east-1
 
-      - name: Upload index.html to S3
-        run: aws s3 cp index.html s3://public-speaking-coach-jayvee-frontend/index.html --content-type "text/html" --cache-control "no-cache"
+      - name: Upload website files to S3
+        run: aws s3 sync site/ s3://public-speaking-coach-jayvee-frontend/ --cache-control "no-cache"

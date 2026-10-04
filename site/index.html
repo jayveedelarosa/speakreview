@@ -9,653 +9,79 @@
 <meta property="og:description" content="Upload a speech and get AI feedback on filler words, pace and delivery.">
 <meta property="og:url" content="https://speakreview.jayveedelarosa.dev">
 
-<style>
-:root {
-    --bg-deep: #0f172a;
-    --bg-card: #1e293b;
-    --gold: #e2b857;
-    --gold-glow: rgba(226, 184, 87, 0.3);
-    --text-main: #f8fafc;
-    --text-sec: #94a3b8;
-    --text-muted: #cbd5e1;
-}
-
-* {
-    box-sizing: border-box;
-    transition: all 0.3s ease;
-}
-
-body {
-    font-family: 'Inter', 'Segoe UI', sans-serif;
-    margin: 0;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%);
-    color: var(--text-main);
-}
-
-.container {
-    width: 100%;
-    max-width: 580px;
-    background: var(--bg-card);
-    padding: 40px;
-    border-radius: 24px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    animation: slideUp 0.6s ease-out;
-}
-
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-h1 {
-    text-align: center;
-    margin: 0;
-    font-size: 32px;
-    font-weight: 700;
-    background: linear-gradient(to right, #ffffff, var(--gold));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: -0.02em;
-}
-
-.subtitle {
-    text-align: center;
-    font-size: 14px;
-    color: var(--text-sec);
-    margin-bottom: 32px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-/* ---------- Upload / drop zone ---------- */
-.upload-box {
-    position: relative;
-    border: 2px dashed rgba(226, 184, 87, 0.2);
-    border-radius: 16px;
-    padding: 40px 20px;
-    text-align: center;
-    background: rgba(15, 23, 42, 0.4);
-    margin-bottom: 24px;
-}
-
-.upload-box:hover {
-    border-color: rgba(226, 184, 87, 0.5);
-    background: rgba(226, 184, 87, 0.03);
-}
-
-/* Highlight while a file is being dragged over the box */
-.upload-box.dragging {
-    border-color: var(--gold);
-    border-style: solid;
-    background: rgba(226, 184, 87, 0.08);
-    box-shadow: 0 0 0 4px var(--gold-glow), inset 0 0 40px rgba(226, 184, 87, 0.08);
-    transform: scale(1.02);
-}
-
-/* Stops the highlight from flickering when the cursor moves over the text inside */
-.upload-box.dragging * {
-    pointer-events: none;
-}
-
-/* Hide the plain browser file input but keep it usable */
-.file-input-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    overflow: hidden;
-}
-
-/* The styled Choose File button */
-.file-picker-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 22px;
-    border: 1px solid rgba(226, 184, 87, 0.5);
-    border-radius: 10px;
-    background: rgba(226, 184, 87, 0.08);
-    color: var(--gold);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    user-select: none;
-}
-
-.file-picker-btn:hover {
-    background: rgba(226, 184, 87, 0.16);
-    border-color: var(--gold);
-    transform: translateY(-1px);
-}
-
-.file-picker-btn svg {
-    width: 16px;
-    height: 16px;
-}
-
-.file-input-hidden:focus-visible + .file-picker-btn {
-    outline: 2px solid var(--gold);
-    outline-offset: 3px;
-}
-
-.file-name {
-    display: block;
-    margin-top: 12px;
-    font-size: 13px;
-    color: var(--text-sec);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Desktop: show the file name beside the Choose File button */
-@media (min-width: 481px) {
-    .file-name {
-        display: inline-block;
-        vertical-align: middle;
-        max-width: 50%;
-        margin-top: 0;
-        margin-left: 12px;
-    }
-}
-
-.file-name.has-file {
-    color: var(--gold);
-    font-weight: 500;
-}
-
-button {
-    margin-top: 24px;
-    width: 100%;
-    padding: 16px;
-    border: none;
-    border-radius: 12px;
-    background: var(--gold);
-    color: #000;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    box-shadow: 0 4px 14px 0 var(--gold-glow);
-}
-
-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px 0 var(--gold-glow);
-    filter: brightness(1.1);
-}
-
-button:disabled {
-    background: #475569;
-    color: #94a3b8;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-#status {
-    margin-top: 20px;
-    text-align: center;
-    font-size: 14px;
-    color: var(--gold);
-    font-weight: 500;
-}
-
-.wait-note {
-    margin-top: 8px;
-    text-align: center;
-    font-size: 13px;
-    color: var(--text-sec);
-}
-
-.privacy-note {
-    margin: 16px 0 0;
-    text-align: center;
-    font-size: 12px;
-    line-height: 1.6;
-    color: var(--text-sec);
-}
-
-.privacy-note strong {
-    font-weight: 600;
-}
-
-.result-card {
-    margin-top: 32px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding-top: 32px;
-}
-
-.metrics-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-}
-
-.metric-tile {
-    background: rgba(15, 23, 42, 0.5);
-    padding: 20px;
-    border-radius: 16px;
-    border-left: 3px solid var(--gold);
-}
-
-.metric-tile label {
-    display: block;
-    font-size: 11px;
-    color: var(--text-sec);
-    text-transform: uppercase;
-    margin-bottom: 8px;
-    letter-spacing: 0.5px;
-}
-
-.metric-tile span {
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--text-main);
-}
-
-.breakdown-area {
-    margin-top: 16px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.filler-tag {
-    background: rgba(226, 184, 87, 0.1);
-    border: 1px solid rgba(226, 184, 87, 0.3);
-    color: var(--gold);
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.score-section {
-    margin: 32px 0;
-}
-
-.score-header {
-    display: flex;
-    justify-content: space-between;
-    font-size: 14px;
-    margin-bottom: 10px;
-    color: var(--text-sec);
-}
-
-.score-bar-bg {
-    height: 8px;
-    background: #0f172a;
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.score-fill {
-    height: 100%;
-    background: var(--gold);
-    box-shadow: 0 0 15px var(--gold-glow);
-    width: 0%;
-    transition: width 1.5s cubic-bezier(0.1, 0, 0.3, 1);
-}
-
-.feedback-area {
-    background: rgba(255, 255, 255, 0.03);
-    padding: 24px;
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.feedback-area h3 {
-    margin: 0 0 16px 0;
-    font-size: 16px;
-    color: var(--gold);
-}
-
-.feedback-content {
-    font-size: 14px;
-    line-height: 1.7;
-    color: var(--text-muted);
-}
-
-.feedback-content strong {
-    color: var(--text-main);
-}
-
-@media (max-width: 480px) {
-    .container {
-        padding: 28px 20px;
-        border-radius: 0;
-    }
-    .metrics-grid {
-        grid-template-columns: 1fr;
-    }
-}
-</style>
+<link rel="stylesheet" href="css/styles.css">
+<script src="js/app.js" defer></script>
 </head>
 
 <body>
 
-<div class="container">
-    <h1>SpeakReview</h1>
-    <p class="subtitle">AI-Powered Speech Performance Analysis</p>
+<div class="app">
+    <header class="app-header">
+        <h1>SpeakReview</h1>
+        <p class="subtitle">AI-Powered Speech Performance Analysis</p>
+    </header>
 
-    <div class="upload-box" id="dropZone">
-        <input type="file" id="audioFile" class="file-input-hidden" accept=".mp3,audio/mpeg">
-        <label for="audioFile" class="file-picker-btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="17 8 12 3 7 8"/>
-                <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
-            Choose File
-        </label>
-
-        <span id="fileName" class="file-name">No File Chosen</span>
-
-        <button id="uploadBtn">Begin Analysis</button>
+    <div class="tab-bar" role="tablist" aria-label="Sections">
+        <button type="button" class="tab" id="tabPractice" role="tab" aria-selected="true" aria-controls="panelPractice">Practice</button>
+        <!-- Stage 4: remove "hidden" to show the History tab -->
+        <button type="button" class="tab" id="tabHistory" role="tab" aria-selected="false" aria-controls="panelHistory" tabindex="-1" hidden>History</button>
     </div>
 
-    <p class="privacy-note">Recordings are used only to create your feedback.<br>They are deleted automatically after 7 days, and results after 30 days.</p>
+    <main>
+        <section id="panelPractice" role="tabpanel" aria-labelledby="tabPractice">
+            <div class="steps">
 
-    <p id="status"></p>
-    <p id="waitNote" class="wait-note" style="display:none;">Longer speeches can take a few minutes to analyze. Please keep this page open.</p>
+                <!-- Stage 2: remove "hidden" to show the Topic step -->
+                <section class="card step" id="stepTopic" aria-labelledby="stepTopicTitle" hidden>
+                    <h2 class="card-title" id="stepTopicTitle">Topic</h2>
+                </section>
 
-    <div id="result" class="result-card" style="display:none;">
-    </div>
+                <!-- Stage 2: remove "hidden" to show the Time step -->
+                <section class="card step" id="stepTime" aria-labelledby="stepTimeTitle" hidden>
+                    <h2 class="card-title" id="stepTimeTitle">Time</h2>
+                </section>
+
+                <section class="card step" id="stepSpeak" aria-labelledby="stepSpeakTitle">
+                    <h2 class="card-title" id="stepSpeakTitle">Speak</h2>
+
+                    <!-- Stage 3: live recording option (mic button, preparation countdown, stopwatch) goes here -->
+
+                    <div class="upload-box" id="dropZone">
+                        <input type="file" id="audioFile" class="file-input-hidden" accept=".mp3,audio/mpeg">
+                        <label for="audioFile" class="file-picker-btn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                            Choose File
+                        </label>
+
+                        <span id="fileName" class="file-name">No File Chosen</span>
+                    </div>
+
+                    <button type="button" id="uploadBtn" class="btn-primary">Begin Analysis</button>
+
+                    <p id="status" role="status" aria-live="polite"></p>
+                    <p id="waitNote" class="wait-note" style="display:none;">Longer speeches can take a few minutes to analyze. Please keep this page open.</p>
+
+                    <p class="privacy-note">Recordings are used only to create your feedback.<br>They are deleted automatically after 7 days, and results after 30 days.</p>
+                </section>
+
+                <section id="result" class="card result-card" aria-label="Results" style="display:none;">
+                </section>
+
+            </div>
+        </section>
+
+        <!-- Stage 4: remove "hidden" to show the History panel -->
+        <section id="panelHistory" role="tabpanel" aria-labelledby="tabHistory" hidden>
+            <div class="card">
+                <h2 class="card-title">History</h2>
+            </div>
+        </section>
+    </main>
 </div>
-
-<script>
-const API_BASE = "https://jhfndh1s03.execute-api.us-east-1.amazonaws.com";
-
-// Upload limits (keep in sync with the backend)
-const MAX_FILE_MB = 25;
-const MAX_DURATION_MINUTES = 10;
-const MAX_POLL_ATTEMPTS = 75;          // 75 × 4 s ≈ 5 minutes
-const POLL_INTERVAL_MS = 4000;
-const DURATION_CHECK_TIMEOUT_MS = 5000;
-
-const uploadBtn = document.getElementById("uploadBtn");
-const statusText = document.getElementById("status");
-const waitNote = document.getElementById("waitNote");
-const resultBox = document.getElementById("result");
-const dropZone = document.getElementById("dropZone");
-const fileInput = document.getElementById("audioFile");
-const fileNameText = document.getElementById("fileName");
-
-uploadBtn.addEventListener("click", upload);
-
-// ---------------------------
-// Show the chosen file name
-// ---------------------------
-function showFileName() {
-    const file = fileInput.files[0];
-    if (file) {
-        fileNameText.textContent = file.name;
-        fileNameText.title = file.name;
-        fileNameText.classList.add("has-file");
-    } else {
-        fileNameText.textContent = "No File Chosen";
-        fileNameText.title = "";
-        fileNameText.classList.remove("has-file");
-    }
-}
-
-fileInput.addEventListener("change", showFileName);
-
-// ---------------------------
-// Drag and drop
-// ---------------------------
-["dragenter", "dragover"].forEach(evt => {
-    dropZone.addEventListener(evt, e => {
-        e.preventDefault();
-        dropZone.classList.add("dragging");
-    });
-});
-
-["dragleave", "drop"].forEach(evt => {
-    dropZone.addEventListener(evt, e => {
-        e.preventDefault();
-        dropZone.classList.remove("dragging");
-    });
-});
-
-dropZone.addEventListener("drop", e => {
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-
-    if (!file.name.toLowerCase().endsWith(".mp3")) {
-        statusText.innerText = "Please drop an MP3 file.";
-        return;
-    }
-
-    const transfer = new DataTransfer();
-    transfer.items.add(file);
-    fileInput.files = transfer.files;
-    statusText.innerText = "";
-    showFileName();
-});
-
-// Stop the browser from opening the file if it's dropped outside the box
-["dragover", "drop"].forEach(evt => {
-    window.addEventListener(evt, e => e.preventDefault());
-});
-
-// ---------------------------
-// Read the audio length in the browser
-// ---------------------------
-// Returns the length in seconds, or null if it can't be read in time
-function getAudioDurationSeconds(file) {
-    return new Promise(resolve => {
-        const audio = new Audio();
-        const objectUrl = URL.createObjectURL(file);
-        let done = false;
-
-        function finish(seconds) {
-            if (done) return;
-            done = true;
-            clearTimeout(timer);
-            URL.revokeObjectURL(objectUrl);
-            resolve(Number.isFinite(seconds) ? seconds : null);
-        }
-
-        const timer = setTimeout(() => finish(null), DURATION_CHECK_TIMEOUT_MS);
-        audio.addEventListener("loadedmetadata", () => finish(audio.duration));
-        audio.addEventListener("error", () => finish(null));
-        audio.preload = "metadata";
-        audio.src = objectUrl;
-    });
-}
-
-// ---------------------------
-// Upload and analysis
-// ---------------------------
-async function upload() {
-    const file = fileInput.files[0];
-
-    if(!file) {
-        alert("Please select an audio file.");
-        return;
-    }
-
-    uploadBtn.disabled = true;
-    resultBox.style.display = "none";
-    waitNote.style.display = "none";
-
-    if(file.size > MAX_FILE_MB * 1024 * 1024) {
-        statusText.innerText = `This file is too large. Please upload an MP3 under ${MAX_FILE_MB} MB.`;
-        uploadBtn.disabled = false;
-        return;
-    }
-
-    statusText.innerText = "Checking your recording...";
-    const durationSeconds = await getAudioDurationSeconds(file);
-    if(durationSeconds !== null && durationSeconds > MAX_DURATION_MINUTES * 60) {
-        statusText.innerText = `This recording is longer than ${MAX_DURATION_MINUTES} minutes. Please upload a shorter speech.`;
-        uploadBtn.disabled = false;
-        return;
-    }
-
-    try {
-        statusText.innerText = "Initializing Stage...";
-        const response = await fetch(`${API_BASE}/upload-url`);
-
-        if(response.status === 429) {
-            const limit = await response.json().catch(() => ({}));
-            statusText.innerText = limit.message || "Upload limit reached. Please try again later.";
-            uploadBtn.disabled = false;
-            return;
-        }
-
-        if(!response.ok) throw new Error(`upload-url failed: ${response.status}`);
-
-        const data = await response.json();
-
-        // S3 presigned POST: the given fields first, the file last
-        const formData = new FormData();
-        Object.entries(data.upload.fields).forEach(([key, value]) => {
-            formData.append(key, value);
-        });
-        formData.append("file", file);
-
-        const uploadResponse = await fetch(data.upload.url, {
-            method: "POST",
-            body: formData
-        });
-
-        if(!uploadResponse.ok) {
-            console.error("S3 upload failed:", uploadResponse.status);
-            statusText.innerText = `Upload failed. Please make sure your MP3 is under ${MAX_FILE_MB} MB and try again.`;
-            uploadBtn.disabled = false;
-            return;
-        }
-
-        statusText.innerText = "Analyzing Performance Patterns...";
-        waitNote.style.display = "block";
-        pollResult(data.fileId);
-
-    } catch(err) {
-        console.error(err);
-        statusText.innerText = "Technical error occurred.";
-        waitNote.style.display = "none";
-        uploadBtn.disabled = false;
-    }
-}
-
-async function pollResult(speechId) {
-    let attempts = 0;
-    let stopped = false;   // ignores replies that arrive after we've finished
-    const interval = setInterval(async () => {
-        if(stopped) return;
-        attempts++;
-
-        // Checked before the request so a failing connection still gives up
-        if(attempts > MAX_POLL_ATTEMPTS) {
-            stopped = true;
-            clearInterval(interval);
-            waitNote.style.display = "none";
-            statusText.innerText = "This is taking longer than expected. Please try again in a few minutes.";
-            uploadBtn.disabled = false;
-            return;
-        }
-
-        try {
-            const res = await fetch(`${API_BASE}/result?speech_id=${speechId}`);
-            const result = await res.json();
-
-            if(stopped) return;
-
-            if(result && result.wpm) {
-                stopped = true;
-                clearInterval(interval);
-                waitNote.style.display = "none";
-                uploadBtn.disabled = false;
-                statusText.innerText = "Spotlight Ready.";
-                displayResult(result);
-                return;
-            }
-        } catch(err) {
-            console.error("Polling...", err);
-        }
-    }, POLL_INTERVAL_MS);
-}
-
-// Makes text safe to put inside HTML by turning special characters into harmless codes
-function escapeHtml(value) {
-    return String(value)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
-
-function displayResult(data) {
-    resultBox.style.display = "block";
-
-    const confidenceRaw = Number(data.avg_confidence);
-    const confidenceScore = Number.isFinite(confidenceRaw) ? Math.round(confidenceRaw * 100) : 0;
-
-    // Escapes the AI's text first, then turns its formatting (#, ##, ###, **bold**) into real bold text
-    const cleanFeedback = data.ai_feedback
-        ? escapeHtml(data.ai_feedback)
-            .trim()
-            .replace(/^#{1,6}\s*(.*)$/gm, '<strong>$1</strong>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\n\s*\n/g, '<br><br>')
-            .replace(/\n/g, '<br>')
-        : "Analysis is being finalized.";
-
-    // Filler word breakdown
-    let breakdownHtml = '';
-    if (data.filler_word_breakdown) {
-        Object.entries(data.filler_word_breakdown).forEach(([word, count]) => {
-            breakdownHtml += `<div class="filler-tag">${escapeHtml(word)}: ${escapeHtml(count)}</div>`;
-        });
-    }
-
-    resultBox.innerHTML = `
-        <div class="metrics-grid">
-            <div class="metric-tile">
-                <label>Pacing (WPM)</label>
-                <span>${escapeHtml(data.wpm ?? "0")}</span>
-            </div>
-            <div class="metric-tile">
-                <label>Total Filler Words</label>
-                <span>${escapeHtml(data.filler_word_total ?? "0")}</span>
-            </div>
-        </div>
-
-        <div class="breakdown-area">
-            ${breakdownHtml}
-        </div>
-
-        <div class="score-section">
-            <div class="score-header">
-                <span>Confidence Score</span>
-                <span>${confidenceScore}%</span>
-            </div>
-            <div class="score-bar-bg">
-                <div id="confidenceFill" class="score-fill" style="width: 0%"></div>
-            </div>
-        </div>
-
-        <div class="feedback-area">
-            <h3>SpeakReview Feedback</h3>
-            <div class="feedback-content">${cleanFeedback}</div>
-        </div>
-    `;
-
-    setTimeout(() => {
-        const fill = document.getElementById('confidenceFill');
-        if(fill) fill.style.width = confidenceScore + '%';
-    }, 100);
-}
-</script>
 
 </body>
 </html>
