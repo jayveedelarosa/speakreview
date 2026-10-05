@@ -734,19 +734,28 @@ navButtons.forEach(button => {
 backToStageBtn.addEventListener("click", () => showView("stage"));
 
 // ---------------------------
-// Privacy note (phones open it from the header, laptops always show it)
+// Privacy note: a small panel under the "Privacy" link at the top right
 // ---------------------------
+const privacyWrap = document.getElementById("privacyWrap");
+
 function setPrivacyOpen(open) {
-    privacyNote.classList.toggle("is-open", open);
+    privacyNote.hidden = !open;
     privacyBtn.setAttribute("aria-expanded", String(open));
 }
 
 privacyBtn.addEventListener("click", () => {
-    setPrivacyOpen(!privacyNote.classList.contains("is-open"));
+    setPrivacyOpen(privacyNote.hidden);
+});
+
+// A click or tap anywhere outside the link and its panel closes the panel
+document.addEventListener("click", e => {
+    if (!privacyNote.hidden && !privacyWrap.contains(e.target)) {
+        setPrivacyOpen(false);
+    }
 });
 
 document.addEventListener("keydown", e => {
-    if (e.key === "Escape" && privacyNote.classList.contains("is-open")) {
+    if (e.key === "Escape" && !privacyNote.hidden) {
         setPrivacyOpen(false);
         privacyBtn.focus();
     }

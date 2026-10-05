@@ -63,15 +63,10 @@ Laptop: content centered between the curtains (about 200px in from each side at 
 
 Phone (about 390 by 780): curtains become thin strips at the sides, the top valance stays, the menu becomes a bottom tab bar (Stage, Backstage, Wall of Fame with icons). The Stage screen must fit on one screen with no page scrolling on a typical Android phone. Backstage: the page does not scroll, only the Coach's notes scroll inside the mirror. Wall of Fame: only the frames area scrolls.
 
-Stage height rules (laptop and phone):
-- The audience band always sits fully between the bottom of the settings strip and the top of the floor, with a small gap above it. No button, label, line or text may sit on top of it.
-- The floor grows to hold the main action. If there is not enough height, the stage grows and the page scrolls (scrollbar hidden). Content never overlaps the audience to save space.
-- Main action layouts, switched automatically:
-  - Tall windows: stacked and centered (heading, line, upload controls, status).
-  - Short laptop windows (wider than about 900px but shorter than about 760px of visible height, including browser zoom): one centered row on the floor. Left: the heading and the line under it, right-aligned. Right: the controls, left-aligned (Upload, file name and length, Begin, status, wait note). A clear empty space in the middle is where the Stage 3 mic stands.
-  - Very short windows (under about 500px of visible height, where even the row does not fit): stacked again, and the page scrolls.
-  - Phones: always stacked.
-- In the short row layout the privacy note sits small at the bottom right of the floor and never overlaps the controls.
+Stage layout rules (laptop and phone):
+- **Privacy**: behind a "Privacy" link with a small lock icon at the top right on all screens (laptop: in the header, right of the menu). It is a quiet, muted button, not a menu item, and brightens on hover and focus. It opens a small panel right under it with the privacy note; the panel closes on a second click, a click outside it, or Escape (focus returns to the link).
+- **Main action**: always stacked and centered on the wooden floor: "Your turn on stage", the line under it, the Upload button, then the file name and length line, "Begin the performance", the status and the wait note. The floor grows to hold it. It never overlaps the audience.
+- **Audience**: always fully between the bottom of the settings strip (with a small gap) and the top of the floor. On shorter windows and when zoomed in it scales down proportionally to fit that space, down to about 70 percent of its normal height. If there is still not enough room, the stage grows and the page scrolls (scrollbar hidden). No button, label, line or text ever sits on top of it.
 
 ## Rules
 

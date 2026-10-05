@@ -155,6 +155,7 @@ textarea {
 .main-nav {
     display: flex;
     gap: 4px;
+    margin-left: auto;
 }
 
 .nav-item {
@@ -198,23 +199,65 @@ textarea {
     color: var(--muted);
 }
 
-/* The Privacy button is for phones only. On laptops the note is always shown on the floor. */
+/* Privacy: a quiet link at the top right (smaller and dimmer than the menu items, so it doesn't
+   look like another screen) that opens a small panel right under it */
+.privacy {
+    position: relative;
+}
+
 .privacy-btn {
-    display: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.privacy-btn:hover,
+.privacy-btn:focus-visible,
+.privacy-btn[aria-expanded="true"] {
+    color: var(--text);
+}
+
+.privacy-note {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: min(300px, calc(100vw - 40px));
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #24100D;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+    color: var(--text);
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: left;
 }
 
 /* ---------- Stage ---------- */
-/* The stage is a grid of rows, top to bottom: topic, settings, a stretchy empty row,
-   the audience band, and the floor (which holds the main action). Because the audience and
-   the floor are real rows, nothing can sit on top of the audience: when the floor's content
-   grows, the floor row grows and the stage gets taller (the page scrolls instead). */
+/* The stage is a grid of rows, top to bottom: topic, settings, the audience row, and the floor
+   (which holds the main action). Because the audience and the floor are real rows, nothing can
+   sit on top of the audience. The audience row soaks up the spare height, but never gets smaller
+   than 70% of the audience plus the gap above it; below that, the stage gets taller and the page
+   scrolls. The floor row grows with its content in the same way. */
 .stage {
+    --audience-min-row: calc(var(--audience-h) * 0.7 + var(--audience-gap));
     position: relative;
     min-height: 100vh;
     min-height: 100dvh;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto 1fr [audience] auto [floor] auto;
+    grid-template-rows: auto auto [audience] minmax(var(--audience-min-row), 1fr) [floor] auto;
     justify-items: center;
     padding: var(--stage-top) var(--inset) 0;
     text-align: center;
@@ -271,26 +314,31 @@ textarea {
         repeating-linear-gradient(90deg, var(--wood) 0 118px, var(--wood-gap) 118px 120px, var(--wood-light) 120px 238px, var(--wood-gap) 238px 240px);
 }
 
-/* The seated audience: its own row, full stage width, with a small gap above it.
-   The band clips the SVG to the screen width. */
+/* The seated audience: at the bottom of its row, full stage width. Full size when there is room;
+   on shorter windows (or zoomed in) it gets shorter, always keeping the gap above it. The band
+   clips everything at its edges, and its bottom edge is the floor line. */
 .audience-band {
     grid-row: audience;
+    align-self: end;
     position: relative;
     z-index: 1;
     width: calc(100% + 2 * var(--inset));
-    height: var(--audience-h);
-    margin: var(--audience-gap) calc(-1 * var(--inset)) 0;
+    height: min(var(--audience-h), calc(100% - var(--audience-gap)));
+    margin: 0 calc(-1 * var(--inset));
     overflow: hidden;
 }
 
-/* Bottom edge on the floor line. Width follows the height. The front row is drawn past the
-   bottom of the SVG box and gets clipped there (the default overflow: hidden). */
+/* Bottom edge on the floor line. Width follows the height, so it scales without squashing.
+   overflow: visible lets the extra seats the design drew past the left and right edges fill in
+   toward the curtains when it is scaled down. The front row, drawn past the bottom of the SVG,
+   is still cut off by the band at the floor line. */
 .audience {
     position: absolute;
     left: 50%;
     bottom: 0;
     width: auto;
     height: 100%;
+    overflow: visible;
     transform: translateX(-50%);
 }
 
@@ -862,32 +910,17 @@ textarea {
 }
 
 .action-side {
+    width: 100%;
+}
+
+/* One centered column: Upload, file name and length, Begin, status, wait note */
+.action-controls {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     width: 100%;
-}
-
-/* File details on their own line first, then Upload and Begin side by side, then the messages */
-.action-controls {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 8px 12px;
-    width: 100%;
-    margin-top: 4px;
-}
-
-.action-controls .file-info {
-    order: -1;
-}
-
-.action-controls .file-info,
-.action-controls #status,
-.action-controls .wait-note {
-    flex-basis: 100%;
+    margin-top: 6px;
 }
 
 .action-title {
@@ -1022,13 +1055,6 @@ textarea {
 .wait-note {
     margin: 0;
     font-size: 13px;
-    color: var(--floor-text-soft);
-}
-
-.privacy-note {
-    margin: 0;
-    font-size: 11px;
-    line-height: 1.5;
     color: var(--floor-text-soft);
 }
 
@@ -1243,7 +1269,7 @@ textarea {
     :root {
         --header-top: 68px;
         --stage-top: 120px;
-        --floor-h: 140px;
+        --floor-h: 130px;
         --audience-gap: 12px;
         --topic-size: clamp(30px, 3vw, 38px);
         --topic-lines: 2;
@@ -1262,78 +1288,6 @@ textarea {
 
     .stage-floor {
         padding: 12px 0;
-    }
-}
-
-/* ---------- Short laptop windows: the main action becomes one row on the floor ----------
-   Wider than 900 px and shorter than 760 px of visible height (browser zoom counts, because
-   zooming in makes the window smaller in CSS pixels). Below 500 px even the row does not fit,
-   so very short windows keep the stacked layout and the page scrolls. */
-@media (min-width: 901px) and (max-height: 759px) and (min-height: 500px) {
-    :root {
-        --floor-h: 100px;
-        --topic-size: clamp(30px, 2.6vw, 34px);
-    }
-
-    /* The floor row spans almost the full width (the curtains stop at the floor) */
-    .stage-floor {
-        width: calc(100% + 2 * var(--inset) - 48px);
-        margin-inline: calc(24px - var(--inset));
-    }
-
-    /* Three columns: intro | empty space for the Stage 3 mic | controls */
-    .stage-action {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) var(--mic-space, 180px) minmax(0, 1fr);
-        align-items: center;
-        max-width: none;
-    }
-
-    .action-intro {
-        grid-column: 1;
-        align-items: flex-end;
-        text-align: right;
-    }
-
-    .action-text {
-        max-width: 300px;
-    }
-
-    /* Right half: the controls on the left, the privacy note pushed to the bottom right.
-       They are separate items in a wrapping row, so the note can never cover the controls. */
-    .action-side {
-        grid-column: 3;
-        flex-direction: row;
-        flex-wrap: wrap;
-        align-items: flex-end;
-        gap: 10px 20px;
-    }
-
-    .action-controls {
-        flex-direction: column;
-        flex-wrap: nowrap;
-        align-items: flex-start;
-        width: auto;
-        max-width: 320px;
-        margin-top: 0;
-        text-align: left;
-    }
-
-    .action-controls .file-info {
-        order: 0;
-        justify-content: flex-start;
-    }
-
-    .action-controls .file-info,
-    .action-controls #status,
-    .action-controls .wait-note {
-        flex-basis: auto;
-    }
-
-    .privacy-note {
-        max-width: 210px;
-        margin-left: auto;
-        text-align: right;
     }
 }
 
@@ -1389,24 +1343,16 @@ textarea {
         height: 20px;
     }
 
-    .privacy-btn {
-        display: inline-flex;
-        align-items: center;
+    .privacy {
         position: absolute;
         right: -10px;
         top: 50%;
-        height: 34px;
-        padding: 0 10px;
-        border: 0;
-        background: transparent;
-        color: var(--muted);
-        font-size: 11px;
-        font-weight: 600;
-        text-decoration: underline;
-        text-underline-offset: 3px;
-        text-decoration-color: rgba(188, 169, 146, 0.35);
         transform: translateY(-50%);
-        cursor: pointer;
+    }
+
+    .privacy-btn {
+        height: 34px;
+        font-size: 11px;
     }
 
     /* Bottom tab bar */
@@ -1759,28 +1705,6 @@ textarea {
 
     .wait-note {
         font-size: 11px;
-    }
-
-    /* Privacy note: a small panel that opens from the Privacy button */
-    .privacy-note {
-        display: none;
-        position: fixed;
-        top: 84px;
-        left: 24px;
-        right: 24px;
-        z-index: 25;
-        padding: 12px 14px;
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        background: #24100D;
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
-        font-size: 12px;
-        color: var(--text);
-        text-shadow: none;
-    }
-
-    .privacy-note.is-open {
-        display: block;
     }
 
     .backstage-placeholder {
