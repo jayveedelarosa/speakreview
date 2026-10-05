@@ -49,8 +49,8 @@
     --stage-top: 168px;
     --floor-h: 190px;
     --audience-h: max(140px, 10.9375vw);
-    /* How much of the audience band is kept clear of the settings (1 = all of it) */
-    --audience-reserve: 1;
+    /* Empty space between the settings strip and the audience band */
+    --audience-gap: 16px;
     --topic-size: clamp(30px, 3.6vw, 46px);
     --topic-lines: 3;
     --control-h: 44px;
@@ -204,25 +204,34 @@ textarea {
 }
 
 /* ---------- Stage ---------- */
+/* The stage is a grid of rows, top to bottom: topic, settings, a stretchy empty row,
+   the audience band, and the floor (which holds the main action). Because the audience and
+   the floor are real rows, nothing can sit on top of the audience: when the floor's content
+   grows, the floor row grows and the stage gets taller (the page scrolls instead). */
 .stage {
     position: relative;
     min-height: 100vh;
     min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr [audience] auto [floor] auto;
+    justify-items: center;
     padding: var(--stage-top) var(--inset) 0;
     text-align: center;
 }
 
-/* Scenery sits behind everything and never catches clicks */
+/* Scenery sits behind the content and never catches clicks */
 .scenery,
-.scenery * {
+.floor,
+.curtain,
+.tieback,
+.valance,
+.scallops,
+.audience-band {
     pointer-events: none;
 }
 
-/* Scenery wider than the screen (audience, spotlight) is clipped here, on the decorative
-   layer only. The stage itself never clips, so it grows and the page scrolls when needed. */
+/* The spotlight is taller than a short stage, so it is clipped here. The stage itself never clips. */
 .scenery {
     position: absolute;
     inset: 0;
@@ -245,13 +254,16 @@ textarea {
     to { opacity: 1; }
 }
 
-/* The floor's gold-brown top edge is inside its height, so the audience can stand exactly on it */
+/* The floor fills the floor row ("grid-row: floor / auto" means from the floor line to the
+   bottom of the stage). Its gold-brown top edge is the floor line, where the audience stands. */
 .floor {
     position: absolute;
+    grid-row: floor / auto;
+    top: 0;
+    bottom: 0;
     left: 0;
     right: 0;
-    bottom: 0;
-    height: var(--floor-h);
+    z-index: 0;
     border-top: 4px solid var(--wood-edge);
     background:
         radial-gradient(ellipse 22% 40% at 50% 8%, rgba(255, 214, 150, 0.38), rgba(0, 0, 0, 0) 70%),
@@ -259,15 +271,26 @@ textarea {
         repeating-linear-gradient(90deg, var(--wood) 0 118px, var(--wood-gap) 118px 120px, var(--wood-light) 120px 238px, var(--wood-gap) 238px 240px);
 }
 
-/* The seated audience: its bottom edge sits on the floor's top edge. Width follows the height.
-   The front row is drawn past the bottom of the SVG box and gets clipped there (the default
-   overflow: hidden), which is what keeps it off the floor. */
+/* The seated audience: its own row, full stage width, with a small gap above it.
+   The band clips the SVG to the screen width. */
+.audience-band {
+    grid-row: audience;
+    position: relative;
+    z-index: 1;
+    width: calc(100% + 2 * var(--inset));
+    height: var(--audience-h);
+    margin: var(--audience-gap) calc(-1 * var(--inset)) 0;
+    overflow: hidden;
+}
+
+/* Bottom edge on the floor line. Width follows the height. The front row is drawn past the
+   bottom of the SVG box and gets clipped there (the default overflow: hidden). */
 .audience {
     position: absolute;
     left: 50%;
-    bottom: var(--floor-h);
+    bottom: 0;
     width: auto;
-    height: var(--audience-h);
+    height: 100%;
     transform: translateX(-50%);
 }
 
@@ -275,11 +298,14 @@ textarea {
     display: none;
 }
 
-/* Side curtains, drawn over the edges of the audience, with rounded tied-back bottoms */
+/* Side curtains from the top of the stage down to the floor line, drawn over the edges of the
+   audience, with rounded tied-back bottoms */
 .curtain {
     position: absolute;
+    grid-row: auto / floor;
     top: 0;
-    bottom: var(--floor-h);
+    bottom: 0;
+    z-index: 2;
     width: var(--curtain-w);
 }
 
@@ -301,10 +327,12 @@ textarea {
         repeating-linear-gradient(270deg, var(--velvet-dark) 0, var(--velvet) 15.6px, var(--velvet-light) 26px, var(--velvet) 36.4px, var(--velvet-dark) 52px);
 }
 
-/* Gold tiebacks, 231 px above the floor like in the design */
+/* Gold tiebacks, 231 px above the floor line like in the design */
 .tieback {
     position: absolute;
-    bottom: calc(var(--floor-h) + 231px);
+    grid-row: auto / floor;
+    bottom: 231px;
+    z-index: 3;
     width: 74px;
     height: 9px;
     border-radius: 5px;
@@ -328,6 +356,7 @@ textarea {
     top: 0;
     left: 0;
     right: 0;
+    z-index: 3;
     height: 61px;
     border-bottom: 3px solid var(--gold);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
@@ -339,6 +368,7 @@ textarea {
     top: 61px;
     left: 0;
     right: 0;
+    z-index: 3;
     height: 22px;
     background: radial-gradient(circle at 50% 0, var(--velvet) 0 17px, rgba(0, 0, 0, 0) 18px) 0 0 / 40px 22px repeat-x;
 }
@@ -346,9 +376,9 @@ textarea {
 /* Everything that is not scenery sits above it */
 .topic-area,
 .settings-strip,
-.stage-bottom {
+.stage-floor {
     position: relative;
-    z-index: 1;
+    z-index: 4;
     width: 100%;
 }
 
@@ -801,20 +831,20 @@ textarea {
 }
 
 /* ---------- Main action, standing on the floor ---------- */
-/* Reserves room for the audience and the floor, then places the action at the bottom */
-.stage-bottom {
-    flex: 1 0 auto;
+/* The floor row. It is at least --floor-h tall and grows to hold everything in it. */
+.stage-floor {
+    grid-row: floor;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
+    justify-content: center;
     align-items: center;
-    gap: 10px;
-    min-height: calc(var(--audience-h) * var(--audience-reserve) + var(--floor-h));
-    padding-bottom: 16px;
+    min-height: var(--floor-h);
+    padding: 16px 0;
     /* Text over the wood floor stays readable */
     text-shadow: 0 1px 8px rgba(0, 0, 0, 0.85);
 }
 
+/* Tall windows and phones: everything stacked and centered */
 .stage-action {
     display: flex;
     flex-direction: column;
@@ -822,6 +852,42 @@ textarea {
     gap: 4px;
     width: 100%;
     max-width: 560px;
+}
+
+.action-intro {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.action-side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+/* File details on their own line first, then Upload and Begin side by side, then the messages */
+.action-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 12px;
+    width: 100%;
+    margin-top: 4px;
+}
+
+.action-controls .file-info {
+    order: -1;
+}
+
+.action-controls .file-info,
+.action-controls #status,
+.action-controls .wait-note {
+    flex-basis: 100%;
 }
 
 .action-title {
@@ -848,7 +914,6 @@ textarea {
     justify-content: center;
     gap: 2px 12px;
     max-width: 100%;
-    margin-top: 6px;
     font-size: 14px;
 }
 
@@ -876,15 +941,6 @@ textarea {
 .timing-ok {
     color: var(--ok);
     font-weight: 600;
-}
-
-.action-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    margin-top: 8px;
 }
 
 /* Hide the plain browser file input but keep it usable */
@@ -953,7 +1009,7 @@ textarea {
 
 /* ---------- Status and notes ---------- */
 #status {
-    margin: 8px 0 0;
+    margin: 0;
     font-size: 15px;
     font-weight: 600;
     color: var(--gold-light);
@@ -964,7 +1020,7 @@ textarea {
 }
 
 .wait-note {
-    margin: 2px 0 0;
+    margin: 0;
     font-size: 13px;
     color: var(--floor-text-soft);
 }
@@ -1188,8 +1244,7 @@ textarea {
         --header-top: 68px;
         --stage-top: 120px;
         --floor-h: 140px;
-        /* The empty top of the back row may sit behind the settings */
-        --audience-reserve: 0.75;
+        --audience-gap: 12px;
         --topic-size: clamp(30px, 3vw, 38px);
         --topic-lines: 2;
         --control-h: 40px;
@@ -1205,8 +1260,80 @@ textarea {
         padding: 10px;
     }
 
-    .stage-bottom {
-        padding-bottom: 10px;
+    .stage-floor {
+        padding: 12px 0;
+    }
+}
+
+/* ---------- Short laptop windows: the main action becomes one row on the floor ----------
+   Wider than 900 px and shorter than 760 px of visible height (browser zoom counts, because
+   zooming in makes the window smaller in CSS pixels). Below 500 px even the row does not fit,
+   so very short windows keep the stacked layout and the page scrolls. */
+@media (min-width: 901px) and (max-height: 759px) and (min-height: 500px) {
+    :root {
+        --floor-h: 100px;
+        --topic-size: clamp(30px, 2.6vw, 34px);
+    }
+
+    /* The floor row spans almost the full width (the curtains stop at the floor) */
+    .stage-floor {
+        width: calc(100% + 2 * var(--inset) - 48px);
+        margin-inline: calc(24px - var(--inset));
+    }
+
+    /* Three columns: intro | empty space for the Stage 3 mic | controls */
+    .stage-action {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) var(--mic-space, 180px) minmax(0, 1fr);
+        align-items: center;
+        max-width: none;
+    }
+
+    .action-intro {
+        grid-column: 1;
+        align-items: flex-end;
+        text-align: right;
+    }
+
+    .action-text {
+        max-width: 300px;
+    }
+
+    /* Right half: the controls on the left, the privacy note pushed to the bottom right.
+       They are separate items in a wrapping row, so the note can never cover the controls. */
+    .action-side {
+        grid-column: 3;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 10px 20px;
+    }
+
+    .action-controls {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        align-items: flex-start;
+        width: auto;
+        max-width: 320px;
+        margin-top: 0;
+        text-align: left;
+    }
+
+    .action-controls .file-info {
+        order: 0;
+        justify-content: flex-start;
+    }
+
+    .action-controls .file-info,
+    .action-controls #status,
+    .action-controls .wait-note {
+        flex-basis: auto;
+    }
+
+    .privacy-note {
+        max-width: 210px;
+        margin-left: auto;
+        text-align: right;
     }
 }
 
@@ -1577,10 +1704,10 @@ textarea {
     }
 
     /* Main action on the floor */
-    .stage-bottom {
+    .stage-floor {
         margin-inline: calc(20px - var(--inset));
         width: calc(100% + 2 * (var(--inset) - 20px));
-        padding-bottom: 12px;
+        padding: 12px 0;
     }
 
     .stage-action {
@@ -1596,7 +1723,6 @@ textarea {
     }
 
     .file-info {
-        margin-top: 4px;
         font-size: 12px;
     }
 
@@ -1604,8 +1730,8 @@ textarea {
         font-size: 11px;
     }
 
-    .action-row {
-        gap: 10px;
+    .action-controls {
+        gap: 6px 10px;
     }
 
     .btn-upload {
@@ -1628,7 +1754,6 @@ textarea {
     }
 
     #status {
-        margin-top: 4px;
         font-size: 13px;
     }
 
