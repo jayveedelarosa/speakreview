@@ -1058,27 +1058,126 @@ textarea {
     color: var(--floor-text-soft);
 }
 
-/* ---------- Backstage placeholder (part 2 builds the real one) ---------- */
-.backstage-placeholder {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* ---------- Backstage: the dressing room mirror ---------- */
+.backstage {
+    /* Space above the frame (for the header) plus space below it */
+    --backstage-top: 96px;
+    --backstage-bottom: 24px;
+    --backstage-space: calc(var(--backstage-top) + var(--backstage-bottom));
+    position: relative;
     min-height: 100vh;
     min-height: 100dvh;
-    padding: 180px 24px 60px;
+    padding: var(--backstage-top) max(24px, 7vw) var(--backstage-bottom);
     background:
         radial-gradient(ellipse 60% 45% at 50% 0%, rgba(255, 220, 150, 0.10), rgba(0, 0, 0, 0) 70%),
         repeating-linear-gradient(90deg, var(--backstage-wall) 0 158px, var(--backstage-stripe) 158px 162px),
         var(--backstage-wall);
-    text-align: center;
 }
 
-.backstage-inner {
+/* On Backstage the header moves up, above the mirror */
+.app[data-view="backstage"] .site-header {
+    top: 26px;
+    left: max(24px, 7vw);
+    right: max(24px, 7vw);
+}
+
+/* The wooden frame fills the rest of the window, so the page itself does not scroll and only the
+   Coach's notes scroll inside it. The frame needs a set height for that, so it is the window height
+   minus the space above and below, but never less than 480px (on tiny windows the page scrolls). */
+.mirror {
+    position: relative;
+    display: flex;
+    width: 100%;
+    max-width: 1100px;
+    height: max(calc(100vh - var(--backstage-space)), 480px);
+    height: max(calc(100dvh - var(--backstage-space)), 480px);
+    margin: 0 auto;
+    padding: 16px;
+    border-radius: 22px;
+    background: linear-gradient(160deg, #B07A44, #8A5A2E 45%, #8A5A2E);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+}
+
+/* Bulbs: a row along the top and a column down each side, on the wood */
+.bulbs,
+.bulbs * {
+    pointer-events: none;
+}
+
+.bulb-row {
+    position: absolute;
+    display: flex;
+    justify-content: space-between;
+}
+
+.bulb-top {
+    top: -3px;
+    left: 40px;
+    right: 40px;
+}
+
+.bulb-left,
+.bulb-right {
+    top: 80px;
+    bottom: 80px;
+    flex-direction: column;
+}
+
+.bulb-left {
+    left: -3px;
+}
+
+.bulb-right {
+    right: -3px;
+}
+
+.bulb {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: radial-gradient(circle at 40% 35%, #FFFFFF, #FFDFA0 60%);
+    box-shadow: 0 0 18px 5px rgba(255, 200, 120, 0.7);
+}
+
+/* Odd and even bulbs take turns fading to 35 percent (one change per second, 3 cycles), then stay lit.
+   app.js restarts this each time Backstage opens. The even bulbs run half a cycle longer so they
+   also end fully lit instead of jumping. */
+@keyframes bulbOdd {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+@keyframes bulbEven {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
+}
+
+.mirror.bulbs-on .bulb:nth-child(odd) {
+    animation: bulbOdd 2s ease-in-out 3;
+}
+
+.mirror.bulbs-on .bulb:nth-child(even) {
+    animation: bulbEven 2s ease-in-out 3.5;
+}
+
+/* The mirror glass */
+.mirror-glass {
+    position: relative;
+    flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    max-width: 520px;
+    padding: 36px 48px;
+    border-radius: 10px;
+    background: linear-gradient(155deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 35%), #1E0F0C;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), inset 0 0 60px rgba(0, 0, 0, 0.45);
+    text-align: left;
+}
+
+/* Headings that receive focus from code don't need the focus ring */
+[tabindex="-1"]:focus {
+    outline: none;
 }
 
 .eyebrow {
@@ -1090,115 +1189,154 @@ textarea {
     color: var(--muted);
 }
 
-.backstage-inner h2 {
-    margin: 0;
-    font-family: var(--serif);
-    font-size: 38px;
-    font-weight: 500;
-    letter-spacing: -0.02em;
-    line-height: 1.15;
-    color: var(--heading);
+/* Empty state, before any result exists */
+.backstage-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin: auto;
+    padding: 24px;
+    text-align: center;
 }
 
-.backstage-inner p:not(.eyebrow) {
+.backstage-empty h2 {
     margin: 0 0 8px;
-    font-size: 15px;
-    color: var(--text-sec);
-}
-
-/* ---------- Results (below the stage until part 2 moves them to Backstage) ---------- */
-/* Takes no space until displayResult() shows the card */
-.results-section {
-    padding: 0 16px;
-}
-
-/* The results area checks its own width to decide how many tiles fit in a row */
-.results-panel {
-    container-type: inline-size;
-    max-width: 900px;
-    margin: 0 auto;
-}
-
-.result-placeholder {
-    margin: 0;
-    color: var(--text-sec);
-}
-
-.result-card {
-    margin: 32px 0 48px;
-    padding: 28px 24px;
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    background: linear-gradient(155deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0) 35%), #1E0F0C;
-    scroll-margin-top: 16px;
-}
-
-.card-title {
-    margin: 0 0 16px;
     font-family: var(--serif);
     font-size: 30px;
     font-weight: 500;
+    line-height: 1.2;
     color: var(--heading);
 }
 
-.result-details {
-    max-width: 70ch;
-    margin: 0 0 16px;
+/* #result is shown with an inline display: block by displayResult(), so the two columns live in
+   .backstage-grid inside it */
+.backstage-content {
+    flex: 1;
+    min-height: 0;
 }
 
-.result-detail {
+.backstage-grid {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    margin: 0 0 8px;
-    font-size: 14px;
-    color: var(--text);
-    overflow-wrap: anywhere;
+    gap: 44px;
+    height: 100%;
 }
 
-.detail-label {
-    font-weight: 700;
-    color: var(--muted);
+/* Left: the speech summary and the buttons */
+.perf {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex-shrink: 0;
+    width: 290px;
 }
 
-.metrics-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
+.perf-summary {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
 }
 
-.metric-tile {
-    min-width: 0;
-    padding: 16px;
-    border-left: 3px solid var(--gold);
-    border-radius: 12px;
-    background: rgba(0, 0, 0, 0.25);
-}
-
-.metric-label {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-}
-
-.metric-value {
-    display: block;
+.perf-topic {
+    margin: 0;
     font-family: var(--serif);
-    font-size: 32px;
+    font-size: 25px;
     font-weight: 500;
     line-height: 1.2;
     color: var(--heading);
     overflow-wrap: anywhere;
 }
 
-.score-bar-bg {
-    height: 8px;
+.perf-time {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px;
+    align-self: stretch;
     margin-top: 10px;
+    padding: 14px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+}
+
+.perf-elapsed {
+    font-family: var(--mono);
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--heading);
+}
+
+.perf-limit {
+    font-family: var(--mono);
+    font-size: 17px;
+    color: var(--muted);
+}
+
+/* Over is orange, under or on time is green, and the words always say which */
+.time-pill {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.time-pill.timing-over {
+    background: rgba(255, 176, 102, 0.16);
+}
+
+.time-pill.timing-ok {
+    background: rgba(143, 224, 176, 0.14);
+}
+
+.perf-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-self: stretch;
+    margin-top: 10px;
+}
+
+.stat {
+    display: grid;
+    grid-template-columns: 82px minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 12px;
+}
+
+.stat-num {
+    font-family: var(--serif);
+    font-size: 38px;
+    font-weight: 500;
+    line-height: 1.1;
+    color: var(--heading);
+    overflow-wrap: anywhere;
+}
+
+.stat-label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.stat-sub {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text-sec);
+    overflow-wrap: anywhere;
+}
+
+.score-bar-bg {
+    grid-column: 2;
+    height: 6px;
+    margin-top: 6px;
     overflow: hidden;
     border-radius: 10px;
     background: rgba(0, 0, 0, 0.4);
@@ -1208,36 +1346,90 @@ textarea {
     width: 0%;
     height: 100%;
     background: var(--gold);
-    box-shadow: 0 0 15px rgba(217, 174, 82, 0.4);
+    box-shadow: 0 0 12px rgba(217, 174, 82, 0.4);
     transition: width 1.5s cubic-bezier(0.1, 0, 0.3, 1);
 }
 
-.breakdown-area {
+.perf-buttons {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 16px 0 24px;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: auto;
 }
 
-.filler-tag {
-    max-width: 100%;
-    padding: 4px 12px;
-    border: 1px solid var(--gold-line);
+.perf-buttons .btn-gold {
+    height: 48px;
+}
+
+.btn-outline {
+    height: 48px;
+    padding: 0 22px;
+    border: 1px solid rgba(246, 234, 211, 0.28);
     border-radius: 999px;
-    color: var(--gold);
+    background: transparent;
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.btn-outline:hover {
+    border-color: var(--gold-line);
+    background: rgba(246, 234, 211, 0.05);
+}
+
+/* Right: Coach's notes */
+.notes {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-left: 40px;
+    border-left: 1px solid var(--line);
+}
+
+.notes-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.notes-head h2 {
+    margin: 4px 0 0;
+    font-family: var(--serif);
+    font-size: 38px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    color: var(--heading);
+}
+
+.notes-hint {
     font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    overflow-wrap: anywhere;
+    color: var(--muted);
 }
 
-.feedback-area {
-    padding-top: 20px;
-    border-top: 1px solid var(--line);
+/* The only part of Backstage that scrolls: no visible scrollbar, and a fade at the bottom
+   shows there is more. "flex-basis: 0" means it takes the space that is left and never
+   pushes the frame taller. */
+.notes-body {
+    flex: 1 1 0;
+    min-height: 140px;
+    overflow-y: auto;
+    padding: 6px 14px 40px 0;
+    -webkit-mask-image: linear-gradient(180deg, #000 82%, rgba(0, 0, 0, 0));
+    mask-image: linear-gradient(180deg, #000 82%, rgba(0, 0, 0, 0));
 }
 
-.feedback-area h3 {
-    margin: 0 0 14px;
+.notes-body:focus-visible {
+    outline-offset: -2px;
+}
+
+.note-heading {
+    margin: 22px 0 10px;
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.18em;
@@ -1245,22 +1437,220 @@ textarea {
     color: var(--gold);
 }
 
-.feedback-content {
-    max-width: 70ch;
+.note-heading:first-child {
+    margin-top: 0;
+}
+
+.note-good {
+    color: var(--ok);
+}
+
+.note-over {
+    color: var(--over);
+}
+
+.note-tip {
+    color: #9CCBFF;
+}
+
+.note-gold {
+    color: var(--gold);
+}
+
+.note-item {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 4px;
+    margin: 0 0 10px;
     font-size: 15px;
-    line-height: 1.7;
+    line-height: 1.55;
     color: #DCCBB3;
     overflow-wrap: anywhere;
 }
 
-.feedback-content strong {
+.note-num {
+    font-family: var(--serif);
+    font-size: 19px;
+    line-height: 1.3;
+    color: var(--gold);
+}
+
+.note-text {
+    margin: 0 0 10px;
+    font-size: 15px;
+    line-height: 1.55;
+    color: #DCCBB3;
+    overflow-wrap: anywhere;
+}
+
+.note-item strong,
+.note-text strong {
     color: var(--heading);
 }
 
-/* Three tiles in a row once the results area is at least 420px wide */
-@container (min-width: 420px) {
-    .metrics-grid {
-        grid-template-columns: repeat(3, 1fr);
+/* ---------- Curtains for scene changes ---------- */
+/* Two full-screen curtains that sweep in from the sides. Only "transform" changes, which phones
+   can animate smoothly. When open they are hidden, so their shadows never show at the edges. */
+.drape {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    z-index: 50;
+    width: 50.5%;
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform 0.7s cubic-bezier(0.7, 0, 0.3, 1), visibility 0s linear 0.7s;
+}
+
+.drape-left {
+    left: 0;
+    transform: translateX(-104%);
+    box-shadow: inset -3px 0 0 var(--gold), 10px 0 40px rgba(0, 0, 0, 0.6);
+    background:
+        linear-gradient(90deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0) 80%, rgba(0, 0, 0, 0.45)),
+        repeating-linear-gradient(90deg, var(--velvet-dark) 0, var(--velvet) 18px, var(--velvet-light) 30px, var(--velvet) 42px, var(--velvet-dark) 60px);
+}
+
+.drape-right {
+    right: 0;
+    transform: translateX(104%);
+    box-shadow: inset 3px 0 0 var(--gold), -10px 0 40px rgba(0, 0, 0, 0.6);
+    background:
+        linear-gradient(270deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0) 80%, rgba(0, 0, 0, 0.45)),
+        repeating-linear-gradient(270deg, var(--velvet-dark) 0, var(--velvet) 18px, var(--velvet-light) 30px, var(--velvet) 42px, var(--velvet-dark) 60px);
+}
+
+/* app.js adds this class to <body> to close them */
+body.curtains-closed .drape {
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(0);
+    transition: transform 0.7s cubic-bezier(0.7, 0, 0.3, 1), visibility 0s;
+}
+
+/* ---------- Intermission, shown over the closed curtains ---------- */
+.intermission {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 24px;
+    text-align: center;
+    animation: intermissionIn 0.5s ease-out both;
+}
+
+@keyframes intermissionIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+}
+
+.intermission p {
+    margin: 0;
+}
+
+.intermission-brand {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--gold-light);
+}
+
+.intermission-title {
+    font-family: var(--serif);
+    font-size: 72px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--heading);
+    text-shadow: 0 6px 30px rgba(0, 0, 0, 0.6);
+}
+
+.intermission-text {
+    font-size: 18px;
+    color: #F6E4CC;
+}
+
+.intermission-note {
+    max-width: 460px;
+    font-size: 14px;
+    color: #E6CFB4;
+}
+
+/* The three dots pulse gently, one after another */
+@keyframes dotPulse {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 1; }
+}
+
+.intermission .dot {
+    animation: dotPulse 1.4s ease-in-out infinite;
+}
+
+.intermission .dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.intermission .dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+/* Short laptop windows: a more compact Backstage */
+@media (min-width: 601px) and (max-height: 820px) {
+    .backstage {
+        --backstage-top: 80px;
+        --backstage-bottom: 16px;
+    }
+
+    .app[data-view="backstage"] .site-header {
+        top: 16px;
+    }
+
+    .mirror-glass {
+        padding: 26px 40px;
+    }
+
+    .perf {
+        gap: 14px;
+    }
+
+    .perf-summary {
+        gap: 8px;
+    }
+
+    .perf-topic {
+        font-size: 21px;
+    }
+
+    .perf-time {
+        margin-top: 4px;
+        padding: 10px 0;
+    }
+
+    .perf-elapsed {
+        font-size: 26px;
+    }
+
+    .perf-stats {
+        gap: 8px;
+        margin-top: 4px;
+    }
+
+    .stat-num {
+        font-size: 30px;
+    }
+
+    .perf-buttons .btn-gold,
+    .btn-outline {
+        height: 44px;
+    }
+
+    .notes-head h2 {
+        font-size: 32px;
     }
 }
 
@@ -1707,27 +2097,230 @@ textarea {
         font-size: 11px;
     }
 
-    .backstage-placeholder {
+    /* Backstage on phones, following the "backstage" screen of theatre-phone.dc.html */
+    .backstage {
+        --backstage-top: 54px;
+        --backstage-bottom: 10px;
+        --backstage-space: calc(var(--backstage-top) + var(--backstage-bottom) + var(--tabbar-h));
         min-height: calc(100vh - var(--tabbar-h));
         min-height: calc(100dvh - var(--tabbar-h));
-        padding: 100px 20px 40px;
+        padding: var(--backstage-top) 10px var(--backstage-bottom);
         background:
             radial-gradient(ellipse 80% 30% at 50% 0%, rgba(255, 220, 150, 0.10), rgba(0, 0, 0, 0) 70%),
             repeating-linear-gradient(90deg, var(--backstage-wall) 0 96px, var(--backstage-stripe) 96px 98px),
             var(--backstage-wall);
     }
 
-    .backstage-inner h2 {
-        font-size: 28px;
+    .app[data-view="backstage"] .site-header {
+        top: 12px;
     }
 
-    .result-card {
-        margin: 20px 0 28px;
-        padding: 20px 16px;
+    .mirror {
+        height: max(calc(100vh - var(--backstage-space)), 460px);
+        height: max(calc(100dvh - var(--backstage-space)), 460px);
+        padding: 10px;
+        border-radius: 16px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
     }
 
-    .card-title {
-        font-size: 24px;
+    /* Phones: 7 smaller bulbs along the top only */
+    .bulb-left,
+    .bulb-right,
+    .bulb-top .bulb:nth-child(n + 8) {
+        display: none;
+    }
+
+    .bulb-top {
+        top: 1px;
+        left: 21px;
+        right: 21px;
+    }
+
+    .bulb {
+        width: 14px;
+        height: 14px;
+        box-shadow: 0 0 12px 4px rgba(255, 200, 120, 0.7);
+    }
+
+    .mirror-glass {
+        padding: 18px 16px 14px;
+        border-radius: 8px;
+        box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.45);
+    }
+
+    .eyebrow {
+        font-size: 10px;
+    }
+
+    .backstage-empty h2 {
+        font-size: 22px;
+    }
+
+    /* One column: compact summary, then the notes, then the buttons.
+       The aside uses display: contents, so its two parts are placed in this column directly. */
+    .backstage-grid {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .perf {
+        display: contents;
+    }
+
+    .perf-summary {
+        gap: 8px;
+    }
+
+    .perf-topic {
+        font-size: 19px;
+    }
+
+    .perf-badge {
+        display: none;
+    }
+
+    .perf-time {
+        gap: 8px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+    }
+
+    .perf-elapsed {
+        font-size: 20px;
+    }
+
+    .perf-limit {
+        font-size: 13px;
+    }
+
+    .time-pill {
+        height: 22px;
+        padding: 0 9px;
+        font-size: 11px;
+    }
+
+    /* The three numbers side by side */
+    .perf-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        margin: 0;
+        padding: 8px 0;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        text-align: center;
+    }
+
+    .stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .stat-num {
+        font-size: 22px;
+    }
+
+    .stat-label {
+        align-items: center;
+        gap: 0;
+        font-size: 10px;
+        font-weight: 400;
+        color: var(--text-sec);
+    }
+
+    .stat-sub {
+        font-size: 10px;
+    }
+
+    .score-bar-bg {
+        width: 70%;
+        height: 4px;
+        margin-top: 4px;
+    }
+
+    .notes {
+        order: 1;
+        flex: 1;
+        min-height: 0;
+        gap: 6px;
+        padding-left: 0;
+        border-left: 0;
+    }
+
+    .notes-head {
+        align-items: baseline;
+    }
+
+    .notes-head .eyebrow {
+        display: none;
+    }
+
+    .notes-head h2 {
+        margin: 0;
+        font-size: 22px;
+    }
+
+    .notes-hint {
+        font-size: 11px;
+    }
+
+    .notes-body {
+        min-height: 120px;
+        padding: 2px 6px 26px 0;
+        -webkit-mask-image: linear-gradient(180deg, #000 80%, rgba(0, 0, 0, 0));
+        mask-image: linear-gradient(180deg, #000 80%, rgba(0, 0, 0, 0));
+    }
+
+    .note-heading {
+        margin: 14px 0 6px;
+        font-size: 10px;
+    }
+
+    .note-item {
+        grid-template-columns: 20px minmax(0, 1fr);
+        gap: 2px;
+        margin-bottom: 6px;
+        font-size: 13px;
+        line-height: 1.45;
+    }
+
+    .note-num {
+        font-size: 15px;
+    }
+
+    .note-text {
+        margin-bottom: 6px;
+        font-size: 13px;
+        line-height: 1.45;
+    }
+
+    .perf-buttons {
+        order: 2;
+        flex-direction: row;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 0;
+    }
+
+    .perf-buttons .btn-gold,
+    .btn-outline {
+        height: 38px;
+        padding: 0 16px;
+        font-size: 12px;
+    }
+
+    .intermission-title {
+        font-size: 44px;
+    }
+
+    .intermission-text {
+        font-size: 15px;
+    }
+
+    .intermission-note {
+        font-size: 12px;
     }
 }
 

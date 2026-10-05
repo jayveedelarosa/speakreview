@@ -51,8 +51,17 @@ const privacyBtn = document.getElementById("privacyBtn");
 const privacyNote = document.getElementById("privacyNote");
 const navButtons = document.querySelectorAll(".nav-item");
 const backstageView = document.getElementById("backstageView");
-const resultsSection = document.getElementById("resultsSection");
 const backToStageBtn = document.getElementById("backToStageBtn");
+const tryAgainBtn = document.getElementById("tryAgainBtn");
+const goToStageBtn = document.getElementById("goToStageBtn");
+const perfSummary = document.getElementById("perfSummary");
+const coachNotesBody = document.getElementById("coachNotesBody");
+const coachNotesTitle = document.getElementById("coachNotesTitle");
+const backstageEmptyTitle = document.getElementById("backstageEmptyTitle");
+const mirror = document.getElementById("mirror");
+const intermission = document.getElementById("intermission");
+const sceneAnnounce = document.getElementById("sceneAnnounce");
+const appRoot = document.querySelector(".app");
 // Every topic and time control, so they can be locked while a speech is being analyzed
 const optionControls = document.querySelectorAll("#stepTopic textarea, #stepTopic button, #stepTime input, #stepTime button");
 
@@ -559,9 +568,12 @@ async function upload() {
         statusText.innerText = "Analyzing Performance Patterns...";
         waitNote.style.display = "block";
         pollResult(data.fileId);
+        // The curtains close and Intermission shows while the coach works
+        startIntermission();
 
     } catch(err) {
         console.error(err);
+        endIntermission("stage");       // never leave the curtains closed (does nothing if they are open)
         statusText.innerText = "Technical error occurred.";
         waitNote.style.display = "none";
         uploadBtn.disabled = false;
@@ -572,6 +584,7 @@ async function upload() {
 async function pollResult(speechId) {
     let attempts = 0;
     let stopped = false;   // ignores replies that arrive after we've finished
+    let showingResult = false;   // true once a result arrived and is being shown
     const interval = setInterval(async () => {
         if(stopped) return;
         attempts++;
@@ -580,6 +593,7 @@ async function pollResult(speechId) {
         if(attempts > MAX_POLL_ATTEMPTS) {
             stopped = true;
             clearInterval(interval);
+            endIntermission("stage");   // curtains open back on the Stage before the message shows
             waitNote.style.display = "none";
             statusText.innerText = "This is taking longer than expected. Please try again in a few minutes.";
             uploadBtn.disabled = false;
@@ -595,19 +609,28 @@ async function pollResult(speechId) {
 
             if(result && result.wpm) {
                 stopped = true;
+                showingResult = true;
                 clearInterval(interval);
                 waitNote.style.display = "none";
                 uploadBtn.disabled = false;
                 setOptionsDisabled(false);
                 statusText.innerText = "Spotlight Ready.";
-                displayResult(result);
-                // The results appear below the stage, so bring them into view
-                showView("stage");
-                resultBox.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth" });
+                displayResult(result);      // fills Backstage and opens the curtains on it
                 return;
             }
         } catch(err) {
             console.error("Polling...", err);
+            // A network or server error while still polling just tries again on the next tick (as before),
+            // and the timeout above opens the curtains if it never succeeds. But if a result arrived and
+            // showing it failed, nothing will try again, so open the curtains on the Stage and show the
+            // existing error message.
+            if(showingResult) {
+                endIntermission("stage");
+                waitNote.style.display = "none";
+                statusText.innerText = "Technical error occurred.";
+                uploadBtn.disabled = false;
+                setOptionsDisabled(false);
+            }
         }
     }, POLL_INTERVAL_MS);
 }
@@ -629,96 +652,163 @@ function displayResult(data) {
     const confidenceRaw = Number(data.avg_confidence);
     const confidenceScore = Number.isFinite(confidenceRaw) ? Math.round(confidenceRaw * 100) : 0;
 
-    // Escapes the AI's text first, then turns its formatting (#, ##, ###, **bold**) into real bold text
+    // Coach's notes. The AI's text is escaped FIRST, then its formatting (headings, numbered points,
+    // **bold**) is turned into notes line by line. Every tag added after escaping is a fixed string.
     const cleanFeedback = data.ai_feedback
         ? escapeHtml(data.ai_feedback)
             .trim()
-            .replace(/^#{1,6}\s*(.*)$/gm, '<strong>$1</strong>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\n\s*\n/g, '<br><br>')
-            .replace(/\n/g, '<br>')
-        : "Analysis is being finalized.";
+            .split(/\r?\n/)
+            .map(formatNoteLine)
+            .join("")
+        : '<p class="note-text">Analysis is being finalized.</p>';
 
-    // Filler word breakdown
-    let breakdownHtml = '';
+    // Filler word breakdown, for example "um 3, uh 1"
+    let breakdownText = '';
     if (data.filler_word_breakdown) {
-        Object.entries(data.filler_word_breakdown).forEach(([word, count]) => {
-            breakdownHtml += `<div class="filler-tag">${escapeHtml(word)}: ${escapeHtml(count)}</div>`;
-        });
+        breakdownText = Object.entries(data.filler_word_breakdown)
+            .map(([word, count]) => `${escapeHtml(word)} ${escapeHtml(count)}`)
+            .join(", ");
     }
 
-    // Topic and time details (older results don't have them)
-    let detailsHtml = '';
+    // Topic and type badge (older results don't have them)
+    let summaryHtml = `<p class="eyebrow">Tonight's performance</p>`;
     if (data.topic) {
         const typeInfo = TOPIC_TYPE_INFO[data.topic_type];
-        const typeBadge = data.topic_type
-            ? ` <span class="topic-badge">${escapeHtml(typeInfo ? typeInfo.label : data.topic_type)}</span>`
-            : '';
-        detailsHtml += `<p class="result-detail"><span class="detail-label">Topic:</span> ${escapeHtml(data.topic)}${typeBadge}</p>`;
+        summaryHtml += `<p class="perf-topic">${escapeHtml(data.topic)}</p>`;
+        if (data.topic_type) {
+            summaryHtml += `<span class="topic-badge perf-badge">${escapeHtml(typeInfo ? typeInfo.label : data.topic_type)}</span>`;
+        }
     }
+
+    // Time line, for example "3:42 / 3:00" with "0:42 over", or "4:10 (untimed)"
     const speakingSeconds = Number(data.speaking_seconds);
     if (data.speaking_seconds != null && Number.isFinite(speakingSeconds)) {
         const limitSeconds = Number(data.time_limit_seconds);
-        let timeText;
+        let timeHtml;
         if (data.time_limit_seconds != null && Number.isFinite(limitSeconds) && limitSeconds > 0) {
             const timing = describeTiming(speakingSeconds, limitSeconds);
-            timeText = `${escapeHtml(formatTime(speakingSeconds))} / ${escapeHtml(formatTime(limitSeconds))} `
-                + `<span class="${timing.className}">(${escapeHtml(timing.text)})</span>`;
+            timeHtml = `<span class="perf-elapsed ${timing.className}">${escapeHtml(formatTime(speakingSeconds))}</span>`
+                + `<span class="perf-limit">/ ${escapeHtml(formatTime(limitSeconds))}</span>`
+                + `<span class="time-pill ${timing.className}">${escapeHtml(timing.text)}</span>`;
         } else {
-            timeText = `${escapeHtml(formatTime(speakingSeconds))} (untimed)`;
+            timeHtml = `<span class="perf-elapsed">${escapeHtml(formatTime(speakingSeconds))}</span>`
+                + `<span class="perf-limit">(untimed)</span>`;
         }
-        detailsHtml += `<p class="result-detail"><span class="detail-label">Time:</span> ${timeText}</p>`;
+        summaryHtml += `<div class="perf-time">${timeHtml}</div>`;
     }
-    if (detailsHtml) detailsHtml = `<div class="result-details">${detailsHtml}</div>`;
 
-    resultBox.innerHTML = `
-        <h2 class="card-title">Results</h2>
-
-        ${detailsHtml}
-
-        <div class="metrics-grid">
-            <div class="metric-tile">
-                <span class="metric-label">Pacing (WPM)</span>
-                <span class="metric-value">${escapeHtml(data.wpm ?? "0")}</span>
+    // The three numbers. Phones show the short labels (screen readers always hear the long ones).
+    summaryHtml += `
+        <div class="perf-stats">
+            <div class="stat">
+                <span class="stat-num">${escapeHtml(data.wpm ?? "0")}</span>
+                <span class="stat-label"><span class="long-label">Words per minute</span><span class="short-label" aria-hidden="true">words per min</span></span>
             </div>
-            <div class="metric-tile">
-                <span class="metric-label">Total Filler Words</span>
-                <span class="metric-value">${escapeHtml(data.filler_word_total ?? "0")}</span>
+            <div class="stat">
+                <span class="stat-num">${escapeHtml(data.filler_word_total ?? "0")}</span>
+                <span class="stat-label"><span class="long-label">Filler words</span><span class="short-label" aria-hidden="true">fillers</span>${breakdownText ? `<span class="stat-sub">${breakdownText}</span>` : ''}</span>
             </div>
-            <div class="metric-tile">
-                <span class="metric-label">Confidence Score</span>
-                <span class="metric-value">${confidenceScore}%</span>
-                <div class="score-bar-bg">
-                    <div id="confidenceFill" class="score-fill" style="width: 0%"></div>
-                </div>
+            <div class="stat">
+                <span class="stat-num">${confidenceScore}%</span>
+                <span class="stat-label"><span class="long-label">Confidence score</span><span class="short-label" aria-hidden="true">confidence</span></span>
+                <div class="score-bar-bg"><div id="confidenceFill" class="score-fill" style="width: 0%"></div></div>
             </div>
-        </div>
+        </div>`;
 
-        <div class="breakdown-area">
-            ${breakdownHtml}
-        </div>
-
-        <div class="feedback-area">
-            <h3>SpeakReview Feedback</h3>
-            <div class="feedback-content">${cleanFeedback}</div>
-        </div>
-    `;
+    perfSummary.innerHTML = summaryHtml;
+    coachNotesBody.innerHTML = cleanFeedback;
+    coachNotesBody.scrollTop = 0;
 
     setTimeout(() => {
         const fill = document.getElementById('confidenceFill');
         if(fill) fill.style.width = confidenceScore + '%';
     }, 100);
+
+    // Open Backstage on the notes (through Intermission if it is showing)
+    revealNotes();
+}
+
+// Section names the coach uses, so a plain "Strengths:" line also counts as a heading
+const NOTE_SECTIONS = /^(strengths?|weaknesses?|improvement tips?|areas? (for|to) improve(ment)?|staying on topic|time management|tips?|summary|overall)$/i;
+
+// Turns ONE line of the feedback into Coach's notes HTML.
+// Only ever give it text that already went through escapeHtml(): it adds tags around that text.
+function formatNoteLine(line) {
+    const text = line.trim();
+    if (text === "") return "";
+    const bold = s => s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    let match;
+
+    // Section headings: "# Strengths", "**Strengths**" or "Strengths:"
+    let heading = null;
+    if ((match = text.match(/^#{1,6}\s*(.+)$/))) heading = match[1];
+    else if ((match = text.match(/^\*\*([^*]+)\*\*:?$/))) heading = match[1];
+    else if ((match = text.match(/^([A-Za-z][A-Za-z ]{2,40}):$/)) && NOTE_SECTIONS.test(match[1].trim())) heading = match[1];
+    if (heading !== null) {
+        heading = heading.replace(/\*\*/g, "").replace(/:\s*$/, "").trim();
+        return `<h3 class="note-heading ${noteColor(heading)}">${heading}</h3>`;
+    }
+
+    // Numbered points: "1. Clear position: ..."
+    if ((match = text.match(/^(\d{1,2})[.)]\s+(.*)$/))) {
+        return `<div class="note-item"><span class="note-num">${match[1]}</span><span>${bold(match[2])}</span></div>`;
+    }
+
+    // Bullet points: "- ..." or "* ..."
+    if ((match = text.match(/^[-*•]\s+(.*)$/))) {
+        return `<div class="note-item"><span class="note-num" aria-hidden="true">•</span><span>${bold(match[1])}</span></div>`;
+    }
+
+    return `<p class="note-text">${bold(text)}</p>`;
+}
+
+// Picks a heading color class (always one of these fixed names, never text from the feedback)
+function noteColor(heading) {
+    if (/strength/i.test(heading)) return "note-good";
+    if (/weak/i.test(heading)) return "note-over";
+    if (/improv|tip/i.test(heading)) return "note-tip";
+    return "note-gold";
 }
 
 // ---------------------------
-// Menu: Stage and Backstage
+// Scenes: Stage and Backstage, curtains and Intermission
 // ---------------------------
-// Shows one view and marks its menu item as the current page
+const CURTAIN_MS = 720;        // how long the curtains take to close or to open
+const CURTAIN_PAUSE_MS = 160;  // short pause with the curtains closed before they open again
+let currentView = "stage";
+let intermissionOn = false;
+// Scene changes wait for each other in this queue, so two quick clicks (or a result arriving
+// in the middle of a sweep) can never tangle the curtains
+let sceneQueue = Promise.resolve();
+
+function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function queueScene(step) {
+    sceneQueue = sceneQueue.then(step).catch(err => console.error(err));
+    return sceneQueue;
+}
+
+// Closes or opens the curtains and waits until they finish. With reduced motion they move instantly.
+async function setCurtains(closed) {
+    document.body.classList.toggle("curtains-closed", closed);
+    if (!prefersReducedMotion()) await wait(CURTAIN_MS);
+}
+
+// Tells screen readers about a scene change, once
+function announceScene(text) {
+    sceneAnnounce.textContent = "";
+    setTimeout(() => { sceneAnnounce.textContent = text; }, 50);
+}
+
+// Shows one view right away and marks its menu item as the current page
 function showView(name) {
     const isStage = name === "stage";
+    currentView = name;
     dropZone.hidden = !isStage;
-    resultsSection.hidden = !isStage;
     backstageView.hidden = isStage;
+    appRoot.dataset.view = name;
     navButtons.forEach(button => {
         if (button.dataset.view === name) {
             button.setAttribute("aria-current", "page");
@@ -726,12 +816,97 @@ function showView(name) {
             button.removeAttribute("aria-current");
         }
     });
+    if (!isStage) {
+        // A new upload hides the old results, so the empty state shows until new ones arrive
+        resultPlaceholder.hidden = resultBox.style.display !== "none";
+        restartBulbs();
+    }
+    window.scrollTo(0, 0);
+}
+
+// The bulbs flicker softly 3 times each time Backstage opens, then stay lit
+function restartBulbs() {
+    mirror.classList.remove("bulbs-on");
+    void mirror.offsetWidth;   // makes the browser notice the class was removed, so the animation starts over
+    mirror.classList.add("bulbs-on");
+}
+
+function focusBackstageHeading() {
+    const heading = resultBox.style.display === "none" ? backstageEmptyTitle : coachNotesTitle;
+    heading.focus({ preventScroll: true });
+}
+
+// Switches screens: the curtains close, the screen changes, then they open (instant with reduced motion)
+function goToView(name) {
+    return queueScene(async () => {
+        if (intermissionOn) return;          // during Intermission, its end decides where the curtains open
+        if (name !== currentView) {
+            if (prefersReducedMotion()) {
+                showView(name);
+            } else {
+                appRoot.inert = true;        // nothing can be clicked while the curtains move
+                await setCurtains(true);
+                showView(name);
+                await wait(CURTAIN_PAUSE_MS);
+                await setCurtains(false);
+                appRoot.inert = false;
+            }
+        }
+        if (name === "backstage") focusBackstageHeading();
+    });
+}
+
+// The curtains close and Intermission shows over them while the coach reviews the speech
+function startIntermission() {
+    if (intermissionOn) return;
+    intermissionOn = true;
+    setPrivacyOpen(false);
+    // inert: everything behind the closed curtains is unclickable and hidden from keyboards and screen readers
+    appRoot.inert = true;
+    queueScene(async () => {
+        await setCurtains(true);
+        if (!intermissionOn) return;         // it already ended while the curtains were closing
+        intermission.hidden = false;
+        announceScene("Intermission. Your coach is reviewing your speech. Longer speeches can take a few minutes to analyze. Please keep this page open.");
+    });
+}
+
+// Ends Intermission and opens the curtains on "stage" or "backstage".
+// Safe to call any time: it does nothing when no Intermission is running.
+function endIntermission(target) {
+    if (!intermissionOn) return Promise.resolve();
+    intermissionOn = false;
+    appRoot.inert = false;                   // the page is usable again right away, so messages are heard
+    return queueScene(async () => {
+        intermission.hidden = true;
+        showView(target);
+        if (!prefersReducedMotion()) await wait(CURTAIN_PAUSE_MS);
+        await setCurtains(false);
+    });
+}
+
+// Opens Backstage on the new notes, announces them once and moves focus to "Coach's notes"
+function revealNotes() {
+    const done = intermissionOn ? endIntermission("backstage") : goToView("backstage");
+    done.then(() => {
+        announceScene("Your coach's notes are ready.");
+        focusBackstageHeading();
+    });
 }
 
 navButtons.forEach(button => {
-    button.addEventListener("click", () => showView(button.dataset.view));
+    button.addEventListener("click", () => goToView(button.dataset.view));
 });
-backToStageBtn.addEventListener("click", () => showView("stage"));
+backToStageBtn.addEventListener("click", () => goToView("stage"));
+goToStageBtn.addEventListener("click", () => goToView("stage"));
+
+// Same topic and time limit, but a fresh start: the picked file is cleared
+tryAgainBtn.addEventListener("click", () => {
+    fileInput.value = "";
+    showFileName();
+    statusText.textContent = "";
+    goToView("stage");
+});
 
 // ---------------------------
 // Privacy note: a small panel under the "Privacy" link at the top right

@@ -51,7 +51,7 @@
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
                 Privacy
             </button>
-            <p id="privacyNote" class="privacy-note" hidden>Recordings are used only to create your feedback.<br>They are deleted automatically after 7 days, and results after 30 days.</p>
+            <p id="privacyNote" class="privacy-note" hidden>Recordings are used only to create your feedback. They are deleted automatically after 7 days, and results after 30 days.</p>
         </div>
     </header>
 
@@ -197,25 +197,68 @@
             </section>
         </div>
 
-        <!-- Placeholder: part 2 of the Theatre redesign builds Backstage -->
-        <section id="backstageView" class="backstage-placeholder" aria-labelledby="backstageTitle" hidden>
-            <div class="backstage-inner">
-                <p class="eyebrow">Backstage</p>
-                <h2 id="backstageTitle">Coach's notes are on the way</h2>
-                <p>Backstage opens in the next update. For now, feedback appears below the stage after a performance.</p>
-                <button type="button" id="backToStageBtn" class="btn-gold">Back to the stage</button>
-            </div>
-        </section>
+        <!-- Backstage: a dressing room mirror with the speech summary on the left and Coach's notes on the right -->
+        <section id="backstageView" class="backstage" aria-label="Backstage" hidden>
+            <div class="mirror" id="mirror">
+                <!-- Bulbs around the frame: decorative only -->
+                <div class="bulbs" aria-hidden="true">
+                    <div class="bulb-row bulb-top"><span class="bulb"></span><span class="bulb"></span><span class="bulb"></span><span class="bulb"></span><span class="bulb"></span><span class="bulb"></span><span class="bulb"></span><span class="bulb"></span><span class="bulb"></span><span class="bulb"></span><span class="bulb"></span><span class="bulb"></span></div>
+                    <div class="bulb-row bulb-left"><span class="bulb"></span><span class="bulb"></span><span class="bulb"></span><span class="bulb"></span><span class="bulb"></span><span class="bulb"></span></div>
+                    <div class="bulb-row bulb-right"><span class="bulb"></span><span class="bulb"></span><span class="bulb"></span><span class="bulb"></span><span class="bulb"></span><span class="bulb"></span></div>
+                </div>
 
-        <section id="resultsSection" class="results-section" aria-label="Results">
-            <div class="results-panel" id="resultsPanel">
-                <p id="resultPlaceholder" class="result-placeholder" hidden>Your feedback will appear here.</p>
-                <section id="result" class="result-card" aria-label="Results" style="display:none;">
-                </section>
+                <div class="mirror-glass">
+                    <!-- Empty state, shown until a result exists -->
+                    <div id="resultPlaceholder" class="backstage-empty">
+                        <p class="eyebrow">Backstage</p>
+                        <h2 id="backstageEmptyTitle" tabindex="-1">No notes yet. Take the stage first.</h2>
+                        <button type="button" id="goToStageBtn" class="btn-gold">Go to the stage</button>
+                    </div>
+
+                    <!-- Filled by displayResult() -->
+                    <div id="result" class="backstage-content" style="display:none;">
+                        <div class="backstage-grid">
+                            <aside class="perf" aria-label="Your speech">
+                                <div id="perfSummary" class="perf-summary"></div>
+                                <div class="perf-buttons">
+                                    <button type="button" id="backToStageBtn" class="btn-gold">Back to the stage</button>
+                                    <button type="button" id="tryAgainBtn" class="btn-outline">Try this topic again</button>
+                                </div>
+                            </aside>
+
+                            <section class="notes" aria-labelledby="coachNotesTitle">
+                                <div class="notes-head">
+                                    <div>
+                                        <p class="eyebrow">Backstage</p>
+                                        <h2 id="coachNotesTitle" tabindex="-1">Coach's notes</h2>
+                                    </div>
+                                    <span class="notes-hint"><span class="long-label">Scroll for all notes</span><span class="short-label" aria-hidden="true">Scroll for more</span></span>
+                                </div>
+                                <!-- The only part of Backstage that scrolls -->
+                                <div id="coachNotesBody" class="notes-body" tabindex="0" aria-label="Coach's notes, scrollable"></div>
+                            </section>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
     </main>
 </div>
+
+<!-- Curtains for scene changes: they sweep closed, the screen changes, then they sweep open -->
+<div class="drape drape-left" aria-hidden="true"></div>
+<div class="drape drape-right" aria-hidden="true"></div>
+
+<!-- Shown over the closed curtains while the coach reviews the speech (announced through #sceneAnnounce) -->
+<div id="intermission" class="intermission" aria-hidden="true" hidden>
+    <p class="intermission-brand">SpeakReview</p>
+    <p class="intermission-title">Intermission</p>
+    <p class="intermission-text">Your coach is reviewing your speech<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></p>
+    <p class="intermission-note">Longer speeches can take a few minutes to analyze. Please keep this page open.</p>
+</div>
+
+<!-- Screen reader announcements for scene changes -->
+<p id="sceneAnnounce" class="visually-hidden" aria-live="polite"></p>
 
 </body>
 </html>
