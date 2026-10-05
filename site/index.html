@@ -9,6 +9,9 @@
 <meta property="og:description" content="Upload a speech and get AI feedback on filler words, pace and delivery.">
 <meta property="og:url" content="https://speakreview.jayveedelarosa.dev">
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap">
 <link rel="stylesheet" href="css/styles.css">
 <script src="js/topics.js" defer></script>
 <script src="js/app.js" defer></script>
@@ -17,127 +20,185 @@
 <body>
 
 <div class="app">
-    <header class="app-header">
-        <h1>SpeakReview</h1>
-        <p class="subtitle">AI-Powered Speech Performance Analysis</p>
+    <header class="site-header">
+        <h1 class="logo">
+            <svg class="logo-icon" width="26" height="26" viewBox="0 0 28 28" fill="none" aria-hidden="true" focusable="false"><rect x="3" y="11" width="3" height="6" rx="1.5" fill="#D9AE52"></rect><rect x="9" y="6" width="3" height="16" rx="1.5" fill="#D9AE52"></rect><rect x="15" y="3" width="3" height="22" rx="1.5" fill="#D9AE52"></rect><rect x="21" y="9" width="3" height="10" rx="1.5" fill="#D9AE52"></rect></svg>
+            <span>Speak<span class="logo-accent">Review</span></span>
+        </h1>
+
+        <nav class="main-nav" aria-label="Main">
+            <button type="button" class="nav-item" id="navStage" data-view="stage" aria-current="page">
+                <svg class="nav-icon" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 3h6v11a3 3 0 0 1-6 0z M5 11a7 7 0 0 0 14 0 M12 18v3"></path></svg>
+                <span class="nav-label">Stage</span>
+                <span class="nav-sub">Practice</span>
+            </button>
+            <button type="button" class="nav-item" id="navBackstage" data-view="backstage">
+                <svg class="nav-icon" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 3h12v18H6z M9 8h6 M9 12h6 M9 16h4"></path></svg>
+                <span class="nav-label">Backstage</span>
+                <span class="nav-sub">Your feedback</span>
+            </button>
+            <!-- Stage 4: remove "hidden" to show the Wall of Fame -->
+            <button type="button" class="nav-item" id="navWall" data-view="wall" hidden>
+                <svg class="nav-icon" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 4h10v5a5 5 0 0 1-10 0z M7 6H4a3 3 0 0 0 4 4 M17 6h3a3 3 0 0 1-4 4 M12 14v4 M8 20h8"></path></svg>
+                <span class="nav-label">Wall of Fame</span>
+                <span class="nav-sub">Past performances</span>
+            </button>
+        </nav>
+
+        <!-- Phones only: the privacy note opens from here -->
+        <button type="button" id="privacyBtn" class="privacy-btn" aria-expanded="false" aria-controls="privacyNote">Privacy</button>
     </header>
 
-    <!-- Stage 4: remove "hidden" here and on the History tab and panel to show the tabs -->
-    <div class="tab-bar" role="tablist" aria-label="Sections" hidden>
-        <button type="button" class="tab" id="tabPractice" role="tab" aria-selected="true" aria-controls="panelPractice">Practice</button>
-        <!-- Stage 4: remove "hidden" to show the History tab -->
-        <button type="button" class="tab" id="tabHistory" role="tab" aria-selected="false" aria-controls="panelHistory" tabindex="-1" hidden>History</button>
-    </div>
-
     <main>
-        <section id="panelPractice" role="tabpanel" aria-labelledby="tabPractice">
-            <div class="practice-layout">
-                <div class="setup-column">
-                    <div class="steps">
+        <!-- Drop an MP3 anywhere on the stage -->
+        <div id="dropZone">
+            <section class="stage" id="stageView" aria-label="Stage">
 
-                        <div class="setup-options">
-                            <section class="step" id="stepTopic" aria-labelledby="stepTopicTitle">
-                                <h2 class="card-title" id="stepTopicTitle">Topic <span class="optional-tag">Optional</span></h2>
+                <!-- Scenery: decorative only -->
+                <div class="scenery" aria-hidden="true">
+                    <div class="spotlight"></div>
+                    <div class="floor"></div>
+                    <svg aria-hidden="true" width="1280" height="140" viewBox="0 0 1280 140" class="audience audience-laptop" focusable="false"><rect x="-6" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="-3" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="18" cy="45" rx="22" ry="15" fill="#1C0608"></ellipse><ellipse cx="18" cy="20" rx="12" ry="14" fill="#1C0608"></ellipse><rect x="52" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="55" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><rect x="110" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="113" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="139" cy="50" rx="24" ry="17" fill="#1C0608"></ellipse><ellipse cx="139" cy="24" rx="13" ry="15" fill="#1C0608"></ellipse><rect x="168" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="171" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="194" cy="44" rx="22" ry="15" fill="#1C0608"></ellipse><ellipse cx="194" cy="20" rx="11" ry="14" fill="#1C0608"></ellipse><rect x="226" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="229" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="250" cy="51" rx="25" ry="17" fill="#1C0608"></ellipse><ellipse cx="250" cy="24" rx="13" ry="15" fill="#1C0608"></ellipse><rect x="284" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="287" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="312" cy="45" rx="21" ry="15" fill="#1C0608"></ellipse><ellipse cx="312" cy="21" rx="11" ry="13" fill="#1C0608"></ellipse><rect x="342" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="345" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="369" cy="51" rx="24" ry="17" fill="#1C0608"></ellipse><ellipse cx="369" cy="24" rx="13" ry="15" fill="#1C0608"></ellipse><rect x="400" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="403" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><rect x="458" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="461" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="485" cy="45" rx="23" ry="16" fill="#1C0608"></ellipse><ellipse cx="485" cy="20" rx="12" ry="14" fill="#1C0608"></ellipse><rect x="516" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="519" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="540" cy="52" rx="25" ry="17" fill="#1C0608"></ellipse><ellipse cx="540" cy="24" rx="13" ry="15" fill="#1C0608"></ellipse><rect x="574" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="577" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="599" cy="50" rx="25" ry="17" fill="#1C0608"></ellipse><ellipse cx="599" cy="22" rx="13" ry="15" fill="#1C0608"></ellipse><rect x="632" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="635" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="660" cy="47" rx="23" ry="16" fill="#1C0608"></ellipse><ellipse cx="660" cy="21" rx="12" ry="14" fill="#1C0608"></ellipse><rect x="690" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="693" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="716" cy="44" rx="21" ry="15" fill="#1C0608"></ellipse><ellipse cx="716" cy="21" rx="11" ry="13" fill="#1C0608"></ellipse><rect x="748" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="751" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="771" cy="46" rx="21" ry="14" fill="#1C0608"></ellipse><ellipse cx="771" cy="23" rx="11" ry="13" fill="#1C0608"></ellipse><rect x="806" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="809" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="832" cy="46" rx="23" ry="16" fill="#1C0608"></ellipse><ellipse cx="832" cy="21" rx="12" ry="14" fill="#1C0608"></ellipse><rect x="864" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="867" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="888" cy="45" rx="22" ry="15" fill="#1C0608"></ellipse><ellipse cx="888" cy="20" rx="12" ry="14" fill="#1C0608"></ellipse><rect x="922" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="925" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="947" cy="48" rx="22" ry="15" fill="#1C0608"></ellipse><ellipse cx="947" cy="23" rx="12" ry="14" fill="#1C0608"></ellipse><rect x="980" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="983" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1006" cy="47" rx="25" ry="17" fill="#1C0608"></ellipse><ellipse cx="1006" cy="20" rx="13" ry="15" fill="#1C0608"></ellipse><rect x="1038" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="1041" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><rect x="1096" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="1099" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1124" cy="46" rx="23" ry="16" fill="#1C0608"></ellipse><ellipse cx="1124" cy="20" rx="12" ry="14" fill="#1C0608"></ellipse><rect x="1154" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="1157" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1178" cy="44" rx="23" ry="15" fill="#1C0608"></ellipse><ellipse cx="1178" cy="19" rx="12" ry="14" fill="#1C0608"></ellipse><rect x="1212" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="1215" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1240" cy="51" rx="25" ry="17" fill="#1C0608"></ellipse><ellipse cx="1240" cy="23" rx="13" ry="15" fill="#1C0608"></ellipse><rect x="1270" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="1273" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1293" cy="49" rx="22" ry="15" fill="#1C0608"></ellipse><ellipse cx="1293" cy="25" rx="11" ry="14" fill="#1C0608"></ellipse><rect x="-35" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="-32" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="-1" cy="98" rx="35" ry="24" fill="#0F0304"></ellipse><ellipse cx="-1" cy="59" rx="19" ry="22" fill="#0F0304"></ellipse><rect x="43" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="46" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="77" cy="91" rx="30" ry="21" fill="#0F0304"></ellipse><ellipse cx="77" cy="58" rx="16" ry="19" fill="#0F0304"></ellipse><rect x="121" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="124" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="155" cy="96" rx="35" ry="24" fill="#0F0304"></ellipse><ellipse cx="155" cy="57" rx="19" ry="22" fill="#0F0304"></ellipse><rect x="199" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="202" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><rect x="277" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="280" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><rect x="355" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="358" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="392" cy="91" rx="31" ry="21" fill="#0F0304"></ellipse><ellipse cx="392" cy="57" rx="17" ry="20" fill="#0F0304"></ellipse><rect x="433" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="436" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><rect x="511" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="514" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="546" cy="89" rx="30" ry="21" fill="#0F0304"></ellipse><ellipse cx="546" cy="55" rx="16" ry="19" fill="#0F0304"></ellipse><rect x="589" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="592" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><rect x="667" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="670" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="703" cy="88" rx="30" ry="21" fill="#0F0304"></ellipse><ellipse cx="703" cy="55" rx="16" ry="19" fill="#0F0304"></ellipse><rect x="745" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="748" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="778" cy="95" rx="36" ry="24" fill="#0F0304"></ellipse><ellipse cx="778" cy="56" rx="19" ry="22" fill="#0F0304"></ellipse><rect x="823" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="826" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="860" cy="96" rx="32" ry="22" fill="#0F0304"></ellipse><ellipse cx="860" cy="61" rx="17" ry="20" fill="#0F0304"></ellipse><rect x="901" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="904" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="934" cy="90" rx="32" ry="22" fill="#0F0304"></ellipse><ellipse cx="934" cy="55" rx="17" ry="20" fill="#0F0304"></ellipse><rect x="979" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="982" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1012" cy="98" rx="35" ry="24" fill="#0F0304"></ellipse><ellipse cx="1012" cy="60" rx="18" ry="22" fill="#0F0304"></ellipse><rect x="1057" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="1060" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1089" cy="90" rx="31" ry="21" fill="#0F0304"></ellipse><ellipse cx="1089" cy="56" rx="16" ry="19" fill="#0F0304"></ellipse><rect x="1135" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="1138" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1168" cy="94" rx="35" ry="24" fill="#0F0304"></ellipse><ellipse cx="1168" cy="56" rx="18" ry="22" fill="#0F0304"></ellipse><rect x="1213" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="1216" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><rect x="1291" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="1294" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1326" cy="97" rx="35" ry="24" fill="#0F0304"></ellipse><ellipse cx="1326" cy="57" rx="19" ry="22" fill="#0F0304"></ellipse><rect x="0" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="3" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="47" cy="153" rx="46" ry="32" fill="#050101"></ellipse><ellipse cx="47" cy="101" rx="24" ry="29" fill="#050101"></ellipse><rect x="104" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="107" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="148" cy="148" rx="41" ry="28" fill="#050101"></ellipse><ellipse cx="148" cy="102" rx="22" ry="26" fill="#050101"></ellipse><rect x="208" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="211" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="257" cy="148" rx="42" ry="29" fill="#050101"></ellipse><ellipse cx="257" cy="101" rx="22" ry="26" fill="#050101"></ellipse><rect x="312" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="315" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="359" cy="152" rx="46" ry="32" fill="#050101"></ellipse><ellipse cx="359" cy="100" rx="24" ry="29" fill="#050101"></ellipse><rect x="416" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="419" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="463" cy="149" rx="42" ry="29" fill="#050101"></ellipse><ellipse cx="463" cy="103" rx="22" ry="26" fill="#050101"></ellipse><rect x="520" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="523" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="563" cy="156" rx="48" ry="33" fill="#050101"></ellipse><ellipse cx="563" cy="103" rx="25" ry="30" fill="#050101"></ellipse><rect x="624" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="627" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="667" cy="150" rx="47" ry="32" fill="#050101"></ellipse><ellipse cx="667" cy="98" rx="25" ry="29" fill="#050101"></ellipse><rect x="728" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="731" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="775" cy="142" rx="40" ry="27" fill="#050101"></ellipse><ellipse cx="775" cy="98" rx="21" ry="25" fill="#050101"></ellipse><rect x="832" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="835" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="878" cy="153" rx="46" ry="31" fill="#050101"></ellipse><ellipse cx="878" cy="103" rx="24" ry="28" fill="#050101"></ellipse><rect x="936" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="939" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="979" cy="149" rx="47" ry="32" fill="#050101"></ellipse><ellipse cx="979" cy="97" rx="25" ry="29" fill="#050101"></ellipse><rect x="1040" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="1043" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1084" cy="153" rx="46" ry="32" fill="#050101"></ellipse><ellipse cx="1084" cy="102" rx="24" ry="29" fill="#050101"></ellipse><rect x="1144" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="1147" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1190" cy="150" rx="47" ry="32" fill="#050101"></ellipse><ellipse cx="1190" cy="98" rx="25" ry="29" fill="#050101"></ellipse><rect x="1248" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="1251" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1293" cy="154" rx="47" ry="32" fill="#050101"></ellipse><ellipse cx="1293" cy="102" rx="25" ry="29" fill="#050101"></ellipse></svg>
+                    <svg aria-hidden="true" width="390" height="100" viewBox="0 0 390 100" class="audience audience-phone" focusable="false"><rect x="-5" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="-2" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="10" cy="31" rx="16" ry="11" fill="#1C0608"></ellipse><ellipse cx="10" cy="13" rx="8" ry="10" fill="#1C0608"></ellipse><rect x="33" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="36" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="49" cy="31" rx="14" ry="9" fill="#1C0608"></ellipse><ellipse cx="49" cy="16" rx="7" ry="9" fill="#1C0608"></ellipse><rect x="71" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="74" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><rect x="109" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="112" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="123" cy="31" rx="14" ry="10" fill="#1C0608"></ellipse><ellipse cx="123" cy="16" rx="7" ry="9" fill="#1C0608"></ellipse><rect x="147" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="150" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="162" cy="33" rx="14" ry="10" fill="#1C0608"></ellipse><ellipse cx="162" cy="17" rx="8" ry="9" fill="#1C0608"></ellipse><rect x="185" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="188" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="202" cy="35" rx="15" ry="10" fill="#1C0608"></ellipse><ellipse cx="202" cy="19" rx="8" ry="9" fill="#1C0608"></ellipse><rect x="223" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="226" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><rect x="261" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="264" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="277" cy="29" rx="14" ry="10" fill="#1C0608"></ellipse><ellipse cx="277" cy="14" rx="7" ry="9" fill="#1C0608"></ellipse><rect x="299" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="302" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="318" cy="32" rx="14" ry="10" fill="#1C0608"></ellipse><ellipse cx="318" cy="16" rx="7" ry="9" fill="#1C0608"></ellipse><rect x="337" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="340" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="353" cy="30" rx="15" ry="10" fill="#1C0608"></ellipse><ellipse cx="353" cy="13" rx="8" ry="10" fill="#1C0608"></ellipse><rect x="375" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="378" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><rect x="-23" y="34" width="46" height="66" rx="15" fill="#560E17"></rect><rect x="-20" y="36" width="40" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1" cy="62" rx="21" ry="14" fill="#0F0304"></ellipse><ellipse cx="1" cy="39" rx="11" ry="13" fill="#0F0304"></ellipse><rect x="29" y="34" width="46" height="66" rx="15" fill="#560E17"></rect><rect x="32" y="36" width="40" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="52" cy="64" rx="20" ry="14" fill="#0F0304"></ellipse><ellipse cx="52" cy="42" rx="11" ry="12" fill="#0F0304"></ellipse><rect x="81" y="34" width="46" height="66" rx="15" fill="#560E17"></rect><rect x="84" y="36" width="40" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="102" cy="64" rx="21" ry="15" fill="#0F0304"></ellipse><ellipse cx="102" cy="40" rx="11" ry="13" fill="#0F0304"></ellipse><rect x="133" y="34" width="46" height="66" rx="15" fill="#560E17"></rect><rect x="136" y="36" width="40" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="157" cy="65" rx="20" ry="14" fill="#0F0304"></ellipse><ellipse cx="157" cy="43" rx="11" ry="12" fill="#0F0304"></ellipse><rect x="185" y="34" width="46" height="66" rx="15" fill="#560E17"></rect><rect x="188" y="36" width="40" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="208" cy="62" rx="22" ry="15" fill="#0F0304"></ellipse><ellipse cx="208" cy="38" rx="12" ry="14" fill="#0F0304"></ellipse><rect x="237" y="34" width="46" height="66" rx="15" fill="#560E17"></rect><rect x="240" y="36" width="40" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="257" cy="65" rx="22" ry="15" fill="#0F0304"></ellipse><ellipse cx="257" cy="42" rx="11" ry="13" fill="#0F0304"></ellipse><rect x="289" y="34" width="46" height="66" rx="15" fill="#560E17"></rect><rect x="292" y="36" width="40" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="314" cy="63" rx="20" ry="14" fill="#0F0304"></ellipse><ellipse cx="314" cy="41" rx="11" ry="12" fill="#0F0304"></ellipse><rect x="341" y="34" width="46" height="66" rx="15" fill="#560E17"></rect><rect x="344" y="36" width="40" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="364" cy="65" rx="21" ry="14" fill="#0F0304"></ellipse><ellipse cx="364" cy="42" rx="11" ry="13" fill="#0F0304"></ellipse><rect x="393" y="34" width="46" height="66" rx="15" fill="#560E17"></rect><rect x="396" y="36" width="40" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="416" cy="61" rx="22" ry="15" fill="#0F0304"></ellipse><ellipse cx="416" cy="37" rx="11" ry="13" fill="#0F0304"></ellipse><rect x="0" y="62" width="60" height="90" rx="19" fill="#6C131E"></rect><rect x="3" y="64" width="54" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="31" cy="107" rx="31" ry="21" fill="#050101"></ellipse><ellipse cx="31" cy="72" rx="16" ry="19" fill="#050101"></ellipse><rect x="68" y="62" width="60" height="90" rx="19" fill="#6C131E"></rect><rect x="71" y="64" width="54" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="97" cy="100" rx="29" ry="20" fill="#050101"></ellipse><ellipse cx="97" cy="67" rx="16" ry="18" fill="#050101"></ellipse><rect x="136" y="62" width="60" height="90" rx="19" fill="#6C131E"></rect><rect x="139" y="64" width="54" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="164" cy="96" rx="26" ry="18" fill="#050101"></ellipse><ellipse cx="164" cy="67" rx="14" ry="16" fill="#050101"></ellipse><rect x="204" y="62" width="60" height="90" rx="19" fill="#6C131E"></rect><rect x="207" y="64" width="54" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="232" cy="99" rx="27" ry="19" fill="#050101"></ellipse><ellipse cx="232" cy="69" rx="14" ry="17" fill="#050101"></ellipse><rect x="272" y="62" width="60" height="90" rx="19" fill="#6C131E"></rect><rect x="275" y="64" width="54" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="299" cy="101" rx="28" ry="19" fill="#050101"></ellipse><ellipse cx="299" cy="70" rx="15" ry="18" fill="#050101"></ellipse><rect x="340" y="62" width="60" height="90" rx="19" fill="#6C131E"></rect><rect x="343" y="64" width="54" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="372" cy="102" rx="31" ry="21" fill="#050101"></ellipse><ellipse cx="372" cy="69" rx="16" ry="19" fill="#050101"></ellipse></svg>
+                    <div class="curtain curtain-left"></div>
+                    <div class="curtain curtain-right"></div>
+                    <div class="tieback tieback-left"></div>
+                    <div class="tieback tieback-right"></div>
+                    <div class="valance"></div>
+                    <div class="scallops"></div>
+                </div>
 
-                                <label for="topicInput" class="field-label">Speech topic</label>
-                                <div class="topic-row">
-                                    <textarea id="topicInput" class="text-input topic-textarea" rows="1" maxlength="120" placeholder="Type your own topic, or get a random one" autocomplete="off"></textarea>
-                                    <button type="button" id="clearTopicBtn" class="btn-small" hidden>Clear</button>
-                                </div>
+                <section class="topic-area" id="stepTopic" aria-label="Topic">
+                    <div class="topic-meta">
+                        <label for="topicInput" class="topic-label">Your topic</label>
+                        <span id="topicBadge" class="topic-badge-group" hidden>
+                            <span id="topicBadgeType" class="topic-badge"></span>
+                            <span id="topicBadgeHint" class="topic-hint"></span>
+                        </span>
+                    </div>
 
-                                <p id="topicBadge" class="topic-badge-row" hidden>
-                                    <span id="topicBadgeType" class="topic-badge"></span>
-                                    <span id="topicBadgeHint" class="topic-hint"></span>
-                                </p>
-                                <p id="topicAnnounce" class="visually-hidden" aria-live="polite"></p>
+                    <div class="topic-stage">
+                        <textarea id="topicInput" class="topic-input" rows="1" maxlength="120" placeholder="Roll a topic, or write your own" autocomplete="off" spellcheck="false"></textarea>
+                    </div>
+                    <p id="topicAnnounce" class="visually-hidden" aria-live="polite"></p>
 
-                                <button type="button" id="randomTopicBtn" class="btn-secondary">Random topic</button>
-                            </section>
+                    <div class="topic-actions">
+                        <button type="button" id="randomTopicBtn" class="btn-roll">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 7h3.5l9 10H21"></path><path d="M3 17h3.5l3-3.4"></path><path d="M14.5 10.4l2-2.4H21"></path><path d="M18 5l3 3-3 3"></path><path d="M18 14l3 3-3 3"></path></svg>
+                            Roll a new topic
+                        </button>
+                        <div class="topic-links">
+                            <button type="button" id="writeTopicBtn" class="btn-text">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20h4L19 9l-4-4L4 16v4z"></path></svg>
+                                Write your own
+                            </button>
+                            <span class="link-dot" aria-hidden="true">·</span>
+                            <button type="button" id="clearTopicBtn" class="btn-text btn-text-muted">
+                                <span class="long-label">Speak freely, no topic</span><span class="short-label" aria-hidden="true">No topic</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
 
-                            <section class="step" id="stepTime" aria-labelledby="stepTimeTitle">
-                                <h2 class="card-title" id="stepTimeTitle">Time limit <span class="optional-tag">Optional</span></h2>
-                                <p class="card-helper">Speeches can be up to 10 minutes long.</p>
-
-                                <fieldset class="choice-group">
-                                    <legend class="visually-hidden">Time limit</legend>
-                                    <label class="choice"><input type="radio" name="timeLimit" value="0" checked><span>Untimed</span></label>
-                                    <label class="choice"><input type="radio" name="timeLimit" value="60"><span>1 min</span></label>
-                                    <label class="choice"><input type="radio" name="timeLimit" value="180"><span>3 min</span></label>
-                                    <label class="choice"><input type="radio" name="timeLimit" value="300"><span>5 min</span></label>
-                                    <label class="choice"><input type="radio" name="timeLimit" value="custom"><span>Custom</span></label>
-                                </fieldset>
-
-                                <div id="customTime" class="custom-time" hidden>
-                                    <div class="custom-fields">
-                                        <div class="custom-field">
-                                            <label for="customMinutes" class="field-label">Minutes</label>
-                                            <div class="stepper">
-                                                <button type="button" class="stepper-btn" data-target="customMinutes" data-step="-1" aria-label="Decrease minutes">−</button>
-                                                <input type="number" id="customMinutes" class="text-input" min="0" max="10" step="1" value="2" inputmode="numeric" aria-describedby="customTimeError">
-                                                <button type="button" class="stepper-btn" data-target="customMinutes" data-step="1" aria-label="Increase minutes">+</button>
-                                            </div>
-                                        </div>
-                                        <div class="custom-field">
-                                            <label for="customSeconds" class="field-label">Seconds</label>
-                                            <div class="stepper">
-                                                <button type="button" class="stepper-btn" data-target="customSeconds" data-step="-1" aria-label="Decrease seconds">−</button>
-                                                <input type="number" id="customSeconds" class="text-input" min="0" max="59" step="1" value="0" inputmode="numeric" aria-describedby="customTimeError">
-                                                <button type="button" class="stepper-btn" data-target="customSeconds" data-step="1" aria-label="Increase seconds">+</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <p id="customTimeError" class="field-error" aria-live="polite"></p>
-                                </div>
-                            </section>
+                <section class="settings-strip" id="stepTime" aria-label="Practice settings">
+                    <div class="setting">
+                        <span class="setting-label" id="speakingTimeLabel">Speaking time</span>
+                        <div class="choice-group" role="radiogroup" aria-labelledby="speakingTimeLabel">
+                            <label class="choice"><input type="radio" name="timeLimit" value="0" checked><span>Untimed</span></label>
+                            <label class="choice"><input type="radio" name="timeLimit" value="60"><span><span class="long-label">1 min</span><span class="short-label" aria-hidden="true">1m</span></span></label>
+                            <label class="choice"><input type="radio" name="timeLimit" value="180"><span><span class="long-label">3 min</span><span class="short-label" aria-hidden="true">3m</span></span></label>
+                            <label class="choice"><input type="radio" name="timeLimit" value="300"><span><span class="long-label">5 min</span><span class="short-label" aria-hidden="true">5m</span></span></label>
+                            <label class="choice"><input type="radio" name="timeLimit" value="custom"><span>Custom</span></label>
                         </div>
 
-                        <section class="step" id="stepSpeak" aria-labelledby="stepSpeakTitle">
-                            <h2 class="card-title" id="stepSpeakTitle">Speak</h2>
-                            <p class="card-helper">Upload an MP3 of your speech, up to 10 minutes and 25 MB.</p>
-
-                            <!-- Stage 3: live recording option (mic button, preparation countdown, stopwatch) goes here -->
-
-                            <div class="upload-box" id="dropZone">
-                                <input type="file" id="audioFile" class="file-input-hidden" accept=".mp3,audio/mpeg">
-                                <label for="audioFile" class="file-picker-btn">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                        <polyline points="17 8 12 3 7 8"/>
-                                        <line x1="12" y1="3" x2="12" y2="15"/>
-                                    </svg>
-                                    Choose File
-                                </label>
-
-                                <span id="fileName" class="file-name">No File Chosen</span>
-                                <p id="lengthLine" class="length-line" hidden></p>
-                                <p class="drop-hint">or drag an MP3 here</p>
+                        <div id="customTime" class="custom-time" hidden>
+                            <div class="custom-fields">
+                                <div class="custom-field">
+                                    <label for="customMinutes" class="field-label"><span class="long-label">Minutes</span><span class="short-label" aria-hidden="true">Min</span></label>
+                                    <div class="stepper">
+                                        <button type="button" class="stepper-btn" data-target="customMinutes" data-step="-1" aria-label="Decrease minutes">−</button>
+                                        <input type="number" id="customMinutes" class="text-input" min="0" max="10" step="1" value="2" inputmode="numeric" aria-describedby="customTimeError">
+                                        <button type="button" class="stepper-btn" data-target="customMinutes" data-step="1" aria-label="Increase minutes">+</button>
+                                    </div>
+                                </div>
+                                <div class="custom-field">
+                                    <label for="customSeconds" class="field-label"><span class="long-label">Seconds</span><span class="short-label" aria-hidden="true">Sec</span></label>
+                                    <div class="stepper">
+                                        <button type="button" class="stepper-btn" data-target="customSeconds" data-step="-1" aria-label="Decrease seconds">−</button>
+                                        <input type="number" id="customSeconds" class="text-input" min="0" max="59" step="1" value="0" inputmode="numeric" aria-describedby="customTimeError">
+                                        <button type="button" class="stepper-btn" data-target="customSeconds" data-step="1" aria-label="Increase seconds">+</button>
+                                    </div>
+                                </div>
                             </div>
-
-                            <button type="button" id="uploadBtn" class="btn-primary">Begin Analysis</button>
-
-                            <p id="status" role="status" aria-live="polite"></p>
-                            <p id="waitNote" class="wait-note" style="display:none;">Longer speeches can take a few minutes to analyze. Please keep this page open.</p>
-
-                            <p class="privacy-note">Recordings are used only to create your feedback.<br>They are deleted automatically after 7 days, and results after 30 days.</p>
-                        </section>
-
+                            <p id="customTimeError" class="field-error" aria-live="polite"></p>
+                        </div>
                     </div>
-                </div>
 
-                <div class="results-column">
-                    <div class="results-panel" id="resultsPanel">
-                        <p id="resultPlaceholder" class="result-placeholder">Your feedback will appear here.</p>
-                        <section id="result" class="result-card" aria-label="Results" style="display:none;">
-                        </section>
+                    <!-- Stage 3: remove "hidden" to show the prep time choice -->
+                    <div class="setting" hidden>
+                        <span class="setting-label" id="prepTimeLabel">Prep time</span>
+                        <div class="choice-group" role="radiogroup" aria-labelledby="prepTimeLabel">
+                            <label class="choice"><input type="radio" name="prepTime" value="0"><span>Off</span></label>
+                            <label class="choice"><input type="radio" name="prepTime" value="30" checked><span>30 sec</span></label>
+                            <label class="choice"><input type="radio" name="prepTime" value="60"><span>1 min</span></label>
+                            <label class="choice"><input type="radio" name="prepTime" value="120"><span>2 min</span></label>
+                        </div>
                     </div>
+
+                    <!-- Stage 3: remove "hidden" to show the stopwatch switch -->
+                    <div class="setting" hidden>
+                        <span class="setting-label" id="stopwatchLabel">Stopwatch while speaking</span>
+                        <button type="button" id="stopwatchToggle" class="switch-btn" role="switch" aria-checked="true" aria-labelledby="stopwatchLabel">
+                            <span class="switch-track"><span class="switch-thumb"></span></span>
+                            <span class="switch-word">Show</span>
+                        </button>
+                    </div>
+                </section>
+
+                <div class="stage-bottom">
+                    <!-- Stage 3: the mic replaces this as the main action, upload moves under it -->
+                    <section class="stage-action" id="stepSpeak" aria-labelledby="stepSpeakTitle">
+                        <h2 class="action-title" id="stepSpeakTitle">Your turn on stage</h2>
+                        <p class="action-text">Upload an MP3 of your speech. Up to 10 minutes and 25 MB.</p>
+
+                        <div id="fileInfo" class="file-info" hidden>
+                            <span id="fileName" class="file-name">No File Chosen</span>
+                            <p id="lengthLine" class="length-line" hidden></p>
+                        </div>
+
+                        <div class="action-row">
+                            <button type="button" id="uploadBtn" class="btn-gold" hidden>Begin the performance</button>
+                            <input type="file" id="audioFile" class="file-input-hidden" accept=".mp3,audio/mpeg">
+                            <label for="audioFile" class="btn-upload">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 16V4"></path><path d="M7 9l5-5 5 5"></path><path d="M5 20h14"></path></svg>
+                                <span id="uploadLabel">Upload an MP3</span>
+                            </label>
+                        </div>
+
+                        <p id="status" role="status" aria-live="polite"></p>
+                        <p id="waitNote" class="wait-note" style="display:none;">Longer speeches can take a few minutes to analyze. Please keep this page open.</p>
+                    </section>
+
+                    <p id="privacyNote" class="privacy-note">Recordings are used only to create your feedback.<br>They are deleted automatically after 7 days, and results after 30 days.</p>
                 </div>
+            </section>
+        </div>
+
+        <!-- Placeholder: part 2 of the Theatre redesign builds Backstage -->
+        <section id="backstageView" class="backstage-placeholder" aria-labelledby="backstageTitle" hidden>
+            <div class="backstage-inner">
+                <p class="eyebrow">Backstage</p>
+                <h2 id="backstageTitle">Coach's notes are on the way</h2>
+                <p>Backstage opens in the next update. For now, feedback appears below the stage after a performance.</p>
+                <button type="button" id="backToStageBtn" class="btn-gold">Back to the stage</button>
             </div>
         </section>
 
-        <!-- Stage 4: remove "hidden" to show the History panel -->
-        <section id="panelHistory" role="tabpanel" aria-labelledby="tabHistory" hidden>
-            <div class="card">
-                <h2 class="card-title">History</h2>
+        <section id="resultsSection" class="results-section" aria-label="Results">
+            <div class="results-panel" id="resultsPanel">
+                <p id="resultPlaceholder" class="result-placeholder" hidden>Your feedback will appear here.</p>
+                <section id="result" class="result-card" aria-label="Results" style="display:none;">
+                </section>
             </div>
         </section>
     </main>

@@ -1,19 +1,64 @@
+/* Classic Theatre look. Values come from design/DESIGN-NOTES.md and design/theatre-*.dc.html */
 :root {
-    --bg-deep: #0f172a;
-    --bg-card: #1e293b;
-    --gold: #e2b857;
-    --gold-glow: rgba(226, 184, 87, 0.3);
-    --text-main: #f8fafc;
-    --text-sec: #94a3b8;
-    --text-muted: #cbd5e1;
-    --ok: #4ade80;
-    --over: #f87171;
-    --divider: rgba(255, 255, 255, 0.08);
+    /* Text and page */
+    --bg: #1A0B0A;
+    --text: #EFE2CF;
+    --heading: #FFF6E3;
+    --text-sec: #D8C6AE;
+    --muted: #BCA992;
+    --floor-text: #F1E2CC;
+    --floor-text-soft: #E6D3BA;
+
+    /* Gold */
+    --gold: #D9AE52;
+    --gold-light: #F0CF86;
+    --gold-dark: #A97D2B;
+    --on-gold: #1E1006;
+    --gold-soft: rgba(217, 174, 82, 0.14);
+    --gold-line: rgba(217, 174, 82, 0.6);
+
+    /* Lines */
+    --line: rgba(246, 234, 211, 0.16);
+    --chip-border: rgba(246, 234, 211, 0.26);
+
+    /* Time status (color is never the only signal: the words "over" and "under" are always shown) */
+    --ok: #8FE0B0;
+    --over: #FFB066;
+
+    /* Scenery */
+    --velvet-dark: #4A0812;
+    --velvet: #8C1426;
+    --velvet-light: #B8283A;
+    --wood: #6B3F22;
+    --wood-gap: #43260F;
+    --wood-light: #7A4A2A;
+    --wood-edge: #A0703F;
+    --spotlight: rgba(255, 214, 150, 0.30);
+    --backstage-wall: #3A0E14;
+    --backstage-stripe: #2A080D;
+
+    /* Fonts */
+    --serif: Fraunces, Georgia, serif;
+    --sans: Manrope, system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+
+    /* Laptop layout (the design is drawn at 1280 px wide) */
+    --curtain-w: clamp(96px, 13.75vw, 264px);
+    --inset: clamp(116px, 15.625vw, 300px);
+    --header-top: 92px;
+    --stage-top: 168px;
+    --floor-h: 190px;
+    --audience-h: max(140px, 10.9375vw);
+    /* How much of the audience band is kept clear of the settings (1 = all of it) */
+    --audience-reserve: 1;
+    --topic-size: clamp(30px, 3.6vw, 46px);
+    --topic-lines: 3;
+    --control-h: 44px;
+    --roll-h: 46px;
 }
 
 * {
     box-sizing: border-box;
-    transition: all 0.3s ease;
 }
 
 /* Anything with the hidden attribute stays hidden, even if a class sets display */
@@ -21,615 +66,38 @@
     display: none !important;
 }
 
+/* No visible scrollbars anywhere. Scrolling still works with the wheel, keys and swiping. */
+* {
+    scrollbar-width: none;
+}
+
+::-webkit-scrollbar {
+    display: none;
+}
+
+html {
+    background: var(--bg);
+}
+
 body {
-    font-family: 'Inter', 'Segoe UI', sans-serif;
     margin: 0;
     min-height: 100vh;
-    background: radial-gradient(circle at top, #1e293b 0%, #0f172a 100%);
-    background-attachment: fixed;
-    color: var(--text-main);
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
     line-height: 1.5;
+}
+
+button,
+input,
+textarea {
+    font: inherit;
 }
 
 /* Visible keyboard focus for everything that can be focused */
 :focus-visible {
-    outline: 2px solid var(--gold);
+    outline: 2px solid var(--gold-light);
     outline-offset: 3px;
-}
-
-/* ---------- Page layout (mobile first) ---------- */
-.app {
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px 16px 40px;
-    animation: slideUp 0.6s ease-out;
-}
-
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Compact header: title and subtitle on one line, wrapping on phones */
-.app-header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 4px 16px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--divider);
-}
-
-h1 {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 700;
-    background: linear-gradient(to right, #ffffff, var(--gold));
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: -0.02em;
-}
-
-.subtitle {
-    margin: 0;
-    font-size: 12px;
-    color: var(--text-sec);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-/* ---------- Tabs ---------- */
-.tab-bar {
-    display: flex;
-    gap: 8px;
-    padding: 6px;
-    margin-bottom: 20px;
-    background: rgba(15, 23, 42, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 14px;
-}
-
-.tab {
-    flex: 1;
-    min-height: 44px;
-    padding: 10px 16px;
-    border: none;
-    border-radius: 10px;
-    background: transparent;
-    color: var(--text-sec);
-    font: inherit;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.tab:hover {
-    color: var(--text-main);
-}
-
-.tab[aria-selected="true"] {
-    background: var(--bg-card);
-    color: var(--gold);
-    box-shadow: inset 0 -2px 0 var(--gold);
-}
-
-/* ---------- Steps (no boxes: sections sit on the page, split by thin lines) ---------- */
-.steps {
-    counter-reset: step;
-}
-
-.card-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 0 0 12px;
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--text-main);
-}
-
-.card-helper {
-    margin: -4px 0 12px;
-    font-size: 14px;
-    color: var(--text-sec);
-}
-
-/* Hidden steps are skipped by the counter, so the visible steps are always numbered 1, 2, 3... */
-.step {
-    counter-increment: step;
-    min-width: 0;
-    padding: 20px 0;
-    border-bottom: 1px solid var(--divider);
-}
-
-.steps > .step:last-child {
-    border-bottom: none;
-}
-
-.step .card-title::before {
-    content: counter(step);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: var(--gold);
-    color: #000;
-    font-size: 13px;
-}
-
-/* Topic and Time sit side by side only when this area is wide enough.
-   A container query is like a media query, but it checks this box's width instead of the screen's. */
-.setup-column {
-    container-type: inline-size;
-}
-
-@container (min-width: 760px) {
-    .setup-options {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        column-gap: 32px;
-    }
-}
-
-/* ---------- Two-column layout ---------- */
-.results-column {
-    padding-top: 20px;
-    border-top: 1px solid var(--divider);
-}
-
-.result-placeholder {
-    margin: 0;
-    font-size: 15px;
-    color: var(--text-sec);
-}
-
-@media (min-width: 1024px) {
-    .practice-layout {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        column-gap: 40px;
-        align-items: start;
-    }
-
-    .results-column {
-        align-self: stretch;
-        padding-top: 20px;
-        padding-left: 40px;
-        border-top: none;
-        border-left: 1px solid var(--divider);
-    }
-
-    /* Added by app.js only when the results fit in the window */
-    .results-panel.is-sticky {
-        position: sticky;
-        top: 24px;
-    }
-}
-
-/* ---------- Upload / drop zone ---------- */
-.upload-box {
-    position: relative;
-    border: 2px dashed rgba(226, 184, 87, 0.2);
-    border-radius: 16px;
-    padding: 24px 16px;
-    text-align: center;
-    background: rgba(15, 23, 42, 0.4);
-}
-
-.upload-box:hover {
-    border-color: rgba(226, 184, 87, 0.5);
-    background: rgba(226, 184, 87, 0.03);
-}
-
-/* Highlight while a file is being dragged over the box */
-.upload-box.dragging {
-    border-color: var(--gold);
-    border-style: solid;
-    background: rgba(226, 184, 87, 0.08);
-    box-shadow: 0 0 0 4px var(--gold-glow), inset 0 0 40px rgba(226, 184, 87, 0.08);
-    transform: scale(1.02);
-}
-
-/* Stops the highlight from flickering when the cursor moves over the text inside */
-.upload-box.dragging * {
-    pointer-events: none;
-}
-
-/* Hide the plain browser file input but keep it usable */
-.file-input-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    overflow: hidden;
-}
-
-/* The styled Choose File button */
-.file-picker-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-height: 44px;
-    padding: 10px 22px;
-    border: 1px solid rgba(226, 184, 87, 0.5);
-    border-radius: 10px;
-    background: rgba(226, 184, 87, 0.08);
-    color: var(--gold);
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    user-select: none;
-}
-
-.file-picker-btn:hover {
-    background: rgba(226, 184, 87, 0.16);
-    border-color: var(--gold);
-    transform: translateY(-1px);
-}
-
-.file-picker-btn svg {
-    width: 16px;
-    height: 16px;
-}
-
-.file-input-hidden:focus-visible + .file-picker-btn {
-    outline: 2px solid var(--gold);
-    outline-offset: 3px;
-}
-
-.file-name {
-    display: block;
-    max-width: 100%;
-    margin-top: 12px;
-    font-size: 14px;
-    color: var(--text-sec);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.file-name.has-file {
-    color: var(--gold);
-    font-weight: 500;
-}
-
-.drop-hint {
-    margin: 12px 0 0;
-    font-size: 13px;
-    color: var(--text-sec);
-}
-
-/* ---------- Main action button ---------- */
-.btn-primary {
-    margin-top: 20px;
-    width: 100%;
-    min-height: 52px;
-    padding: 16px;
-    border: none;
-    border-radius: 12px;
-    background: var(--gold);
-    color: #000;
-    font: inherit;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    box-shadow: 0 4px 14px 0 var(--gold-glow);
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px 0 var(--gold-glow);
-    filter: brightness(1.1);
-}
-
-.btn-primary:disabled {
-    background: #475569;
-    color: #e2e8f0;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-    filter: none;
-}
-
-/* ---------- Status and notes ---------- */
-#status {
-    margin: 16px 0 0;
-    text-align: center;
-    font-size: 15px;
-    color: var(--gold);
-    font-weight: 500;
-}
-
-#status:empty {
-    margin: 0;
-}
-
-.wait-note {
-    margin: 8px 0 0;
-    text-align: center;
-    font-size: 14px;
-    color: var(--text-sec);
-}
-
-.privacy-note {
-    margin: 20px 0 0;
-    padding-top: 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-    text-align: center;
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--text-sec);
-}
-
-.privacy-note strong {
-    font-weight: 600;
-}
-
-/* ---------- Topic and time options ---------- */
-.optional-tag {
-    padding: 2px 8px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-sec);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.field-label {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-muted);
-}
-
-.text-input {
-    width: 100%;
-    min-height: 44px;
-    padding: 10px 12px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 10px;
-    background: rgba(15, 23, 42, 0.6);
-    color: var(--text-main);
-    font: inherit;
-    font-size: 15px;
-}
-
-.text-input::placeholder {
-    color: var(--text-sec);
-}
-
-.text-input:focus {
-    border-color: var(--gold);
-}
-
-.text-input[aria-invalid="true"] {
-    border-color: var(--over);
-}
-
-.text-input:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-/* The topic box with the Clear button beside it */
-.topic-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-}
-
-.topic-row .text-input {
-    flex: 1;
-    min-width: 0;
-}
-
-/* Grows with its text (app.js sets the height). Only the border color animates,
-   so the height doesn't slide around on every change. */
-.topic-textarea {
-    display: block;
-    resize: none;
-    overflow-y: hidden;
-    line-height: 1.5;
-    transition: border-color 0.3s ease;
-}
-
-/* Dimmed while the random topics flick past */
-.topic-textarea.rolling {
-    color: var(--text-sec);
-}
-
-.btn-secondary,
-.btn-small {
-    min-height: 44px;
-    border: 1px solid rgba(226, 184, 87, 0.5);
-    border-radius: 10px;
-    background: rgba(226, 184, 87, 0.08);
-    color: var(--gold);
-    font: inherit;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.btn-secondary {
-    margin-top: 16px;
-    padding: 10px 22px;
-    font-size: 15px;
-}
-
-.btn-small {
-    flex-shrink: 0;
-    padding: 8px 14px;
-    font-size: 14px;
-}
-
-.btn-secondary:hover,
-.btn-small:hover {
-    background: rgba(226, 184, 87, 0.16);
-    border-color: var(--gold);
-}
-
-.btn-secondary:disabled,
-.btn-small:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.topic-badge-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    margin: 10px 0 0;
-}
-
-.topic-badge {
-    display: inline-block;
-    padding: 2px 10px;
-    border: 1px solid rgba(226, 184, 87, 0.3);
-    border-radius: 20px;
-    background: rgba(226, 184, 87, 0.1);
-    color: var(--gold);
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.topic-hint {
-    font-size: 13px;
-    color: var(--text-sec);
-}
-
-/* Time options: real radio buttons styled as buttons */
-.choice-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 0;
-    padding: 0;
-    border: none;
-}
-
-.choice {
-    position: relative;
-}
-
-/* Hide the round radio dot but keep it usable with keyboard and screen readers */
-.choice input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-}
-
-.choice span {
-    display: inline-flex;
-    align-items: center;
-    min-height: 44px;
-    padding: 10px 16px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 10px;
-    background: rgba(15, 23, 42, 0.6);
-    color: var(--text-muted);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.choice span:hover {
-    border-color: rgba(226, 184, 87, 0.5);
-}
-
-.choice input:checked + span {
-    border-color: var(--gold);
-    background: rgba(226, 184, 87, 0.12);
-    color: var(--gold);
-}
-
-.choice input:focus-visible + span {
-    outline: 2px solid var(--gold);
-    outline-offset: 3px;
-}
-
-.choice input:disabled + span {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.custom-time {
-    margin-top: 16px;
-}
-
-.custom-fields {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px 20px;
-}
-
-/* A number box with − and + buttons on each side */
-.stepper {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.stepper .text-input {
-    width: 56px;
-    text-align: center;
-    /* Firefox: hide the built-in up/down arrows */
-    -moz-appearance: textfield;
-    appearance: textfield;
-}
-
-/* Chrome, Edge and Safari: hide the built-in up/down arrows */
-.stepper .text-input::-webkit-inner-spin-button,
-.stepper .text-input::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-.stepper-btn {
-    flex-shrink: 0;
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    border: 1px solid rgba(226, 184, 87, 0.5);
-    border-radius: 50%;
-    background: rgba(226, 184, 87, 0.08);
-    color: var(--gold);
-    font: inherit;
-    font-size: 20px;
-    font-weight: 600;
-    line-height: 1;
-    cursor: pointer;
-}
-
-.stepper-btn:hover {
-    background: rgba(226, 184, 87, 0.16);
-    border-color: var(--gold);
-}
-
-.stepper-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.field-error {
-    margin: 8px 0 0;
-    font-size: 14px;
-    color: var(--over);
-}
-
-.field-error:empty {
-    display: none;
 }
 
 /* Hidden on screen but still read by screen readers */
@@ -645,10 +113,757 @@ h1 {
     border: 0;
 }
 
-.length-line {
-    margin: 8px 0 0;
+/* Short labels are only for phones (see the phone section). Screen readers always hear the long label. */
+.short-label {
+    display: none;
+}
+
+.app {
+    position: relative;
+}
+
+/* ---------- Header ---------- */
+.site-header {
+    position: absolute;
+    z-index: 20;
+    top: var(--header-top);
+    left: var(--inset);
+    right: var(--inset);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    font-family: var(--serif);
+    font-size: 23px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    color: var(--heading);
+}
+
+.logo-accent {
+    color: var(--gold);
+}
+
+.main-nav {
+    display: flex;
+    gap: 4px;
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    min-height: 48px;
+    padding: 4px 14px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text-sec);
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.nav-item:hover {
+    background: rgba(217, 174, 82, 0.08);
+}
+
+.nav-item[aria-current="page"] {
+    background: rgba(217, 174, 82, 0.16);
+    color: var(--gold-light);
+}
+
+.nav-icon {
+    display: none;
+}
+
+.nav-label {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.nav-sub {
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--muted);
+}
+
+/* The Privacy button is for phones only. On laptops the note is always shown on the floor. */
+.privacy-btn {
+    display: none;
+}
+
+/* ---------- Stage ---------- */
+.stage {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--stage-top) var(--inset) 0;
+    overflow: hidden;
+    text-align: center;
+}
+
+/* Scenery sits behind everything and never catches clicks */
+.scenery,
+.scenery * {
+    pointer-events: none;
+}
+
+.scenery {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+
+.spotlight {
+    position: absolute;
+    left: 12.5%;
+    right: 12.5%;
+    top: -140px;
+    height: 880px;
+    background: radial-gradient(ellipse 55% 62% at 50% 12%, var(--spotlight), rgba(0, 0, 0, 0) 70%);
+    animation: spotlightFade 1.2s ease-out both;
+}
+
+@keyframes spotlightFade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* The floor's gold-brown top edge is inside its height, so the audience can stand exactly on it */
+.floor {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--floor-h);
+    border-top: 4px solid var(--wood-edge);
+    background:
+        radial-gradient(ellipse 22% 40% at 50% 8%, rgba(255, 214, 150, 0.38), rgba(0, 0, 0, 0) 70%),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.6)),
+        repeating-linear-gradient(90deg, var(--wood) 0 118px, var(--wood-gap) 118px 120px, var(--wood-light) 120px 238px, var(--wood-gap) 238px 240px);
+}
+
+/* The seated audience: its bottom edge sits on the floor's top edge. Width follows the height.
+   The front row is drawn past the bottom of the SVG box and gets clipped there (the default
+   overflow: hidden), which is what keeps it off the floor. */
+.audience {
+    position: absolute;
+    left: 50%;
+    bottom: var(--floor-h);
+    width: auto;
+    height: var(--audience-h);
+    transform: translateX(-50%);
+}
+
+.audience-phone {
+    display: none;
+}
+
+/* Side curtains, drawn over the edges of the audience, with rounded tied-back bottoms */
+.curtain {
+    position: absolute;
+    top: 0;
+    bottom: var(--floor-h);
+    width: var(--curtain-w);
+}
+
+.curtain-left {
+    left: 0;
+    border-bottom-right-radius: 136px 300px;
+    box-shadow: 12px 0 40px rgba(0, 0, 0, 0.5);
+    background:
+        linear-gradient(90deg, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.55)),
+        repeating-linear-gradient(90deg, var(--velvet-dark) 0, var(--velvet) 15.6px, var(--velvet-light) 26px, var(--velvet) 36.4px, var(--velvet-dark) 52px);
+}
+
+.curtain-right {
+    right: 0;
+    border-bottom-left-radius: 136px 300px;
+    box-shadow: -12px 0 40px rgba(0, 0, 0, 0.5);
+    background:
+        linear-gradient(270deg, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.55)),
+        repeating-linear-gradient(270deg, var(--velvet-dark) 0, var(--velvet) 15.6px, var(--velvet-light) 26px, var(--velvet) 36.4px, var(--velvet-dark) 52px);
+}
+
+/* Gold tiebacks, 231 px above the floor like in the design */
+.tieback {
+    position: absolute;
+    bottom: calc(var(--floor-h) + 231px);
+    width: 74px;
+    height: 9px;
+    border-radius: 5px;
+    background: linear-gradient(180deg, var(--gold-light), var(--gold-dark));
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5);
+}
+
+.tieback-left {
+    left: calc(var(--curtain-w) - 80px);
+    transform: rotate(-24deg);
+}
+
+.tieback-right {
+    right: calc(var(--curtain-w) - 80px);
+    transform: rotate(24deg);
+}
+
+/* Top valance with a gold bottom border, and the scalloped edge under it */
+.valance {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 61px;
+    border-bottom: 3px solid var(--gold);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    background: repeating-linear-gradient(90deg, var(--velvet-dark) 0, var(--velvet) 10.2px, var(--velvet-light) 17px, var(--velvet) 23.8px, var(--velvet-dark) 34px);
+}
+
+.scallops {
+    position: absolute;
+    top: 61px;
+    left: 0;
+    right: 0;
+    height: 22px;
+    background: radial-gradient(circle at 50% 0, var(--velvet) 0 17px, rgba(0, 0, 0, 0) 18px) 0 0 / 40px 22px repeat-x;
+}
+
+/* Everything that is not scenery sits above it */
+.topic-area,
+.settings-strip,
+.stage-bottom {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+}
+
+/* Highlight while a file is dragged over the stage */
+#dropZone.dragging .stage::after {
+    content: "Drop your MP3 on the stage";
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(26, 11, 10, 0.55);
+    box-shadow: inset 0 0 0 3px var(--gold), inset 0 0 80px rgba(217, 174, 82, 0.25);
+    color: var(--heading);
+    font-family: var(--serif);
+    font-size: 28px;
+}
+
+/* Stops the highlight from flickering when the cursor moves over the elements inside */
+#dropZone.dragging * {
+    pointer-events: none;
+}
+
+/* ---------- Topic ---------- */
+.topic-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.topic-meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    min-height: 26px;
+}
+
+.topic-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.topic-badge-group {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.topic-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 12px;
+    border: 1px solid var(--gold-line);
+    border-radius: 999px;
+    color: var(--gold);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.topic-hint {
     font-size: 14px;
-    color: var(--text-muted);
+    color: var(--text-sec);
+}
+
+/* Keeps room for 3 lines, so the buttons below don't jump while topics roll */
+.topic-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: calc(var(--topic-size) * 1.12 * var(--topic-lines) + 10px);
+    margin-top: 10px;
+}
+
+/* The big topic is the text field itself. app.js sets its height to fit the text. */
+.topic-input {
+    display: block;
+    width: 100%;
+    max-width: 820px;
+    margin: 0;
+    padding: 4px 12px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--heading);
+    font-family: var(--serif);
+    font-size: var(--topic-size);
+    font-weight: 500;
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    text-align: center;
+    resize: none;
+    overflow-y: hidden;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+/* Typed topics too long for 3 lines get a smaller font (app.js adds this class) */
+.topic-input.topic-long {
+    font-size: calc(var(--topic-size) * 0.78);
+}
+
+.topic-input.topic-longer {
+    font-size: calc(var(--topic-size) * 0.66);
+}
+
+/* Only if the text still doesn't fit: a soft fade shows there is more */
+.topic-input.is-scrolling {
+    -webkit-mask-image: linear-gradient(180deg, #000 75%, rgba(0, 0, 0, 0));
+    mask-image: linear-gradient(180deg, #000 75%, rgba(0, 0, 0, 0));
+}
+
+/* The empty and "speak freely" headings are the placeholder, in the same font */
+.topic-input::placeholder {
+    color: rgba(255, 246, 227, 0.62);
+    opacity: 1;
+}
+
+.topic-input:hover {
+    border-color: rgba(217, 174, 82, 0.25);
+}
+
+/* Editing look */
+.topic-input:focus {
+    outline: none;
+    border-color: var(--gold-line);
+    background: rgba(0, 0, 0, 0.22);
+}
+
+.topic-input:focus::placeholder {
+    color: rgba(255, 246, 227, 0.4);
+}
+
+/* Dimmed while the random topics flick past */
+.topic-input.rolling {
+    opacity: 0.75;
+    filter: blur(0.6px);
+}
+
+.topic-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.topic-links {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.link-dot {
+    display: none;
+    color: #6E5A44;
+}
+
+.btn-roll {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    height: var(--roll-h);
+    padding: 0 20px;
+    border: 1px solid var(--gold);
+    border-radius: 999px;
+    background: var(--gold-soft);
+    color: var(--gold-light);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btn-roll:hover {
+    background: rgba(217, 174, 82, 0.24);
+}
+
+.btn-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: var(--roll-h);
+    padding: 0 16px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btn-text-muted {
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.btn-text:hover {
+    background: rgba(246, 234, 211, 0.06);
+}
+
+.btn-roll:disabled,
+.btn-text:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ---------- Settings strip ---------- */
+.settings-strip {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    margin-top: 16px;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+}
+
+.setting {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 10px;
+}
+
+/* Thin vertical lines between columns (only between visible ones) */
+.setting:not([hidden]) ~ .setting:not([hidden]) {
+    border-left: 1px solid var(--line);
+}
+
+.setting-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+/* Real radio buttons styled as pills */
+.choice-group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+}
+
+.choice {
+    position: relative;
+}
+
+/* Hide the round radio dot but keep it usable with keyboard and screen readers */
+.choice input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.choice > span {
+    display: inline-flex;
+    align-items: center;
+    height: var(--control-h);
+    padding: 0 12px;
+    border: 1px solid var(--chip-border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.choice > span:hover {
+    border-color: var(--gold-line);
+}
+
+.choice input:checked + span {
+    border-color: var(--gold);
+    background: var(--gold);
+    color: var(--on-gold);
+    font-weight: 700;
+}
+
+.choice input:focus-visible + span {
+    outline: 2px solid var(--gold-light);
+    outline-offset: 3px;
+}
+
+.choice input:disabled + span {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.custom-time {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.custom-fields {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px 20px;
+}
+
+.custom-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.field-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-sec);
+}
+
+/* A number box with − and + buttons on each side */
+.stepper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.text-input {
+    width: 52px;
+    height: var(--control-h);
+    padding: 0 6px;
+    border: 1px solid var(--chip-border);
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.25);
+    color: var(--heading);
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+    /* Firefox: hide the built-in up/down arrows */
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+/* Chrome, Edge and Safari: hide the built-in up/down arrows */
+.text-input::-webkit-inner-spin-button,
+.text-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.text-input:focus {
+    border-color: var(--gold);
+}
+
+.text-input[aria-invalid="true"] {
+    border-color: var(--over);
+}
+
+.text-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.stepper-btn {
+    flex-shrink: 0;
+    width: var(--control-h);
+    height: var(--control-h);
+    padding: 0;
+    border: 1px solid var(--gold-line);
+    border-radius: 50%;
+    background: var(--gold-soft);
+    color: var(--gold-light);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.stepper-btn:hover {
+    background: rgba(217, 174, 82, 0.24);
+}
+
+.stepper-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.field-error {
+    margin: 8px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--over);
+}
+
+.field-error:empty {
+    display: none;
+}
+
+/* Stage 3 stopwatch switch (hidden for now) */
+.switch-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    height: var(--control-h);
+    padding: 0 14px;
+    border: 1px solid var(--chip-border);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.switch-track {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 34px;
+    height: 20px;
+    padding: 2px;
+    border-radius: 999px;
+    background: rgba(246, 234, 211, 0.25);
+}
+
+.switch-btn[aria-checked="true"] .switch-track {
+    justify-content: flex-end;
+    background: var(--gold);
+}
+
+.switch-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: var(--on-gold);
+}
+
+/* ---------- Main action, standing on the floor ---------- */
+/* Reserves room for the audience and the floor, then places the action at the bottom */
+.stage-bottom {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    min-height: calc(var(--audience-h) * var(--audience-reserve) + var(--floor-h));
+    padding-bottom: 16px;
+    /* Text over the wood floor stays readable */
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.85);
+}
+
+.stage-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    max-width: 560px;
+}
+
+.action-title {
+    margin: 0;
+    font-family: var(--serif);
+    font-size: 25px;
+    font-weight: 500;
+    line-height: 1.25;
+    color: var(--heading);
+}
+
+.action-text {
+    margin: 0;
+    text-wrap: balance;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--floor-text);
+}
+
+.file-info {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: center;
+    gap: 2px 12px;
+    max-width: 100%;
+    margin-top: 6px;
+    font-size: 14px;
+}
+
+.file-name {
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--gold-light);
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.length-line {
+    margin: 0;
+    color: var(--floor-text);
+    font-family: var(--mono);
+    font-size: 13px;
 }
 
 .timing-over {
@@ -661,10 +876,185 @@ h1 {
     font-weight: 600;
 }
 
-/* ---------- Results ---------- */
+.action-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+/* Hide the plain browser file input but keep it usable */
+.file-input-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    overflow: hidden;
+}
+
+.btn-upload {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 18px;
+    border: 1px dashed var(--gold-line);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.25);
+    color: var(--gold-light);
+    font-size: 14px;
+    font-weight: 600;
+    text-shadow: none;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-upload:hover {
+    border-color: var(--gold);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.file-input-hidden:focus-visible + .btn-upload {
+    outline: 2px solid var(--gold-light);
+    outline-offset: 3px;
+}
+
+.btn-gold {
+    height: 46px;
+    padding: 0 22px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--gold);
+    color: var(--on-gold);
+    font-size: 15px;
+    font-weight: 700;
+    text-shadow: none;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(217, 174, 82, 0.3);
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-gold:hover {
+    background: var(--gold-light);
+    box-shadow: 0 6px 22px rgba(217, 174, 82, 0.4);
+}
+
+.btn-gold:disabled {
+    background: rgba(217, 174, 82, 0.35);
+    color: rgba(30, 16, 6, 0.7);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+/* ---------- Status and notes ---------- */
+#status {
+    margin: 8px 0 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--gold-light);
+}
+
+#status:empty {
+    display: none;
+}
+
+.wait-note {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: var(--floor-text-soft);
+}
+
+.privacy-note {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--floor-text-soft);
+}
+
+/* ---------- Backstage placeholder (part 2 builds the real one) ---------- */
+.backstage-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 180px 24px 60px;
+    background:
+        radial-gradient(ellipse 60% 45% at 50% 0%, rgba(255, 220, 150, 0.10), rgba(0, 0, 0, 0) 70%),
+        repeating-linear-gradient(90deg, var(--backstage-wall) 0 158px, var(--backstage-stripe) 158px 162px),
+        var(--backstage-wall);
+    text-align: center;
+}
+
+.backstage-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    max-width: 520px;
+}
+
+.eyebrow {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.backstage-inner h2 {
+    margin: 0;
+    font-family: var(--serif);
+    font-size: 38px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    color: var(--heading);
+}
+
+.backstage-inner p:not(.eyebrow) {
+    margin: 0 0 8px;
+    font-size: 15px;
+    color: var(--text-sec);
+}
+
+/* ---------- Results (below the stage until part 2 moves them to Backstage) ---------- */
+/* Takes no space until displayResult() shows the card */
+.results-section {
+    padding: 0 16px;
+}
+
 /* The results area checks its own width to decide how many tiles fit in a row */
 .results-panel {
     container-type: inline-size;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.result-placeholder {
+    margin: 0;
+    color: var(--text-sec);
+}
+
+.result-card {
+    margin: 32px 0 48px;
+    padding: 28px 24px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: linear-gradient(155deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0) 35%), #1E0F0C;
+    scroll-margin-top: 16px;
+}
+
+.card-title {
+    margin: 0 0 16px;
+    font-family: var(--serif);
+    font-size: 30px;
+    font-weight: 500;
+    color: var(--heading);
 }
 
 .result-details {
@@ -673,15 +1063,19 @@ h1 {
 }
 
 .result-detail {
-    margin: 0 0 6px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 8px;
     font-size: 14px;
-    color: var(--text-muted);
+    color: var(--text);
     overflow-wrap: anywhere;
 }
 
 .detail-label {
-    font-weight: 600;
-    color: var(--text-sec);
+    font-weight: 700;
+    color: var(--muted);
 }
 
 .metrics-grid {
@@ -692,73 +1086,78 @@ h1 {
 
 .metric-tile {
     min-width: 0;
-    background: rgba(15, 23, 42, 0.5);
     padding: 16px;
-    border-radius: 16px;
     border-left: 3px solid var(--gold);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.25);
 }
 
 .metric-label {
     display: block;
+    margin-bottom: 6px;
     font-size: 12px;
-    color: var(--text-sec);
+    font-weight: 700;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    margin-bottom: 8px;
-    letter-spacing: 0.5px;
+    color: var(--muted);
 }
 
 .metric-value {
     display: block;
-    font-size: 26px;
-    font-weight: 700;
-    color: var(--text-main);
+    font-family: var(--serif);
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--heading);
     overflow-wrap: anywhere;
 }
 
 .score-bar-bg {
     height: 8px;
     margin-top: 10px;
-    background: #0f172a;
-    border-radius: 10px;
     overflow: hidden;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.4);
 }
 
 .score-fill {
+    width: 0%;
     height: 100%;
     background: var(--gold);
-    box-shadow: 0 0 15px var(--gold-glow);
-    width: 0%;
+    box-shadow: 0 0 15px rgba(217, 174, 82, 0.4);
     transition: width 1.5s cubic-bezier(0.1, 0, 0.3, 1);
 }
 
 .breakdown-area {
-    margin: 16px 0 24px;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    margin: 16px 0 24px;
 }
 
 .filler-tag {
     max-width: 100%;
-    background: rgba(226, 184, 87, 0.1);
-    border: 1px solid rgba(226, 184, 87, 0.3);
-    color: var(--gold);
     padding: 4px 12px;
-    border-radius: 20px;
+    border: 1px solid var(--gold-line);
+    border-radius: 999px;
+    color: var(--gold);
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
     overflow-wrap: anywhere;
 }
 
 .feedback-area {
     padding-top: 20px;
-    border-top: 1px solid var(--divider);
+    border-top: 1px solid var(--line);
 }
 
 .feedback-area h3 {
-    margin: 0 0 16px 0;
-    font-size: 16px;
+    margin: 0 0 14px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
     color: var(--gold);
 }
 
@@ -766,38 +1165,12 @@ h1 {
     max-width: 70ch;
     font-size: 15px;
     line-height: 1.7;
-    color: var(--text-muted);
+    color: #DCCBB3;
     overflow-wrap: anywhere;
 }
 
 .feedback-content strong {
-    color: var(--text-main);
-}
-
-/* ---------- Larger screens ---------- */
-@media (min-width: 481px) {
-    .app {
-        padding: 24px 24px 48px;
-    }
-
-    .upload-box {
-        padding: 28px 20px;
-    }
-
-    /* Show the file name beside the Choose File button */
-    .file-name {
-        display: inline-block;
-        vertical-align: middle;
-        max-width: 50%;
-        margin-top: 0;
-        margin-left: 12px;
-    }
-}
-
-@media (min-width: 1024px) {
-    .app {
-        padding: 32px 32px 48px;
-    }
+    color: var(--heading);
 }
 
 /* Three tiles in a row once the results area is at least 420px wide */
@@ -805,8 +1178,515 @@ h1 {
     .metrics-grid {
         grid-template-columns: repeat(3, 1fr);
     }
+}
 
-    .metric-value {
+/* ---------- Short laptop windows (for example 1366 x 657): tighter spacing so the stage still fits ---------- */
+@media (min-width: 601px) and (max-height: 820px) {
+    :root {
+        --header-top: 68px;
+        --stage-top: 120px;
+        --floor-h: 140px;
+        /* The empty top of the back row may sit behind the settings */
+        --audience-reserve: 0.75;
+        --topic-size: clamp(30px, 3vw, 38px);
+        --topic-lines: 2;
+        --control-h: 40px;
+        --roll-h: 42px;
+    }
+
+    .settings-strip {
+        margin-top: 12px;
+    }
+
+    .setting {
+        gap: 8px;
+        padding: 10px;
+    }
+
+    .stage-bottom {
+        padding-bottom: 10px;
+    }
+}
+
+/* ---------- Phones (about 360 to 412 px wide), following theatre-phone.dc.html ---------- */
+@media (max-width: 600px) {
+    :root {
+        --curtain-w: 18px;
+        --inset: 28px;
+        --header-top: 52px;
+        --stage-top: 88px;
+        --floor-h: 136px;
+        --audience-h: max(100px, 25.64vw);
+        --topic-size: 25px;
+        --topic-lines: 3;
+        --control-h: 34px;
+        --roll-h: 40px;
+        --tabbar-h: 64px;
+    }
+
+    /* Room for the tab bar at the bottom */
+    body {
+        padding-bottom: var(--tabbar-h);
+    }
+
+    .short-label {
+        display: inline;
+    }
+
+    /* Long labels stay for screen readers only */
+    .long-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+    }
+
+    /* Header: logo centered, Privacy on the right */
+    .site-header {
+        justify-content: center;
+        height: 26px;
+    }
+
+    .logo {
+        gap: 7px;
+        font-size: 18px;
+    }
+
+    .logo-icon {
+        width: 20px;
+        height: 20px;
+    }
+
+    .privacy-btn {
+        display: inline-flex;
+        align-items: center;
+        position: absolute;
+        right: -10px;
+        top: 50%;
+        height: 34px;
+        padding: 0 10px;
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 600;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        text-decoration-color: rgba(188, 169, 146, 0.35);
+        transform: translateY(-50%);
+        cursor: pointer;
+    }
+
+    /* Bottom tab bar */
+    .main-nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 30;
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(0, 1fr);
+        gap: 0;
+        height: var(--tabbar-h);
+        background: #12070A;
+        border-top: 2px solid var(--gold);
+    }
+
+    .nav-item {
+        align-items: center;
+        gap: 3px;
+        min-height: 0;
+        padding: 0;
+        border-radius: 0;
+        color: var(--muted);
+    }
+
+    .nav-item:hover,
+    .nav-item[aria-current="page"] {
+        background: transparent;
+    }
+
+    .nav-item[aria-current="page"] {
+        color: var(--gold-light);
+    }
+
+    .nav-icon {
+        display: block;
+    }
+
+    .nav-label {
+        font-size: 11px;
+    }
+
+    .nav-sub {
+        display: none;
+    }
+
+    /* Stage */
+    .stage {
+        min-height: calc(100vh - var(--tabbar-h));
+        min-height: calc(100dvh - var(--tabbar-h));
+    }
+
+    .spotlight {
+        left: 0;
+        right: 0;
+        top: -40px;
+        height: 640px;
+        background: radial-gradient(ellipse 80% 55% at 50% 10%, rgba(255, 214, 150, 0.28), rgba(0, 0, 0, 0) 70%);
+    }
+
+    .floor {
+        border-top-width: 3px;
+        background:
+            radial-gradient(ellipse 40% 45% at 50% 0%, rgba(255, 214, 150, 0.36), rgba(0, 0, 0, 0) 70%),
+            linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.55)),
+            repeating-linear-gradient(90deg, var(--wood) 0 78px, var(--wood-gap) 78px 80px, var(--wood-light) 80px 158px, var(--wood-gap) 158px 160px);
+    }
+
+    .audience-laptop {
+        display: none;
+    }
+
+    .audience-phone {
+        display: block;
+    }
+
+    /* Thin curtain strips */
+    .curtain-left,
+    .curtain-right {
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .curtain-left {
+        background:
+            linear-gradient(90deg, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.5)),
+            repeating-linear-gradient(90deg, var(--velvet-dark) 0, var(--velvet) 6px, var(--velvet-light) 10px, var(--velvet-dark) 18px);
+    }
+
+    .curtain-right {
+        background:
+            linear-gradient(270deg, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.5)),
+            repeating-linear-gradient(270deg, var(--velvet-dark) 0, var(--velvet) 6px, var(--velvet-light) 10px, var(--velvet-dark) 18px);
+    }
+
+    .tieback {
+        display: none;
+    }
+
+    .valance {
+        height: 39px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        background: repeating-linear-gradient(90deg, var(--velvet-dark) 0, var(--velvet) 8px, var(--velvet-light) 13px, var(--velvet) 18px, var(--velvet-dark) 26px);
+    }
+
+    .scallops {
+        top: 39px;
+        height: 12px;
+        background: radial-gradient(circle at 50% 0, var(--velvet) 0 9px, rgba(0, 0, 0, 0) 10px) 0 0 / 22px 12px repeat-x;
+    }
+
+    #dropZone.dragging .stage::after {
+        font-size: 20px;
+    }
+
+    /* Topic: label and badge on top, the topic, then the hint under it.
+       The badge wrapper uses display: contents, so its two parts become grid items
+       and the hidden attribute still hides both at once. */
+    .topic-area {
+        display: grid;
+        grid-template-columns: 1fr auto auto 1fr;
+        justify-items: center;
+    }
+
+    .topic-meta,
+    .topic-badge-group {
+        display: contents;
+    }
+
+    .topic-label {
+        grid-column: 2;
+        grid-row: 1;
+        align-self: center;
+        font-size: 10px;
+    }
+
+    .topic-badge {
+        grid-column: 3;
+        grid-row: 1;
+        height: 20px;
+        margin-left: 8px;
+        padding: 0 9px;
+        font-size: 10px;
+    }
+
+    .topic-label,
+    .topic-badge {
+        line-height: 20px;
+    }
+
+    .topic-stage {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        min-width: 0;
+        margin-top: 6px;
+    }
+
+    .topic-input {
+        padding: 2px 8px;
+        line-height: 1.15;
+        letter-spacing: -0.015em;
+    }
+
+    .topic-input.topic-long {
+        font-size: 20px;
+    }
+
+    .topic-input.topic-longer {
+        font-size: 17px;
+    }
+
+    .topic-hint {
+        grid-column: 1 / -1;
+        grid-row: 3;
+        margin-top: 2px;
+        font-size: 12px;
+    }
+
+    #topicAnnounce {
+        grid-row: 5;
+    }
+
+    .topic-actions {
+        grid-column: 1 / -1;
+        grid-row: 4;
+        flex-direction: column;
+        gap: 2px;
+        margin-top: 10px;
+    }
+
+    .btn-roll {
+        gap: 7px;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .btn-roll svg {
+        width: 15px;
+        height: 15px;
+    }
+
+    .topic-links {
+        gap: 4px;
+    }
+
+    .link-dot {
+        display: inline;
+    }
+
+    .btn-text {
+        height: 36px;
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 600;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        text-decoration-color: rgba(246, 234, 211, 0.35);
+    }
+
+    .btn-text svg {
+        display: none;
+    }
+
+    .btn-text-muted {
+        text-decoration-color: rgba(188, 169, 146, 0.35);
+    }
+
+    /* Settings strip: label above, chips in one row, left aligned */
+    .settings-strip {
+        grid-auto-flow: row;
+        margin-top: 6px;
+        padding: 10px 0;
+        gap: 12px;
+    }
+
+    .setting {
+        align-items: flex-start;
+        gap: 6px;
+        padding: 0;
+    }
+
+    .setting:not([hidden]) ~ .setting:not([hidden]) {
+        border-left: 0;
+    }
+
+    .setting-label {
+        font-size: 10px;
+    }
+
+    .choice-group {
+        justify-content: flex-start;
+        gap: 8px;
+    }
+
+    .choice > span {
+        padding: 0 10px;
+        font-size: 12px;
+    }
+
+    .custom-time {
+        align-items: flex-start;
+    }
+
+    .custom-fields {
+        justify-content: flex-start;
+        gap: 8px 12px;
+    }
+
+    .custom-field {
+        gap: 6px;
+    }
+
+    .field-label {
+        font-size: 12px;
+    }
+
+    .stepper {
+        gap: 4px;
+    }
+
+    .text-input {
+        width: 40px;
+        font-size: 13px;
+    }
+
+    .stepper-btn {
+        font-size: 18px;
+    }
+
+    .field-error {
+        margin-top: 4px;
+        font-size: 12px;
+    }
+
+    /* Main action on the floor */
+    .stage-bottom {
+        margin-inline: calc(20px - var(--inset));
+        width: calc(100% + 2 * (var(--inset) - 20px));
+        padding-bottom: 12px;
+    }
+
+    .stage-action {
+        gap: 2px;
+    }
+
+    .action-title {
+        font-size: 20px;
+    }
+
+    .action-text {
+        font-size: 12px;
+    }
+
+    .file-info {
+        margin-top: 4px;
+        font-size: 12px;
+    }
+
+    .length-line {
+        font-size: 11px;
+    }
+
+    .action-row {
+        gap: 10px;
+    }
+
+    .btn-upload {
+        gap: 7px;
+        height: 36px;
+        padding: 0 14px;
+        background: rgba(0, 0, 0, 0.45);
+        font-size: 12px;
+    }
+
+    .btn-upload svg {
+        width: 13px;
+        height: 13px;
+    }
+
+    .btn-gold {
+        height: 36px;
+        padding: 0 16px;
+        font-size: 13px;
+    }
+
+    #status {
+        margin-top: 4px;
+        font-size: 13px;
+    }
+
+    .wait-note {
+        font-size: 11px;
+    }
+
+    /* Privacy note: a small panel that opens from the Privacy button */
+    .privacy-note {
+        display: none;
+        position: fixed;
+        top: 84px;
+        left: 24px;
+        right: 24px;
+        z-index: 25;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #24100D;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+        font-size: 12px;
+        color: var(--text);
+        text-shadow: none;
+    }
+
+    .privacy-note.is-open {
+        display: block;
+    }
+
+    .backstage-placeholder {
+        min-height: calc(100vh - var(--tabbar-h));
+        min-height: calc(100dvh - var(--tabbar-h));
+        padding: 100px 20px 40px;
+        background:
+            radial-gradient(ellipse 80% 30% at 50% 0%, rgba(255, 220, 150, 0.10), rgba(0, 0, 0, 0) 70%),
+            repeating-linear-gradient(90deg, var(--backstage-wall) 0 96px, var(--backstage-stripe) 96px 98px),
+            var(--backstage-wall);
+    }
+
+    .backstage-inner h2 {
+        font-size: 28px;
+    }
+
+    .result-card {
+        margin: 20px 0 28px;
+        padding: 20px 16px;
+    }
+
+    .card-title {
         font-size: 24px;
+    }
+}
+
+/* ---------- Reduced motion: no animation at all ---------- */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
     }
 }

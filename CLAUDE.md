@@ -4,6 +4,7 @@
 - Website files live in `site/` (`site/index.html`, `site/css/styles.css`, `site/js/app.js`).
 - Speech topics live in `site/js/topics.js` (global `TOPICS` array).
 - GitHub Actions (`.github/workflows/deploy.yml`) deploys them with `aws s3 sync` whenever `site/**` changes.
+- The approved design lives in design/ (reference only, never deployed). Follow design/DESIGN-NOTES.md for any visual change.
 
 ## Do not change unless asked
 - `API_BASE`, AWS names, bucket names and the IAM role ARN.

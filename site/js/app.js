@@ -42,9 +42,17 @@ const customMinutes = document.getElementById("customMinutes");
 const customSeconds = document.getElementById("customSeconds");
 const customTimeError = document.getElementById("customTimeError");
 const topicAnnounce = document.getElementById("topicAnnounce");
-const resultsPanel = document.getElementById("resultsPanel");
 const resultPlaceholder = document.getElementById("resultPlaceholder");
 const stepperButtons = document.querySelectorAll(".stepper-btn");
+const writeTopicBtn = document.getElementById("writeTopicBtn");
+const fileInfo = document.getElementById("fileInfo");
+const uploadLabel = document.getElementById("uploadLabel");
+const privacyBtn = document.getElementById("privacyBtn");
+const privacyNote = document.getElementById("privacyNote");
+const navButtons = document.querySelectorAll(".nav-item");
+const backstageView = document.getElementById("backstageView");
+const resultsSection = document.getElementById("resultsSection");
+const backToStageBtn = document.getElementById("backToStageBtn");
 // Every topic and time control, so they can be locked while a speech is being analyzed
 const optionControls = document.querySelectorAll("#stepTopic textarea, #stepTopic button, #stepTime input, #stepTime button");
 
@@ -64,6 +72,10 @@ function showFileName() {
         fileNameText.title = "";
         fileNameText.classList.remove("has-file");
     }
+    // The Begin button and file details only appear once a file is picked
+    fileInfo.hidden = !file;
+    uploadBtn.hidden = !file;
+    uploadLabel.textContent = file ? "Choose another MP3" : "Upload an MP3";
     updateLengthFromFile();
 }
 
@@ -169,24 +181,60 @@ function showTopicBadge(type) {
     topicBadge.hidden = false;
 }
 
-function updateClearButton() {
-    clearTopicBtn.hidden = topicInput.value === "";
+let speakFreely = false;       // true after "Speak freely, no topic"
+
+// The placeholder doubles as the big heading when there is no topic
+function updateTopicPlaceholder() {
+    if (document.activeElement === topicInput) {
+        topicInput.placeholder = "Type your own topic";
+    } else if (speakFreely) {
+        topicInput.placeholder = "Speak on anything you like";
+    } else {
+        topicInput.placeholder = "Roll a topic, or write your own";
+    }
+    fitTopicHeight();
 }
 
 let isRolling = false;         // true while the random topic animation is running
 
-// Makes the topic box tall enough for its text, up to 3 lines (after that it scrolls)
-function fitTopicHeight() {
+// The height of 3 lines at the current font size, including padding and borders
+function threeLineHeight() {
     const style = getComputedStyle(topicInput);
     const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.5;
     const borders = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
     const padding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
-    const maxHeight = lineHeight * 3 + padding + borders;
+    return lineHeight * 3 + padding + borders;
+}
 
+// Sets the topic box height for its text, up to maxHeight. Returns false if the text needs more.
+function sizeTopicBox(maxHeight) {
+    const style = getComputedStyle(topicInput);
+    const borders = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+
+    // When empty, measure the placeholder instead, since it is shown as the heading
+    const text = topicInput.value;
+    if (text === "") topicInput.value = topicInput.placeholder;
     topicInput.style.height = "auto";
     const needed = topicInput.scrollHeight + borders;
+    if (text === "") topicInput.value = "";
+
     topicInput.style.height = Math.min(needed, maxHeight) + "px";
-    topicInput.style.overflowY = needed > maxHeight ? "auto" : "hidden";
+    const tooLong = needed > maxHeight + 1;
+    topicInput.style.overflowY = tooLong ? "auto" : "hidden";
+    topicInput.classList.toggle("is-scrolling", tooLong);
+    return !tooLong;
+}
+
+// Makes the topic fit in the space of 3 full-size lines. Long typed topics get a smaller font
+// (two steps), so a smaller topic may use a 4th line inside that same space instead of being cut off.
+function fitTopicHeight() {
+    topicInput.classList.remove("topic-long", "topic-longer");
+    const maxHeight = threeLineHeight();
+    if (sizeTopicBox(maxHeight)) return;
+    topicInput.classList.add("topic-long");
+    if (sizeTopicBox(maxHeight)) return;
+    topicInput.classList.add("topic-longer");
+    sizeTopicBox(maxHeight);
 }
 
 function prefersReducedMotion() {
@@ -219,6 +267,7 @@ function rollToTopic(finalTopic) {
     topicInput.setAttribute("aria-busy", "true");   // tells screen readers to wait for the final text
     topicInput.classList.add("rolling");
     randomTopicBtn.disabled = true;
+    writeTopicBtn.disabled = true;
     clearTopicBtn.disabled = true;
     uploadBtn.disabled = true;                      // so a half-rolled topic can't be sent
 
@@ -249,14 +298,14 @@ function landTopic(topic) {
     topicInput.removeAttribute("aria-busy");
     topicInput.readOnly = false;
     isRolling = false;
+    speakFreely = false;
 
     showTopicBadge(topic.type);
     topicAnnounce.textContent = topic.text;         // the only topic screen readers hear
-    updateClearButton();
-    fitTopicHeight();
-    randomTopicBtn.textContent = "New topic";
+    updateTopicPlaceholder();
 
     randomTopicBtn.disabled = isBusy;
+    writeTopicBtn.disabled = isBusy;
     clearTopicBtn.disabled = isBusy;
     uploadBtn.disabled = isBusy || !getTimeLimit().valid;
 }
@@ -275,22 +324,34 @@ topicInput.addEventListener("input", () => {
         topicInput.value = topicInput.value.replace(/[\r\n]+/g, " ");
     }
     randomTopic = null;
+    speakFreely = false;
     topicBadge.hidden = true;
-    updateClearButton();
     fitTopicHeight();
 });
 
+// "Write your own": edit the big topic in place. The text is selected, so typing replaces it.
+writeTopicBtn.addEventListener("click", () => {
+    topicInput.focus();
+    topicInput.select();
+});
+
+topicInput.addEventListener("focus", updateTopicPlaceholder);
+topicInput.addEventListener("blur", updateTopicPlaceholder);
+
+// "Speak freely, no topic": no topic is sent with the speech
 clearTopicBtn.addEventListener("click", () => {
     topicInput.value = "";
     randomTopic = null;
+    speakFreely = true;
     topicBadge.hidden = true;
-    updateClearButton();
-    fitTopicHeight();
-    topicInput.focus();
+    topicAnnounce.textContent = "No topic. Speak on anything you like.";
+    updateTopicPlaceholder();
 });
 
 window.addEventListener("resize", fitTopicHeight);
 fitTopicHeight();
+// The topic font downloads after the page loads, so measure again once it is ready
+if (document.fonts) document.fonts.ready.then(fitTopicHeight);
 
 // ---------------------------
 // Time limit
@@ -398,22 +459,6 @@ function setOptionsDisabled(disabled) {
         control.disabled = disabled;
     });
 }
-
-// ---------------------------
-// Results column
-// ---------------------------
-// Keeps the results in view while scrolling (wide screens only, see styles.css),
-// but only when they fit in the window, so long feedback is never cut off
-function updateResultsSticky() {
-    resultsPanel.classList.toggle("is-sticky", resultsPanel.offsetHeight <= window.innerHeight - 48);
-}
-
-// ResizeObserver calls the function whenever the results area changes size
-if ("ResizeObserver" in window) {
-    new ResizeObserver(updateResultsSticky).observe(resultsPanel);
-}
-window.addEventListener("resize", updateResultsSticky);
-updateResultsSticky();
 
 // ---------------------------
 // Upload and analysis
@@ -556,6 +601,9 @@ async function pollResult(speechId) {
                 setOptionsDisabled(false);
                 statusText.innerText = "Spotlight Ready.";
                 displayResult(result);
+                // The results appear below the stage, so bring them into view
+                showView("stage");
+                resultBox.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth" });
                 return;
             }
         } catch(err) {
@@ -661,3 +709,45 @@ function displayResult(data) {
         if(fill) fill.style.width = confidenceScore + '%';
     }, 100);
 }
+
+// ---------------------------
+// Menu: Stage and Backstage
+// ---------------------------
+// Shows one view and marks its menu item as the current page
+function showView(name) {
+    const isStage = name === "stage";
+    dropZone.hidden = !isStage;
+    resultsSection.hidden = !isStage;
+    backstageView.hidden = isStage;
+    navButtons.forEach(button => {
+        if (button.dataset.view === name) {
+            button.setAttribute("aria-current", "page");
+        } else {
+            button.removeAttribute("aria-current");
+        }
+    });
+}
+
+navButtons.forEach(button => {
+    button.addEventListener("click", () => showView(button.dataset.view));
+});
+backToStageBtn.addEventListener("click", () => showView("stage"));
+
+// ---------------------------
+// Privacy note (phones open it from the header, laptops always show it)
+// ---------------------------
+function setPrivacyOpen(open) {
+    privacyNote.classList.toggle("is-open", open);
+    privacyBtn.setAttribute("aria-expanded", String(open));
+}
+
+privacyBtn.addEventListener("click", () => {
+    setPrivacyOpen(!privacyNote.classList.contains("is-open"));
+});
+
+document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && privacyNote.classList.contains("is-open")) {
+        setPrivacyOpen(false);
+        privacyBtn.focus();
+    }
+});

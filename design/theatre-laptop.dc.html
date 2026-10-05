@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SpeakReview Theatre Prototype</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#1A0B0A}
+@keyframes srBulbA{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes srBulbB{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes srWave{0%,100%{transform:scaleY(.25)}50%{transform:scaleY(1)}}
+@keyframes srGlow{0%,100%{opacity:.5}50%{opacity:1}}
+@keyframes srDot{0%,100%{opacity:.2}50%{opacity:1}}
+@keyframes srRise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes srFade{from{opacity:0}to{opacity:1}}
+.sr-bulb-a{animation:srBulbA 2s ease-in-out 0s 3}
+.sr-bulb-b{animation:srBulbB 2s ease-in-out 0s 3}
+.sr-wave{transform-origin:center;animation:srWave 1s ease-in-out infinite}
+.sr-glow{animation:srGlow 2.4s ease-in-out infinite}
+.sr-dot{animation:srDot 1.4s ease-in-out infinite}
+.sr-rise{animation:srRise .5s ease-out both}
+.sr-fade{animation:srFade 1.2s ease-out both}
+.sr-curtain{transition:transform .7s cubic-bezier(.7,0,.3,1)}
+.sr-scroll::-webkit-scrollbar{width:8px}.sr-scroll::-webkit-scrollbar-thumb{background:rgba(246,234,211,.2);border-radius:8px}
+@media (prefers-reduced-motion: reduce){.sr-bulb-a,.sr-bulb-b,.sr-wave,.sr-glow,.sr-dot,.sr-rise,.sr-fade{animation:none !important}.sr-curtain{transition:none !important}}
+</style>
+</helmet>
+<div style="width: 1280px; height: 900px; position: relative; overflow: hidden; background: #1A0B0A; color: #EFE2CF; font-family: Manrope, system-ui, sans-serif">
+
+<sc-if value="{{isStageLike}}" hint-placeholder-val="{{true}}">
+<div class="sr-fade" aria-hidden="true" style="position: absolute; left: 160px; right: 160px; top: -140px; height: 880px; pointer-events: none; background: radial-gradient(ellipse 55% 62% at 50% 12%, rgba(255,214,150,0.30), rgba(0,0,0,0) 70%)"></div>
+<div aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 190px; border-top: 4px solid #A0703F; background: radial-gradient(ellipse 22% 40% at 50% 8%, rgba(255,214,150,0.38), rgba(0,0,0,0) 70%), linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.6)), repeating-linear-gradient(90deg, #6B3F22 0 118px, #43260F 118px 120px, #7A4A2A 120px 238px, #43260F 238px 240px)"></div>
+<svg aria-hidden="true" width="1280" height="140" viewBox="0 0 1280 140" style="position: absolute; left: 0; top: 570px; pointer-events: none"><rect x="-6" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="-3" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="18" cy="45" rx="22" ry="15" fill="#1C0608"></ellipse><ellipse cx="18" cy="20" rx="12" ry="14" fill="#1C0608"></ellipse><rect x="52" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="55" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><rect x="110" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="113" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="139" cy="50" rx="24" ry="17" fill="#1C0608"></ellipse><ellipse cx="139" cy="24" rx="13" ry="15" fill="#1C0608"></ellipse><rect x="168" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="171" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="194" cy="44" rx="22" ry="15" fill="#1C0608"></ellipse><ellipse cx="194" cy="20" rx="11" ry="14" fill="#1C0608"></ellipse><rect x="226" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="229" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="250" cy="51" rx="25" ry="17" fill="#1C0608"></ellipse><ellipse cx="250" cy="24" rx="13" ry="15" fill="#1C0608"></ellipse><rect x="284" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="287" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="312" cy="45" rx="21" ry="15" fill="#1C0608"></ellipse><ellipse cx="312" cy="21" rx="11" ry="13" fill="#1C0608"></ellipse><rect x="342" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="345" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="369" cy="51" rx="24" ry="17" fill="#1C0608"></ellipse><ellipse cx="369" cy="24" rx="13" ry="15" fill="#1C0608"></ellipse><rect x="400" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="403" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><rect x="458" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="461" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="485" cy="45" rx="23" ry="16" fill="#1C0608"></ellipse><ellipse cx="485" cy="20" rx="12" ry="14" fill="#1C0608"></ellipse><rect x="516" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="519" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="540" cy="52" rx="25" ry="17" fill="#1C0608"></ellipse><ellipse cx="540" cy="24" rx="13" ry="15" fill="#1C0608"></ellipse><rect x="574" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="577" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="599" cy="50" rx="25" ry="17" fill="#1C0608"></ellipse><ellipse cx="599" cy="22" rx="13" ry="15" fill="#1C0608"></ellipse><rect x="632" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="635" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="660" cy="47" rx="23" ry="16" fill="#1C0608"></ellipse><ellipse cx="660" cy="21" rx="12" ry="14" fill="#1C0608"></ellipse><rect x="690" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="693" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="716" cy="44" rx="21" ry="15" fill="#1C0608"></ellipse><ellipse cx="716" cy="21" rx="11" ry="13" fill="#1C0608"></ellipse><rect x="748" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="751" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="771" cy="46" rx="21" ry="14" fill="#1C0608"></ellipse><ellipse cx="771" cy="23" rx="11" ry="13" fill="#1C0608"></ellipse><rect x="806" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="809" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="832" cy="46" rx="23" ry="16" fill="#1C0608"></ellipse><ellipse cx="832" cy="21" rx="12" ry="14" fill="#1C0608"></ellipse><rect x="864" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="867" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="888" cy="45" rx="22" ry="15" fill="#1C0608"></ellipse><ellipse cx="888" cy="20" rx="12" ry="14" fill="#1C0608"></ellipse><rect x="922" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="925" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="947" cy="48" rx="22" ry="15" fill="#1C0608"></ellipse><ellipse cx="947" cy="23" rx="12" ry="14" fill="#1C0608"></ellipse><rect x="980" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="983" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1006" cy="47" rx="25" ry="17" fill="#1C0608"></ellipse><ellipse cx="1006" cy="20" rx="13" ry="15" fill="#1C0608"></ellipse><rect x="1038" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="1041" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><rect x="1096" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="1099" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1124" cy="46" rx="23" ry="16" fill="#1C0608"></ellipse><ellipse cx="1124" cy="20" rx="12" ry="14" fill="#1C0608"></ellipse><rect x="1154" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="1157" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1178" cy="44" rx="23" ry="15" fill="#1C0608"></ellipse><ellipse cx="1178" cy="19" rx="12" ry="14" fill="#1C0608"></ellipse><rect x="1212" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="1215" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1240" cy="51" rx="25" ry="17" fill="#1C0608"></ellipse><ellipse cx="1240" cy="23" rx="13" ry="15" fill="#1C0608"></ellipse><rect x="1270" y="15" width="52" height="72" rx="17" fill="#3E0A11"></rect><rect x="1273" y="17" width="46" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1293" cy="49" rx="22" ry="15" fill="#1C0608"></ellipse><ellipse cx="1293" cy="25" rx="11" ry="14" fill="#1C0608"></ellipse><rect x="-35" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="-32" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="-1" cy="98" rx="35" ry="24" fill="#0F0304"></ellipse><ellipse cx="-1" cy="59" rx="19" ry="22" fill="#0F0304"></ellipse><rect x="43" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="46" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="77" cy="91" rx="30" ry="21" fill="#0F0304"></ellipse><ellipse cx="77" cy="58" rx="16" ry="19" fill="#0F0304"></ellipse><rect x="121" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="124" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="155" cy="96" rx="35" ry="24" fill="#0F0304"></ellipse><ellipse cx="155" cy="57" rx="19" ry="22" fill="#0F0304"></ellipse><rect x="199" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="202" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><rect x="277" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="280" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><rect x="355" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="358" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="392" cy="91" rx="31" ry="21" fill="#0F0304"></ellipse><ellipse cx="392" cy="57" rx="17" ry="20" fill="#0F0304"></ellipse><rect x="433" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="436" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><rect x="511" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="514" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="546" cy="89" rx="30" ry="21" fill="#0F0304"></ellipse><ellipse cx="546" cy="55" rx="16" ry="19" fill="#0F0304"></ellipse><rect x="589" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="592" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><rect x="667" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="670" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="703" cy="88" rx="30" ry="21" fill="#0F0304"></ellipse><ellipse cx="703" cy="55" rx="16" ry="19" fill="#0F0304"></ellipse><rect x="745" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="748" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="778" cy="95" rx="36" ry="24" fill="#0F0304"></ellipse><ellipse cx="778" cy="56" rx="19" ry="22" fill="#0F0304"></ellipse><rect x="823" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="826" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="860" cy="96" rx="32" ry="22" fill="#0F0304"></ellipse><ellipse cx="860" cy="61" rx="17" ry="20" fill="#0F0304"></ellipse><rect x="901" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="904" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="934" cy="90" rx="32" ry="22" fill="#0F0304"></ellipse><ellipse cx="934" cy="55" rx="17" ry="20" fill="#0F0304"></ellipse><rect x="979" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="982" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1012" cy="98" rx="35" ry="24" fill="#0F0304"></ellipse><ellipse cx="1012" cy="60" rx="18" ry="22" fill="#0F0304"></ellipse><rect x="1057" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="1060" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1089" cy="90" rx="31" ry="21" fill="#0F0304"></ellipse><ellipse cx="1089" cy="56" rx="16" ry="19" fill="#0F0304"></ellipse><rect x="1135" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="1138" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1168" cy="94" rx="35" ry="24" fill="#0F0304"></ellipse><ellipse cx="1168" cy="56" rx="18" ry="22" fill="#0F0304"></ellipse><rect x="1213" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="1216" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><rect x="1291" y="49" width="70" height="102" rx="22" fill="#560E17"></rect><rect x="1294" y="51" width="64" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1326" cy="97" rx="35" ry="24" fill="#0F0304"></ellipse><ellipse cx="1326" cy="57" rx="19" ry="22" fill="#0F0304"></ellipse><rect x="0" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="3" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="47" cy="153" rx="46" ry="32" fill="#050101"></ellipse><ellipse cx="47" cy="101" rx="24" ry="29" fill="#050101"></ellipse><rect x="104" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="107" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="148" cy="148" rx="41" ry="28" fill="#050101"></ellipse><ellipse cx="148" cy="102" rx="22" ry="26" fill="#050101"></ellipse><rect x="208" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="211" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="257" cy="148" rx="42" ry="29" fill="#050101"></ellipse><ellipse cx="257" cy="101" rx="22" ry="26" fill="#050101"></ellipse><rect x="312" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="315" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="359" cy="152" rx="46" ry="32" fill="#050101"></ellipse><ellipse cx="359" cy="100" rx="24" ry="29" fill="#050101"></ellipse><rect x="416" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="419" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="463" cy="149" rx="42" ry="29" fill="#050101"></ellipse><ellipse cx="463" cy="103" rx="22" ry="26" fill="#050101"></ellipse><rect x="520" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="523" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="563" cy="156" rx="48" ry="33" fill="#050101"></ellipse><ellipse cx="563" cy="103" rx="25" ry="30" fill="#050101"></ellipse><rect x="624" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="627" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="667" cy="150" rx="47" ry="32" fill="#050101"></ellipse><ellipse cx="667" cy="98" rx="25" ry="29" fill="#050101"></ellipse><rect x="728" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="731" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="775" cy="142" rx="40" ry="27" fill="#050101"></ellipse><ellipse cx="775" cy="98" rx="21" ry="25" fill="#050101"></ellipse><rect x="832" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="835" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="878" cy="153" rx="46" ry="31" fill="#050101"></ellipse><ellipse cx="878" cy="103" rx="24" ry="28" fill="#050101"></ellipse><rect x="936" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="939" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="979" cy="149" rx="47" ry="32" fill="#050101"></ellipse><ellipse cx="979" cy="97" rx="25" ry="29" fill="#050101"></ellipse><rect x="1040" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="1043" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1084" cy="153" rx="46" ry="32" fill="#050101"></ellipse><ellipse cx="1084" cy="102" rx="24" ry="29" fill="#050101"></ellipse><rect x="1144" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="1147" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1190" cy="150" rx="47" ry="32" fill="#050101"></ellipse><ellipse cx="1190" cy="98" rx="25" ry="29" fill="#050101"></ellipse><rect x="1248" y="87" width="92" height="138" rx="29" fill="#6C131E"></rect><rect x="1251" y="89" width="86" height="12" rx="6" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1293" cy="154" rx="47" ry="32" fill="#050101"></ellipse><ellipse cx="1293" cy="102" rx="25" ry="29" fill="#050101"></ellipse></svg>
+<div aria-hidden="true" style="position: absolute; top: 0; bottom: 190px; left: 0; width: 176px; border-bottom-right-radius: 136px 300px; box-shadow: 12px 0 40px rgba(0,0,0,0.5); background: linear-gradient(90deg, rgba(0,0,0,0) 55%, rgba(0,0,0,0.55)), repeating-linear-gradient(90deg, #4A0812 0, #8C1426 15.6px, #B8283A 26px, #8C1426 36.4px, #4A0812 52px)"></div>
+<div aria-hidden="true" style="position: absolute; top: 0; bottom: 190px; right: 0; width: 176px; border-bottom-left-radius: 136px 300px; box-shadow: -12px 0 40px rgba(0,0,0,0.5); background: linear-gradient(270deg, rgba(0,0,0,0) 55%, rgba(0,0,0,0.55)), repeating-linear-gradient(270deg, #4A0812 0, #8C1426 15.6px, #B8283A 26px, #8C1426 36.4px, #4A0812 52px)"></div>
+<div aria-hidden="true" style="position: absolute; left: 96px; top: 470px; width: 74px; height: 9px; border-radius: 5px; background: linear-gradient(180deg, #F0CF86, #A97D2B); box-shadow: 0 3px 6px rgba(0,0,0,0.5); transform: rotate(-24deg)"></div>
+<div aria-hidden="true" style="position: absolute; left: 1110px; top: 470px; width: 74px; height: 9px; border-radius: 5px; background: linear-gradient(180deg, #F0CF86, #A97D2B); box-shadow: 0 3px 6px rgba(0,0,0,0.5); transform: rotate(24deg)"></div><div aria-hidden="true" style="position: absolute; top: 0; left: 0; right: 0; height: 58px; border-bottom: 3px solid #D9AE52; box-shadow: 0 10px 30px rgba(0,0,0,0.45); background: repeating-linear-gradient(90deg, #4A0812 0, #8C1426 10.2px, #B8283A 17px, #8C1426 23.8px, #4A0812 34px)"></div>
+<div aria-hidden="true" style="position: absolute; top: 61px; left: 0; right: 0; height: 22px; background: radial-gradient(circle at 50% 0, #8C1426 0 17px, rgba(0,0,0,0) 18px) 0 0 / 40px 22px repeat-x"></div>
+<div role="status" style="position: absolute; top: 15px; left: 50%; transform: translateX(-50%); z-index: 5; padding: 5px 14px; border-radius: 6px; font: 800 12px Manrope, system-ui, sans-serif; letter-spacing: 0.22em; {{onAirStyle}}">ON AIR</div>
+
+<div style="position: absolute; top: 150px; left: 200px; right: 200px; display: flex; flex-direction: column; align-items: center; text-align: center">
+<sc-if value="{{isStage}}" hint-placeholder-val="{{true}}">
+<div class="sr-rise" style="display: flex; flex-direction: column; align-items: center; width: 100%">
+<div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 24px">
+<span style="font-size: 12px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #BCA992">Your topic</span>
+<span style="display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; border: 1px solid rgba(217,174,82,0.6); color: #D9AE52">{{topic.type}}</span>
+<span style="font-size: 14px; color: #D8C6AE">{{topic.hint}}</span>
+</div>
+<h1 aria-live="polite" style="margin: 14px 0 0; max-width: 820px; min-height: 106px; font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 46px; line-height: 1.12; letter-spacing: -0.02em; color: #FFF6E3; {{topicStyle}}">{{topic.text}}</h1>
+<div style="display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; margin-top: 12px">
+<button type="button" onClick="{{roll}}" style="display: inline-flex; align-items: center; gap: 10px; height: 46px; padding: 0 20px; border-radius: 999px; border: 1px solid #D9AE52; background: rgba(217,174,82,0.14); color: #F0CF86; font: 600 14px Manrope, system-ui, sans-serif; cursor: pointer">
+<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h3.5l9 10H21"></path><path d="M3 17h3.5l3-3.4"></path><path d="M14.5 10.4l2-2.4H21"></path><path d="M18 5l3 3-3 3"></path><path d="M18 14l3 3-3 3"></path></svg>
+Roll a new topic</button>
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 16px; border-radius: 999px; border: 0; background: transparent; color: #EFE2CF; font: 600 14px Manrope, system-ui, sans-serif; cursor: pointer">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"></path></svg>
+Write your own</button>
+<button type="button" style="height: 46px; padding: 0 16px; border-radius: 999px; border: 0; background: transparent; color: #BCA992; font: 500 14px Manrope, system-ui, sans-serif; cursor: pointer">Speak freely, no topic</button>
+</div>
+<section aria-label="Practice settings" style="width: 100%; margin-top: 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid rgba(246,234,211,0.16); border-bottom: 1px solid rgba(246,234,211,0.16)">
+<div style="padding: 14px 10px; display: flex; flex-direction: column; align-items: center; gap: 10px">
+<span style="font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #BCA992">Speaking time</span>
+<div role="radiogroup" aria-label="Speaking time" style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center">
+<sc-for list="{{timeChips}}" as="c" hint-placeholder-count="5">
+<button type="button" role="radio" aria-checked="{{c.on}}" onClick="{{c.pick}}" style="height: 44px; padding: 0 12px; border-radius: 999px; font-family: Manrope, system-ui, sans-serif; font-size: 13px; cursor: pointer; {{c.style}}">{{c.label}}</button>
+</sc-for>
+</div>
+</div>
+<div style="padding: 14px 10px; display: flex; flex-direction: column; align-items: center; gap: 10px; border-left: 1px solid rgba(246,234,211,0.16)">
+<span style="font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #BCA992">Prep time</span>
+<div role="radiogroup" aria-label="Prep time" style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center">
+<sc-for list="{{prepChips}}" as="c" hint-placeholder-count="4">
+<button type="button" role="radio" aria-checked="{{c.on}}" onClick="{{c.pick}}" style="height: 44px; padding: 0 12px; border-radius: 999px; font-family: Manrope, system-ui, sans-serif; font-size: 13px; cursor: pointer; {{c.style}}">{{c.label}}</button>
+</sc-for>
+</div>
+</div>
+<div style="padding: 14px 10px; display: flex; flex-direction: column; align-items: center; gap: 10px; border-left: 1px solid rgba(246,234,211,0.16)">
+<span style="font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #BCA992">Stopwatch while speaking</span>
+<button type="button" aria-pressed="{{watchPressed}}" onClick="{{toggleWatch}}" style="display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px; border-radius: 999px; background: transparent; border: 1px solid rgba(246,234,211,0.26); color: #EFE2CF; font: 600 13px Manrope, system-ui, sans-serif; cursor: pointer">
+<span style="width: 34px; height: 20px; border-radius: 999px; display: inline-flex; align-items: center; padding: 2px; box-sizing: border-box; {{switchTrack}}"><span style="width: 16px; height: 16px; border-radius: 999px; background: #1E1006"></span></span>
+{{watchWord}}</button>
+</div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{isRec}}" hint-placeholder-val="{{false}}">
+<div class="sr-rise" style="display: flex; flex-direction: column; align-items: center; width: 100%">
+<span style="margin-top: 24px; font-size: 12px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #BCA992">Now speaking on</span>
+<h1 style="margin: 10px 0 0; max-width: 780px; font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 36px; line-height: 1.15; color: #FFF6E3">{{topic.text}}</h1>
+<sc-if value="{{showWatch}}" hint-placeholder-val="{{true}}">
+<div style="margin-top: 20px; display: flex; align-items: center; gap: 16px">
+<span role="timer" style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 54px; font-weight: 600; letter-spacing: 0.01em"><span style="{{elapsedStyle}}">{{elapsed}}</span><span style="color: #8E7E6C"> / {{limitText}}</span></span>
+<span style="display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 700; {{statusStyle}}">{{statusText}}</span>
+<button type="button" onClick="{{toggleWatch}}" style="height: 44px; padding: 0 14px; border-radius: 999px; background: transparent; border: 1px solid rgba(246,234,211,0.26); color: #EFE2CF; font: 600 13px Manrope, system-ui, sans-serif; cursor: pointer">Hide stopwatch</button>
+</div>
+</sc-if>
+<sc-if value="{{hideWatch}}" hint-placeholder-val="{{false}}">
+<div style="margin-top: 20px; display: flex; align-items: center; gap: 14px; height: 64px">
+<span style="font-size: 15px; color: #D8C6AE">Stopwatch hidden. Just speak.</span>
+<button type="button" onClick="{{toggleWatch}}" style="height: 44px; padding: 0 14px; border-radius: 999px; background: transparent; border: 1px solid rgba(246,234,211,0.26); color: #EFE2CF; font: 600 13px Manrope, system-ui, sans-serif; cursor: pointer">Show stopwatch</button>
+</div>
+</sc-if>
+<div aria-hidden="true" style="margin-top: 18px; height: 64px; display: flex; align-items: center; gap: 5px">
+<sc-for list="{{waveBars}}" as="w" hint-placeholder-count="44">
+<span class="sr-wave" style="display: block; width: 5px; border-radius: 3px; background: #D9AE52; {{w.style}}"></span>
+</sc-for>
+</div>
+</div>
+</sc-if>
+</div>
+
+<div aria-hidden="true" style="position: absolute; left: 600px; top: 705px; width: 80px; height: 14px; border-radius: 50%; background: radial-gradient(ellipse at 50% 40%, #4A4A50, #1A1A1D 70%); box-shadow: 0 6px 14px rgba(0,0,0,0.6)"></div>
+<button type="button" aria-label="{{micLabel}}" onClick="{{micClick}}" style="position: absolute; left: 580px; top: 556px; width: 120px; height: 158px; padding: 0; border: 0; background: transparent; cursor: pointer">
+<svg width="120" height="156" viewBox="0 0 200 260" aria-hidden="true">
+<defs>
+<radialGradient id="srGrille" cx="38%" cy="32%" r="70%"><stop offset="0" stop-color="#FFFFFF"></stop><stop offset="0.45" stop-color="#C9CCD3"></stop><stop offset="1" stop-color="#5E6168"></stop></radialGradient>
+<linearGradient id="srBody" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#2A2A2E"></stop><stop offset="0.45" stop-color="#5A5B61"></stop><stop offset="1" stop-color="#1A1A1D"></stop></linearGradient>
+</defs>
+<circle class="sr-glow" cx="100" cy="68" r="80" fill="{{micGlow}}"></circle>
+<path d="M74 118 L126 118 L112 196 L88 196 Z" fill="url(#srBody)"></path>
+<rect x="68" y="108" width="64" height="14" rx="5" fill="#B9BCC3"></rect>
+<circle cx="100" cy="68" r="50" fill="url(#srGrille)"></circle>
+<circle cx="100" cy="68" r="50" fill="none" stroke="#8E9198" stroke-width="3"></circle>
+<circle cx="100" cy="68" r="40" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"></circle>
+<circle cx="100" cy="68" r="30" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1.5"></circle>
+<circle cx="100" cy="68" r="20" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"></circle>
+<path d="M54 68 H146 M100 22 V114" stroke="rgba(0,0,0,0.10)" stroke-width="1.5"></path>
+<ellipse cx="82" cy="46" rx="17" ry="9" fill="rgba(255,255,255,0.6)" transform="rotate(-25 82 46)"></ellipse>
+<rect x="91" y="194" width="18" height="16" rx="3" fill="#2B2B2F"></rect>
+<rect x="97" y="208" width="6" height="52" fill="#3A3A3F"></rect>
+</svg>
+</button>
+
+<div style="position: absolute; left: 390px; right: 390px; top: 724px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; text-shadow: 0 1px 8px rgba(0,0,0,0.85)">
+<span style="font-family: Fraunces, Georgia, serif; font-size: 25px; font-weight: 500; color: #FFF6E3">{{leftTitle}}</span>
+<span style="font-size: 14px; line-height: 1.5; color: #F1E2CC">{{leftText}}</span>
+<div style="margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap">
+<sc-if value="{{isStage}}" hint-placeholder-val="{{true}}">
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: 999px; background: rgba(0,0,0,0.25); border: 1px dashed rgba(217,174,82,0.6); color: #F0CF86; font: 600 14px Manrope, system-ui, sans-serif; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"></path><path d="M7 9l5-5 5 5"></path><path d="M5 20h14"></path></svg>
+Upload an MP3 instead</button>
+<span style="font-size: 13px; color: #E6D3BA">Up to 10 minutes and 25 MB</span>
+</sc-if>
+<sc-if value="{{isRec}}" hint-placeholder-val="{{false}}">
+<button type="button" onClick="{{finish}}" style="height: 46px; padding: 0 22px; border-radius: 999px; border: 0; background: #D9AE52; color: #1E1006; font: 700 15px Manrope, system-ui, sans-serif; cursor: pointer">Finish speech</button>
+<button type="button" onClick="{{restart}}" style="height: 44px; padding: 0 6px; border: 0; background: transparent; color: #D8C6AE; font: 600 14px Manrope, system-ui, sans-serif; cursor: pointer">Start over</button>
+</sc-if>
+</div>
+</div>
+
+</sc-if>
+
+<sc-if value="{{isBack}}" hint-placeholder-val="{{false}}">
+<div aria-hidden="true" style="position: absolute; inset: 0; background: radial-gradient(ellipse 60% 45% at 50% 0%, rgba(255,220,150,0.10), rgba(0,0,0,0) 70%), repeating-linear-gradient(90deg, #3A0E14 0 158px, #2A080D 158px 162px), #3A0E14"></div>
+<div aria-hidden="true" style="position: absolute; left: 90px; top: 112px; width: 1100px; height: 768px; border-radius: 22px; background: linear-gradient(160deg, #B07A44, #8A5A2E 45%, #8A5A2E); box-shadow: 0 30px 80px rgba(0,0,0,0.55)"></div>
+<sc-for list="{{bulbs}}" as="b" hint-placeholder-count="24">
+<span aria-hidden="true" class="{{b.cls}}" style="position: absolute; width: 22px; height: 22px; border-radius: 999px; background: radial-gradient(circle at 40% 35%, #FFFFFF, #FFDFA0 60%); box-shadow: 0 0 18px 5px rgba(255,200,120,0.7); {{b.style}}"></span>
+</sc-for>
+<div class="sr-rise" style="position: absolute; left: 106px; top: 128px; width: 1068px; height: 736px; box-sizing: border-box; border-radius: 10px; padding: 36px 48px; display: flex; gap: 44px; background: linear-gradient(155deg, rgba(255,255,255,0.05), rgba(255,255,255,0) 35%), #1E0F0C; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 0 60px rgba(0,0,0,0.45)">
+<aside aria-label="Your speech" style="width: 290px; flex-shrink: 0; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 12px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #BCA992">Tonight's performance</span>
+<h2 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 25px; line-height: 1.2; color: #FFF6E3">{{topic.text}}</h2>
+<span style="align-self: flex-start; display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; border: 1px solid rgba(217,174,82,0.6); color: #D9AE52">{{topic.type}}</span>
+</div>
+<div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 14px 0; border-top: 1px solid rgba(246,234,211,0.16); border-bottom: 1px solid rgba(246,234,211,0.16)">
+<span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 32px; font-weight: 600; color: #FFB066">3:42</span>
+<span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 17px; color: #BCA992">/ 3:00</span>
+<span style="display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 13px; font-weight: 700; background: rgba(255,176,102,0.16); color: #FFB066">0:42 over</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: baseline; gap: 12px"><span style="font-family: Fraunces, Georgia, serif; font-size: 38px; font-weight: 500; min-width: 82px; color: #FFF6E3">132</span><span style="font-weight: 700; font-size: 14px">Words per minute</span></div>
+<div style="display: flex; align-items: baseline; gap: 12px"><span style="font-family: Fraunces, Georgia, serif; font-size: 38px; font-weight: 500; min-width: 82px; color: #FFF6E3">4</span><div style="display: flex; flex-direction: column; gap: 4px"><span style="font-weight: 700; font-size: 14px">Filler words</span><span style="font-size: 13px; color: #D8C6AE">um 3, uh 1</span></div></div>
+<div style="display: flex; align-items: baseline; gap: 12px"><span style="font-family: Fraunces, Georgia, serif; font-size: 38px; font-weight: 500; min-width: 82px; color: #FFF6E3">76%</span><span style="font-weight: 700; font-size: 14px">Confidence score</span></div>
+</div>
+<div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px">
+<button type="button" onClick="{{goStage}}" style="height: 48px; border-radius: 999px; border: 0; background: #D9AE52; color: #1E1006; font: 700 15px Manrope, system-ui, sans-serif; cursor: pointer">Back to the stage</button>
+<button type="button" onClick="{{goStage}}" style="height: 48px; border-radius: 999px; background: transparent; border: 1px solid rgba(246,234,211,0.28); color: #EFE2CF; font: 600 15px Manrope, system-ui, sans-serif; cursor: pointer">Try this topic again</button>
+</div>
+</aside>
+<section aria-label="Coach's notes" style="flex: 1; min-width: 0; padding-left: 40px; border-left: 1px solid rgba(246,234,211,0.16); display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 12px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #BCA992">Backstage</span>
+<h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 38px; letter-spacing: -0.02em; color: #FFF6E3">Coach's notes</h1>
+</div>
+<span style="font-size: 12px; color: #BCA992">Scroll for all notes</span>
+</div>
+<div class="sr-scroll" tabindex="0" aria-label="Coach's notes, scrollable" style="flex: 1; min-height: 0; overflow-y: auto; padding: 6px 14px 40px 0; display: flex; flex-direction: column; gap: 22px; -webkit-mask-image: linear-gradient(180deg, #000 82%, rgba(0,0,0,0)); mask-image: linear-gradient(180deg, #000 82%, rgba(0,0,0,0))">
+<sc-for list="{{notes}}" as="n" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<h3 style="margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; {{n.color}}">{{n.title}}</h3>
+<sc-for list="{{n.items}}" as="it" hint-placeholder-count="3">
+<div style="display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 4px; line-height: 1.55; font-size: 15px; color: #DCCBB3"><span style="font-family: Fraunces, Georgia, serif; font-size: 19px; color: #D9AE52">{{it.n}}</span><span><strong style="color: #FFF6E3">{{it.title}}</strong> {{it.text}}</span></div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{isWall}}" hint-placeholder-val="{{false}}">
+<div aria-hidden="true" style="position: absolute; inset: 0; background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255,214,150,0.12), rgba(0,0,0,0) 70%), repeating-linear-gradient(90deg, #3E0F16 0 60px, #380D13 60px 120px)"></div>
+<div class="sr-scroll" style="position: absolute; top: 100px; left: 0; right: 0; bottom: 0; overflow-y: auto; padding: 26px 90px 60px">
+<div class="sr-rise" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px">
+<h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 42px; letter-spacing: -0.02em; color: #FFF6E3">Wall of Fame</h1>
+<span style="font-size: 14px; color: #D8C6AE">Your past performances. Saved only on this device.</span>
+</div>
+
+<div style="margin-top: 26px; display: flex; flex-direction: column; align-items: center">
+<span style="font-size: 12px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #BCA992">Trophy shelf</span>
+<div style="margin-top: 12px; width: 100%; display: flex; gap: 22px; flex-wrap: wrap; justify-content: center">
+<sc-for list="{{trophies}}" as="tr" hint-placeholder-count="5">
+<div style="width: 112px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; {{tr.dim}}">
+<sc-if value="{{tr.cup}}" hint-placeholder-val="{{true}}">
+<svg width="58" height="58" viewBox="0 0 64 64" aria-hidden="true"><path d="M20 8h24v14a12 12 0 0 1-24 0z" fill="{{tr.fill}}"></path><path d="M20 12h-7a7 7 0 0 0 9 10M44 12h7a7 7 0 0 1-9 10" fill="none" stroke="{{tr.fill}}" stroke-width="3"></path><rect x="29" y="33" width="6" height="11" fill="{{tr.fill}}"></rect><rect x="21" y="44" width="22" height="6" rx="2" fill="{{tr.fill}}"></rect><rect x="17" y="50" width="30" height="8" rx="2" fill="{{tr.base}}"></rect></svg>
+</sc-if>
+<sc-if value="{{tr.medal}}" hint-placeholder-val="{{false}}">
+<svg width="58" height="58" viewBox="0 0 64 64" aria-hidden="true"><path d="M22 2h8l6 18h-8zM42 2h-8l-6 18h8z" fill="#8C1426"></path><circle cx="32" cy="40" r="17" fill="{{tr.fill}}"></circle><circle cx="32" cy="40" r="12" fill="none" stroke="{{tr.base}}" stroke-width="2"></circle><path d="M32 32l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z" fill="{{tr.base}}"></path></svg>
+</sc-if>
+<span style="font-size: 13px; font-weight: 700; color: #FFF6E3">{{tr.title}}</span>
+<span style="font-size: 12px; color: #D8C6AE">{{tr.sub}}</span>
+</div>
+</sc-for>
+</div>
+<div aria-hidden="true" style="width: 100%; height: 14px; margin-top: 8px; border-radius: 3px; background: linear-gradient(180deg, #8A5A2E, #5C3519); box-shadow: 0 10px 20px rgba(0,0,0,0.45)"></div>
+</div>
+
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="3">
+<div style="margin-top: 34px; display: flex; flex-direction: column; align-items: center">
+<span style="display: inline-flex; align-items: center; height: 30px; padding: 0 16px; border-radius: 4px; background: linear-gradient(180deg, #F0CF86, #B8893A); color: #2A1806; font-family: Fraunces, Georgia, serif; font-size: 15px; font-weight: 600; box-shadow: 0 3px 8px rgba(0,0,0,0.4)">{{g.label}}</span>
+<div style="margin-top: 22px; width: 100%; display: flex; gap: 40px; flex-wrap: wrap; justify-content: center">
+<sc-for list="{{g.items}}" as="e" hint-placeholder-count="2">
+<div style="display: flex; flex-direction: column; align-items: center">
+<span aria-hidden="true" style="width: 10px; height: 10px; border-radius: 999px; background: #C9A15A; box-shadow: 0 2px 3px rgba(0,0,0,0.5)"></span>
+<button type="button" onClick="{{e.open}}" aria-label="{{e.aria}}" style="margin-top: 6px; width: 210px; padding: 10px; border: 0; border-radius: 4px; cursor: pointer; text-align: left; background: linear-gradient(145deg, #E6C277, #9C7232 50%, #D8B062); box-shadow: 0 14px 30px rgba(0,0,0,0.5); {{e.tilt}}">
+<span style="display: flex; flex-direction: column; gap: 8px; height: 214px; box-sizing: border-box; padding: 16px 14px; background: #F4E7CC; color: #2A1A0E; box-shadow: inset 0 0 0 1px rgba(90,60,20,0.25)">
+<span style="font-size: 9px; font-weight: 800; letter-spacing: 0.24em; color: #6E5A44">SPEAKREVIEW PRESENTS</span>
+<span style="font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #8C1426">{{e.type}}</span>
+<span style="font-family: Fraunces, Georgia, serif; font-size: 17px; font-weight: 600; line-height: 1.25">{{e.text}}</span>
+<span style="margin-top: auto; padding-top: 8px; border-top: 1px solid rgba(90,60,20,0.3); display: flex; align-items: center; justify-content: space-between; gap: 6px">
+<span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; font-weight: 600">{{e.time}}</span>
+<span style="font-size: 11px; font-weight: 800; {{e.statusColor}}">{{e.status}}</span>
+</span>
+</span>
+</button>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+<div style="margin-top: 44px; display: flex; justify-content: center">
+<button type="button" style="height: 44px; padding: 0 16px; border-radius: 999px; background: transparent; border: 1px solid rgba(246,234,211,0.28); color: #D8C6AE; font: 600 13px Manrope, system-ui, sans-serif; cursor: pointer">Clear the wall</button>
+</div>
+</div>
+</sc-if>
+
+<header style="position: absolute; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 16px; {{headerPos}}">
+<div style="display: flex; align-items: center; gap: 10px">
+<svg width="26" height="26" viewBox="0 0 28 28" fill="none" aria-hidden="true"><rect x="3" y="11" width="3" height="6" rx="1.5" fill="#D9AE52"></rect><rect x="9" y="6" width="3" height="16" rx="1.5" fill="#D9AE52"></rect><rect x="15" y="3" width="3" height="22" rx="1.5" fill="#D9AE52"></rect><rect x="21" y="9" width="3" height="10" rx="1.5" fill="#D9AE52"></rect></svg>
+<span style="font-family: Fraunces, Georgia, serif; font-size: 23px; font-weight: 600; letter-spacing: -0.01em; color: #FFF6E3">Speak<span style="color: #D9AE52">Review</span></span>
+</div>
+<nav aria-label="Main" style="display: flex; gap: 4px">
+<sc-for list="{{nav}}" as="n" hint-placeholder-count="3">
+<button type="button" aria-current="{{n.current}}" onClick="{{n.go}}" style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center; min-height: 48px; padding: 4px 14px; border: 0; border-radius: 12px; cursor: pointer; font-family: Manrope, system-ui, sans-serif; {{n.bg}}"><span style="font-size: 15px; font-weight: 700; {{n.color}}">{{n.label}}</span><span style="font-size: 11px; font-weight: 500; color: #BCA992">{{n.sub}}</span></button>
+</sc-for>
+</nav>
+</header>
+
+<div aria-hidden="true" class="sr-curtain" style="position: absolute; top: 0; bottom: 0; left: 0; width: 50.5%; z-index: 30; box-shadow: inset -3px 0 0 #D9AE52, 10px 0 40px rgba(0,0,0,0.6); background: linear-gradient(90deg, rgba(0,0,0,0.35), rgba(0,0,0,0) 30%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.45)), repeating-linear-gradient(90deg, #4A0812 0, #8C1426 18px, #B8283A 30px, #8C1426 42px, #4A0812 60px); {{curtainL}}"></div>
+<div aria-hidden="true" class="sr-curtain" style="position: absolute; top: 0; bottom: 0; right: 0; width: 50.5%; z-index: 30; box-shadow: inset 3px 0 0 #D9AE52, -10px 0 40px rgba(0,0,0,0.6); background: linear-gradient(270deg, rgba(0,0,0,0.35), rgba(0,0,0,0) 30%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.45)), repeating-linear-gradient(270deg, #4A0812 0, #8C1426 18px, #B8283A 30px, #8C1426 42px, #4A0812 60px); {{curtainR}}"></div>
+
+<sc-if value="{{intermission}}" hint-placeholder-val="{{false}}">
+<div class="sr-rise" role="status" style="position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px">
+<span style="font-size: 13px; font-weight: 800; letter-spacing: 0.3em; text-transform: uppercase; color: #F0CF86">SpeakReview</span>
+<h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 72px; letter-spacing: -0.02em; color: #FFF6E3; text-shadow: 0 6px 30px rgba(0,0,0,0.6)">Intermission</h1>
+<span style="font-size: 18px; color: #F6E4CC">Your coach is reviewing your speech<span class="sr-dot">.</span><span class="sr-dot" style="animation-delay: 0.2s">.</span><span class="sr-dot" style="animation-delay: 0.4s">.</span></span>
+<span style="font-size: 14px; color: #E6CFB4">Longer speeches can take a few minutes. Please keep this page open.</span>
+</div>
+</sc-if>
+
+<sc-if value="{{hasOpen}}" hint-placeholder-val="{{false}}">
+<div role="dialog" aria-modal="true" aria-label="{{openEntry.text}}" style="position: absolute; inset: 0; z-index: 50; background: rgba(12,4,4,0.8); display: flex; align-items: center; justify-content: center">
+<div class="sr-rise" style="width: 760px; padding: 14px; border-radius: 6px; background: linear-gradient(145deg, #E6C277, #9C7232 50%, #D8B062); box-shadow: 0 30px 80px rgba(0,0,0,0.7)">
+<div style="position: relative; max-height: 720px; box-sizing: border-box; display: flex; flex-direction: column; background: #F4E7CC; color: #2A1A0E">
+<button type="button" aria-label="Close" onClick="{{closeEntry}}" style="position: absolute; top: 8px; right: 8px; width: 44px; height: 44px; border-radius: 999px; border: 0; background: transparent; color: #2A1A0E; cursor: pointer; display: flex; align-items: center; justify-content: center">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+</button>
+<div style="padding: 28px 36px 18px; border-bottom: 1px solid rgba(90,60,20,0.3)">
+<span style="font-size: 10px; font-weight: 800; letter-spacing: 0.26em; color: #6E5A44">SPEAKREVIEW PRESENTS</span>
+<h2 style="margin: 8px 0 10px; padding-right: 40px; font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 30px; line-height: 1.15">{{openEntry.text}}</h2>
+<div style="display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: #4A3826">
+<span style="font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #8C1426">{{openEntry.type}}</span>
+<span>{{openEntry.day}}</span>
+<span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600">{{openEntry.time}}</span>
+<span style="font-weight: 800; {{openEntry.statusColor}}">{{openEntry.status}}</span>
+<span>132 words per minute</span>
+<span>4 filler words</span>
+<span>76% confidence</span>
+</div>
+</div>
+<div class="sr-scroll" tabindex="0" style="flex: 1; min-height: 0; max-height: 470px; overflow-y: auto; padding: 18px 36px; display: flex; flex-direction: column; gap: 18px">
+<sc-for list="{{notes}}" as="n" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h3 style="margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: #8C1426">{{n.title}}</h3>
+<sc-for list="{{n.items}}" as="it" hint-placeholder-count="3">
+<div style="display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 4px; line-height: 1.55; font-size: 15px; color: #3A2A1C"><span style="font-family: Fraunces, Georgia, serif; font-size: 17px; color: #8C5A1E">{{it.n}}</span><span><strong style="color: #1E1208">{{it.title}}</strong> {{it.text}}</span></div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+<div style="padding: 14px 36px 22px; border-top: 1px solid rgba(90,60,20,0.3); display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+<sc-if value="{{notConfirming}}" hint-placeholder-val="{{true}}">
+<button type="button" onClick="{{askRemove}}" style="height: 44px; padding: 0 18px; border-radius: 999px; background: transparent; border: 1px solid #8C1426; color: #8C1426; font: 700 14px Manrope, system-ui, sans-serif; cursor: pointer">Remove from the wall</button>
+<button type="button" onClick="{{closeEntry}}" style="height: 44px; padding: 0 18px; border-radius: 999px; border: 0; background: #2A1A0E; color: #F4E7CC; font: 700 14px Manrope, system-ui, sans-serif; cursor: pointer">Close</button>
+</sc-if>
+<sc-if value="{{confirming}}" hint-placeholder-val="{{false}}">
+<span style="font-size: 14px; font-weight: 600; color: #2A1A0E">Remove this performance from your wall? This can't be undone.</span>
+<button type="button" onClick="{{confirmRemove}}" style="height: 44px; padding: 0 18px; border-radius: 999px; border: 0; background: #8C1426; color: #FFF6E3; font: 700 14px Manrope, system-ui, sans-serif; cursor: pointer">Remove</button>
+<button type="button" onClick="{{cancelRemove}}" style="height: 44px; padding: 0 18px; border-radius: 999px; background: transparent; border: 1px solid #2A1A0E; color: #2A1A0E; font: 700 14px Manrope, system-ui, sans-serif; cursor: pointer">Keep it</button>
+</sc-if>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { screen: 'stage', curtain: false, intermission: false, seconds: 172, showWatch: true, time: '3', prep: '30', topicIdx: 0, rolling: false, openId: null, confirm: false, removed: [] };
+this.timers = [];
+this.tick = null;
+}
+componentWillUnmount() {
+this.timers.forEach(function (id) { clearTimeout(id); });
+if (this.tick) { clearInterval(this.tick); }
+}
+calm() {
+return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+later(fn, ms) {
+this.timers.push(setTimeout(fn, ms));
+}
+stopTick() {
+if (this.tick) { clearInterval(this.tick); this.tick = null; }
+}
+go(target) {
+if (this.state.screen === target || this.state.curtain) { return; }
+this.stopTick();
+if (this.calm()) { this.setState({ screen: target }); return; }
+this.setState({ curtain: true });
+this.later(() => this.setState({ screen: target }), 720);
+this.later(() => this.setState({ curtain: false }), 880);
+}
+startRec() {
+this.stopTick();
+this.setState({ screen: 'recording', seconds: 172 });
+this.tick = setInterval(() => this.setState((s) => ({ seconds: s.seconds + 1 })), 1000);
+}
+finish() {
+this.stopTick();
+if (this.calm()) {
+this.setState({ intermission: true });
+this.later(() => this.setState({ screen: 'backstage', intermission: false }), 2500);
+return;
+}
+this.setState({ curtain: true });
+this.later(() => this.setState({ intermission: true }), 700);
+this.later(() => this.setState({ screen: 'backstage', intermission: false }), 3700);
+this.later(() => this.setState({ curtain: false }), 3850);
+}
+roll() {
+if (this.state.rolling) { return; }
+const count = this.topics().length;
+if (this.calm()) { this.setState((s) => ({ topicIdx: (s.topicIdx + 3) % count })); return; }
+let n = 0;
+this.setState({ rolling: true });
+const step = () => {
+n += 1;
+this.setState((s) => ({ topicIdx: (s.topicIdx + 1) % count }));
+if (n < 13) { this.later(step, 45 + n * 14); } else { this.setState({ rolling: false }); }
+};
+step();
+}
+topics() {
+return [
+{ type: 'Persuade', hint: 'Take a side and back it up', text: 'Is failure a better teacher than success?' },
+{ type: 'Story', hint: 'Tell a story with a point', text: 'Describe a time when patience paid off.' },
+{ type: 'Explain', hint: 'Make an idea clear', text: 'What makes a good apology?' },
+{ type: 'Imagine', hint: 'Think on your feet', text: 'If you could invent anything, what would it be?' },
+{ type: 'Reflect', hint: 'Speak honestly about yourself', text: 'What does courage mean to you?' },
+{ type: 'Persuade', hint: 'Take a side and back it up', text: 'Should everyone learn a second language?' },
+{ type: 'Story', hint: 'Tell a story with a point', text: 'Tell the story of the best decision you ever made.' },
+{ type: 'Explain', hint: 'Make an idea clear', text: 'What makes a friendship last?' },
+{ type: 'Imagine', hint: 'Think on your feet', text: 'If you could design the perfect city, what would it be like?' },
+{ type: 'Reflect', hint: 'Speak honestly about yourself', text: 'What advice would you give your younger self, and why?' }
+];
+}
+entries() {
+return [
+{ id: 'e1', day: 'Today', type: 'Persuade', text: 'Is failure a better teacher than success?', time: '3:42 / 3:00', status: '0:42 over', over: true, tilt: -1.2 },
+{ id: 'e2', day: 'Today', type: 'Story', text: 'Describe a time when patience paid off.', time: '2:48 / 3:00', status: '0:12 under', over: false, tilt: 0.8 },
+{ id: 'e3', day: 'Yesterday', type: 'Explain', text: 'What makes a good apology?', time: '1:05 / 1:00', status: '0:05 over', over: true, tilt: -0.6 },
+{ id: 'e4', day: 'Yesterday', type: 'Imagine', text: 'If you could invent anything, what would it be?', time: '4:10', status: 'Untimed', over: false, tilt: 1.1 },
+{ id: 'e5', day: 'Thursday, October 1', type: 'Reflect', text: 'What does courage mean to you?', time: '4:58 / 5:00', status: '0:02 under', over: false, tilt: -0.9 }
+];
+}
+fmt(sec) {
+const m = Math.floor(sec / 60);
+const s = sec % 60;
+return m + ':' + (s < 10 ? '0' : '') + s;
+}
+renderVals() {
+const st = this.state;
+const screen = st.screen;
+const isStage = screen === 'stage';
+const isRec = screen === 'recording';
+const isBack = screen === 'backstage';
+const isWall = screen === 'wall';
+const topics = this.topics();
+const topic = topics[st.topicIdx % topics.length];
+
+const chipStyle = (on) => on
+? 'border: 1px solid #D9AE52; background: #D9AE52; color: #1E1006; font-weight: 700;'
+: 'border: 1px solid rgba(246,234,211,0.26); background: transparent; color: #EFE2CF; font-weight: 600;';
+const timeChips = [['untimed', 'Untimed'], ['1', '1 min'], ['3', '3 min'], ['5', '5 min'], ['custom', 'Custom']].map((p) => ({
+label: p[1], on: st.time === p[0] ? 'true' : 'false', style: chipStyle(st.time === p[0]), pick: () => this.setState({ time: p[0] })
+}));
+const prepChips = [['off', 'Off'], ['30', '30 sec'], ['60', '1 min'], ['120', '2 min']].map((p) => ({
+label: p[1], on: st.prep === p[0] ? 'true' : 'false', style: chipStyle(st.prep === p[0]), pick: () => this.setState({ prep: p[0] })
+}));
+
+const limit = st.time === 'untimed' ? 0 : (st.time === 'custom' ? 150 : Number(st.time) * 60);
+const over = limit > 0 && st.seconds > limit;
+let statusText = 'Untimed';
+let statusStyle = 'background: rgba(246,234,211,0.1); color: #D8C6AE;';
+if (limit > 0 && over) { statusText = '+' + this.fmt(st.seconds - limit) + ' over'; statusStyle = 'background: rgba(255,176,102,0.16); color: #FFB066;'; }
+else if (limit > 0) { statusText = this.fmt(limit - st.seconds) + ' left'; statusStyle = 'background: rgba(143,224,176,0.14); color: #8FE0B0;'; }
+
+const navDefs = [['stage', 'Stage', 'Practice'], ['backstage', 'Backstage', 'Your feedback'], ['wall', 'Wall of Fame', 'Past performances']];
+const nav = navDefs.map((d) => {
+const active = d[0] === screen || (d[0] === 'stage' && isRec);
+return {
+label: d[1], sub: d[2], current: active ? 'page' : 'false',
+bg: active ? 'background: rgba(217,174,82,0.16);' : 'background: transparent;',
+color: active ? 'color: #F0CF86;' : 'color: #D8C6AE;',
+go: () => this.go(d[0])
+};
+});
+
+const bulbs = [];
+const addBulb = (x, y, i) => bulbs.push({ cls: i % 2 === 0 ? 'sr-bulb-a' : 'sr-bulb-b', style: 'left: ' + x + 'px; top: ' + y + 'px;' });
+let k = 0;
+for (let i = 0; i < 12; i++) { addBulb(130 + i * 92, 109, k); k += 1; }
+for (let j = 0; j < 6; j++) { addBulb(1171, 192 + j * 110, k); k += 1; }
+for (let j = 5; j >= 0; j--) { addBulb(87, 192 + j * 110, k); k += 1; }
+
+const heights = [14, 26, 40, 22, 52, 34, 18, 44, 60, 30, 20, 48, 38, 24, 56, 42, 16, 34, 62, 46, 28, 18, 40, 58, 36, 22, 50, 44, 26, 14, 38, 54, 32, 20, 46, 28, 16, 36, 24, 12, 22, 30, 18, 10];
+const waveBars = heights.map((h, i) => ({ style: 'height: ' + h + 'px; animation-duration: ' + (0.7 + (i % 5) * 0.12).toFixed(2) + 's; animation-delay: -' + ((i * 0.13) % 1).toFixed(2) + 's; opacity: ' + (0.45 + (h / 62) * 0.55).toFixed(2) + ';' }));
+
+const notes = [
+{ title: 'Strengths', color: 'color: #8FE0B0;', items: [
+{ n: '1', title: 'Clear position:', text: 'You took a side in your first sentence, so the audience always knew where you stood.' },
+{ n: '2', title: 'Personal example:', text: 'The driving test story made the argument easy to relate to.' },
+{ n: '3', title: 'Steady pace:', text: 'At 132 words per minute, every point was easy to follow.' }] },
+{ title: 'Weaknesses', color: 'color: #FFB066;', items: [
+{ n: '1', title: 'Fillers at transitions:', text: 'Most of the "um" sounds came right before a new point.' },
+{ n: '2', title: 'One side only:', text: 'The speech skipped what success can teach, which made the argument feel incomplete.' },
+{ n: '3', title: 'Abrupt ending:', text: 'The final point stopped without a summary or a closing line.' }] },
+{ title: 'Improvement tips', color: 'color: #9CCBFF;', items: [
+{ n: '1', title: 'Pause instead of filling:', text: 'Take a one second breath before each new point.' },
+{ n: '2', title: 'Answer the other side:', text: 'Spend one sentence on why someone might disagree, then respond to it.' },
+{ n: '3', title: 'Plan your last line:', text: 'End by repeating your position in one memorable sentence.' }] },
+{ title: 'Staying on topic', color: 'color: #D9AE52;', items: [
+{ n: '', title: '', text: 'Every point supported your answer to the question, and the speech worked well as a persuasive piece.' }] },
+{ title: 'Time management', color: 'color: #D9AE52;', items: [
+{ n: '', title: '', text: 'You went 42 seconds over. Trimming the second example would bring this in under 3:00.' }] }
+];
+
+const all = this.entries().filter((e) => st.removed.indexOf(e.id) === -1);
+const dayOrder = [];
+all.forEach((e) => { if (dayOrder.indexOf(e.day) === -1) { dayOrder.push(e.day); } });
+const decorate = (e) => ({
+type: e.type, text: e.text, time: e.time, status: e.status, day: e.day,
+statusColor: e.over ? 'color: #B4531A;' : 'color: #1F7A4D;',
+tilt: 'transform: rotate(' + e.tilt + 'deg);',
+aria: 'Open performance: ' + e.text,
+open: () => this.setState({ openId: e.id, confirm: false })
+});
+const groups = dayOrder.map((d) => ({ label: d, items: all.filter((e) => e.day === d).map(decorate) }));
+const openRaw = all.filter((e) => e.id === st.openId)[0];
+const openEntry = openRaw ? decorate(openRaw) : { text: '', type: '', day: '', time: '', status: '', statusColor: '' };
+
+const gold = '#E3B65A';
+const goldBase = '#9C7232';
+const won = (title, sub, cup) => ({ title: title, sub: sub, cup: cup, medal: !cup, fill: gold, base: goldBase, dim: '' });
+const locked = (title, sub, cup) => ({ title: title, sub: sub, cup: cup, medal: !cup, fill: '#6A5A52', base: '#4A3C36', dim: 'opacity: 0.55;' });
+const trophies = [
+won('Opening night', 'Finished a first speech', true),
+won('Five shows', '5 performances', true),
+won('Right on cue', 'Within 10 sec of the limit', false),
+won('Clean delivery', '1 min+, 2 fillers or fewer', false),
+locked('Ten shows', '7 of 10', true),
+locked('Full repertoire', '4 of 5 topic types', false),
+locked('Long run', 'Speak 5 minutes or more', false),
+locked('Three-night run', '2 of 3 days in a row', true)
+];
+
+const micOn = isRec;
+return {
+isStage: isStage, isRec: isRec, isBack: isBack, isWall: isWall, isStageLike: isStage || isRec,
+topic: topic,
+topicStyle: st.rolling ? 'opacity: 0.75; filter: blur(0.6px);' : '',
+roll: () => this.roll(),
+timeChips: timeChips, prepChips: prepChips,
+showWatch: st.showWatch, hideWatch: !st.showWatch,
+watchPressed: st.showWatch ? 'true' : 'false',
+watchWord: st.showWatch ? 'Show' : 'Hidden',
+switchTrack: st.showWatch ? 'background: #D9AE52; justify-content: flex-end;' : 'background: rgba(246,234,211,0.25); justify-content: flex-start;',
+toggleWatch: () => this.setState((s) => ({ showWatch: !s.showWatch })),
+elapsed: this.fmt(st.seconds),
+limitText: limit > 0 ? this.fmt(limit) : 'untimed',
+elapsedStyle: over ? 'color: #FFB066;' : 'color: #8FE0B0;',
+statusText: statusText, statusStyle: statusStyle,
+waveBars: waveBars,
+onAirStyle: micOn ? 'background: #E5383B; color: #FFFFFF; box-shadow: 0 0 20px rgba(229,56,59,0.7);' : 'background: #2A0A0E; color: rgba(255,255,255,0.4); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);',
+micGlow: micOn ? 'rgba(229,56,59,0.28)' : 'rgba(217,174,82,0.22)',
+micLabel: micOn ? 'Finish speech' : 'Start recording',
+micClick: micOn ? () => this.finish() : () => this.startRec(),
+leftTitle: micOn ? 'Recording' : 'Step up to the mic',
+leftText: micOn ? 'Tap the mic or Finish when done. Recording stops automatically at 10:00.' : 'Tap the mic to begin. You get 30 seconds to prepare, then recording starts.',
+finish: () => this.finish(),
+restart: () => this.startRec(),
+goStage: () => this.go('stage'),
+nav: nav,
+headerPos: (isStage || isRec) ? 'top: 92px; left: 200px; right: 200px;' : 'top: 26px; left: 90px; right: 90px;',
+curtainL: st.curtain ? 'transform: translateX(0);' : 'transform: translateX(-104%);',
+curtainR: st.curtain ? 'transform: translateX(0);' : 'transform: translateX(104%);',
+intermission: st.intermission,
+bulbs: bulbs, notes: notes,
+groups: groups, trophies: trophies,
+hasOpen: !!openRaw, openEntry: openEntry,
+notConfirming: !st.confirm, confirming: st.confirm,
+closeEntry: () => this.setState({ openId: null, confirm: false }),
+askRemove: () => this.setState({ confirm: true }),
+cancelRemove: () => this.setState({ confirm: false }),
+confirmRemove: () => this.setState((s) => ({ removed: s.removed.concat([s.openId]), openId: null, confirm: false }))
+};
+}
+}
+</script>
+</body>
+</html>
