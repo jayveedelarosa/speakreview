@@ -326,24 +326,35 @@ textarea {
     height: min(var(--audience-h), calc(100% - var(--audience-gap)));
     margin: 0 calc(-1 * var(--inset));
     overflow: hidden;
+    /* Centers the audience in every browser, even when it is wider or narrower than the band
+       (an item wider than the band spills out equally on both sides, and the band clips it) */
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    /* The band's size comes only from the rules above, never from the SVG inside it,
+       so the audience row can still shrink to fit the window */
+    contain: size;
 }
 
-/* Bottom edge on the floor line. Width follows the height, so it scales without squashing.
+/* Bottom edge on the floor line. The width comes from the height through a fixed aspect ratio
+   (the SVG's own 1280 by 140, or 390 by 100 on phones), so it scales without squashing.
    overflow: visible lets the extra seats the design drew past the left and right edges fill in
    toward the curtains when it is scaled down. The front row, drawn past the bottom of the SVG,
    is still cut off by the band at the floor line. */
 .audience {
-    position: absolute;
-    left: 50%;
-    bottom: 0;
+    flex: none;
     width: auto;
     height: 100%;
     overflow: visible;
-    transform: translateX(-50%);
+}
+
+.audience-laptop {
+    aspect-ratio: 1280 / 140;
 }
 
 .audience-phone {
     display: none;
+    aspect-ratio: 390 / 100;
 }
 
 /* Side curtains from the top of the stage down to the floor line, drawn over the edges of the
@@ -1419,7 +1430,8 @@ textarea {
     flex: 1 1 0;
     min-height: 140px;
     overflow-y: auto;
-    padding: 6px 14px 40px 0;
+    /* Inner space on the left and right; the bottom space leaves room for the fade */
+    padding: 8px 20px 40px 18px;
     -webkit-mask-image: linear-gradient(180deg, #000 82%, rgba(0, 0, 0, 0));
     mask-image: linear-gradient(180deg, #000 82%, rgba(0, 0, 0, 0));
 }
@@ -2268,7 +2280,7 @@ body.curtains-closed .drape {
 
     .notes-body {
         min-height: 120px;
-        padding: 2px 6px 26px 0;
+        padding: 4px 12px 26px 12px;
         -webkit-mask-image: linear-gradient(180deg, #000 80%, rgba(0, 0, 0, 0));
         mask-image: linear-gradient(180deg, #000 80%, rgba(0, 0, 0, 0));
     }
