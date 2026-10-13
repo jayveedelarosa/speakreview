@@ -151,14 +151,6 @@
                         </div>
                     </div>
 
-                    <!-- Show the stopwatch while recording (hidden when the browser can't record) -->
-                    <div class="setting setting-stopwatch" id="stopwatchSetting">
-                        <span class="setting-label" id="stopwatchLabel"><span class="long-label">Stopwatch while speaking</span><span class="short-label" aria-hidden="true">Stopwatch</span></span>
-                        <button type="button" id="stopwatchToggle" class="switch-btn" role="switch" aria-checked="true" aria-labelledby="stopwatchLabel">
-                            <span class="switch-track"><span class="switch-thumb"></span></span>
-                            <span class="switch-word" id="stopwatchWord" aria-hidden="true">Show</span>
-                        </button>
-                    </div>
                 </section>
 
                 <!-- While recording, this takes the settings strip's place: the stopwatch and the live sound wave -->
@@ -169,7 +161,7 @@
                         <button type="button" id="swHideBtn" class="btn-quiet">Hide stopwatch</button>
                     </div>
                     <div id="stopwatchOff" class="stopwatch-row" hidden>
-                        <span class="sw-off-text">Stopwatch hidden. Just speak.</span>
+                        <span class="sw-off-text">Eyes on your audience, not the clock.</span>
                         <button type="button" id="swShowBtn" class="btn-quiet">Show stopwatch</button>
                     </div>
                     <!-- Decorative: gold bars that follow the mic level (a level meter with reduced motion) -->
@@ -246,12 +238,15 @@
                                         <button type="button" id="fileFwdBtn" class="take-skip" aria-label="Forward 5 seconds">
                                             <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5a7 7 0 1 0 7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M12 2v6l4-3z" fill="currentColor"></path><text x="12" y="15.5" text-anchor="middle" font-size="8" font-weight="700" fill="currentColor">5</text></svg>
                                         </button>
-                                        <input type="range" id="fileSeek" class="seek" min="0" max="0" step="0.1" value="0" aria-label="Position in your MP3">
+                                        <div class="wave-seek">
+                                            <canvas class="wave-canvas" aria-hidden="true"></canvas>
+                                            <input type="range" id="fileSeek" class="seek" min="0" max="0" step="0.1" value="0" aria-label="Position in your MP3">
+                                        </div>
                                         <span id="fileTime" class="take-time">0:00 / 0:00</span>
                                         <audio id="fileAudio" preload="metadata" hidden></audio>
                                     </div>
 
-                                    <button type="button" id="uploadBtn" class="btn-gold btn-bow" aria-label="Take a bow, send to the coach" hidden><span class="bow-main">Take a bow</span><span class="bow-sub">Send to the coach</span></button>
+                                    <button type="button" id="uploadBtn" class="btn-gold" hidden>Send to the coach</button>
                                 </div>
                             </div>
                         </div>
@@ -299,14 +294,17 @@
                                 <button type="button" id="takeFwdBtn" class="take-skip" aria-label="Forward 5 seconds">
                                     <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5a7 7 0 1 0 7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M12 2v6l4-3z" fill="currentColor"></path><text x="12" y="15.5" text-anchor="middle" font-size="8" font-weight="700" fill="currentColor">5</text></svg>
                                 </button>
-                                <input type="range" id="takeSeek" class="seek" min="0" max="0" step="0.1" value="0" aria-label="Position in your take">
+                                <div class="wave-seek">
+                                    <canvas class="wave-canvas" aria-hidden="true"></canvas>
+                                    <input type="range" id="takeSeek" class="seek" min="0" max="0" step="0.1" value="0" aria-label="Position in your take">
+                                </div>
                                 <span id="takeTime" class="take-time">0:00 / 0:00</span>
                                 <audio id="takeAudio" preload="auto" hidden></audio>
                             </div>
                             <p id="takeLengthLine" class="length-line"></p>
                             <p id="takeNote" class="take-note" hidden></p>
                             <div class="rec-buttons">
-                                <button type="button" id="takeSendBtn" class="btn-gold btn-bow" aria-label="Take a bow, send to the coach"><span class="bow-main">Take a bow</span><span class="bow-sub">Send to the coach</span></button>
+                                <button type="button" id="takeSendBtn" class="btn-gold">Send to the coach</button>
                                 <button type="button" id="reRecordBtn" class="btn-outline">Re-record</button>
                                 <button type="button" id="discardBtn" class="btn-quiet">Discard take</button>
                             </div>

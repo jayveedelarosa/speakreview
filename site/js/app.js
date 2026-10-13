@@ -105,9 +105,6 @@ const reRecordBtn = document.getElementById("reRecordBtn");
 const discardBtn = document.getElementById("discardBtn");
 const settingsStrip = document.getElementById("stepTime");
 const livePanel = document.getElementById("livePanel");
-const stopwatchSetting = document.getElementById("stopwatchSetting");
-const stopwatchToggle = document.getElementById("stopwatchToggle");
-const stopwatchWord = document.getElementById("stopwatchWord");
 const stopwatchRow = document.getElementById("stopwatchRow");
 const stopwatchOff = document.getElementById("stopwatchOff");
 const swElapsed = document.getElementById("swElapsed");
@@ -151,7 +148,12 @@ function showFileName() {
         filePlayer.clear();
     }
     filePlayerBox.hidden = !file;
-    updateLengthFromFile();
+    const lengthRead = updateLengthFromFile();
+    if (file) {
+        loadFileWaveform(file, lengthRead);
+    } else {
+        waveRequest++;            // a waveform still being worked out for the old file is ignored
+    }
 }
 
 fileInput.addEventListener("change", showFileName);
@@ -1439,7 +1441,7 @@ function stopRecording(reason) {
     recCount = 0;
     releaseMic();
 
-    setTake(buildWav(chunks, count), count / REC_SAMPLE_RATE);
+    setTake(buildWav(chunks, count), count / REC_SAMPLE_RATE, chunks);
 
     const notes = [];
     if (reason === "max") notes.push(`Recording stopped at the ${formatTime(MAX_REC_SAMPLES / REC_SAMPLE_RATE)} maximum.`);
@@ -1629,10 +1631,11 @@ function toLittleEndian(pcm) {
 }
 
 // ---- The take: listen back, send, re-record or discard ----
-function setTake(blob, seconds) {
+function setTake(blob, seconds, chunks) {
     clearTake();
     currentTake = { blob, seconds, url: URL.createObjectURL(blob), sent: false };
     takePlayer.load(currentTake.url);
+    takePlayer.setPeaks(chunks ? peaksFromChunks(chunks) : null);    // the waveform, from the recorded samples
     renderLengthLine();
 }
 
@@ -1657,20 +1660,163 @@ function markTakeSent(take) {
 }
 
 // ---- Players: listen to a take or a picked MP3, and move through it ----
-// One player setup used twice. Back and Forward jump 5 seconds, the slider can be clicked or dragged,
-// and on the slider the arrow keys also jump 5 seconds (Home and End go to the start and end).
+// One player setup used twice. The position is shown as the recording's waveform (like a voice note):
+// click, tap or drag anywhere on it to move there. An invisible slider lies on top of it for keyboards and
+// screen readers: its arrow keys jump 5 seconds (Home and End go to the start and end). Back and Forward
+// also jump 5 seconds.
 const SKIP_SECONDS = 5;
+const PEAK_BINS = 800;               // fine-grained loudness values kept per recording, drawn as fewer bars
+const WAVE_BARS_LAPTOP = 64;
+const WAVE_BARS_PHONE = 40;
+const WAVE_MIN_SLOT_PX = 3.5;          // narrowest space per bar that still leaves a visible gap
+const TOUCH_SLOP_PX = 8;             // a finger must move this far before it counts as a drag
+const WAVE_PLAYED = "#D9AE52";
+const WAVE_REST = "rgba(246, 234, 211, 0.28)";
+const WAVE_PLAYHEAD = "#F0CF86";
+
+// Scales loudness values so the loudest one is full height. Near silence stays as it is (a flat line).
+function normalizePeaks(peaks) {
+    let loudest = 0;
+    for (let i = 0; i < peaks.length; i++) loudest = Math.max(loudest, peaks[i]);
+    if (loudest < 0.01) return peaks;
+    for (let i = 0; i < peaks.length; i++) peaks[i] /= loudest;
+    return peaks;
+}
+
+// The loudest sample in each of PEAK_BINS slices of a take (its 16-bit chunks)
+function peaksFromChunks(chunks) {
+    const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+    const peaks = new Float32Array(PEAK_BINS);
+    if (total === 0) return peaks;
+    let position = 0;
+    for (const chunk of chunks) {
+        for (let i = 0; i < chunk.length; i++, position++) {
+            const bin = Math.floor(position * PEAK_BINS / total);
+            const level = Math.abs(chunk[i]) / 32768;
+            if (level > peaks[bin]) peaks[bin] = level;
+        }
+    }
+    return normalizePeaks(peaks);
+}
+
+// The same from decoded audio (every channel, the loudest wins)
+function peaksFromBuffer(buffer) {
+    const peaks = new Float32Array(PEAK_BINS);
+    const total = buffer.length;
+    if (total === 0) return peaks;
+    for (let c = 0; c < buffer.numberOfChannels; c++) {
+        const data = buffer.getChannelData(c);
+        for (let i = 0; i < total; i++) {
+            const bin = Math.floor(i * PEAK_BINS / total);
+            const level = Math.abs(data[i]);
+            if (level > peaks[bin]) peaks[bin] = level;
+        }
+    }
+    return normalizePeaks(peaks);
+}
+
+// Decodes a picked MP3 once at 8000 samples per second (small and quick) just to get its waveform.
+// The decoded audio is dropped afterwards. Returns null if the browser can't decode it.
+async function decodeMp3Peaks(file) {
+    const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!Offline || file.size > MAX_FILE_MB * 1024 * 1024) return null;
+    try {
+        const context = new Offline(1, 1, 8000);
+        const buffer = await context.decodeAudioData(await file.arrayBuffer());
+        return peaksFromBuffer(buffer);
+    } catch (err) {
+        return null;
+    }
+}
+
+// Phones and low-memory devices only decode MP3s up to 5 minutes long. Longer ones use the plain slider.
+const LOW_MEMORY_WAVE_SECONDS = 5 * 60;
+
+function isLowMemoryDevice() {
+    return window.matchMedia("(pointer: coarse)").matches
+        || (typeof navigator.deviceMemory === "number" && navigator.deviceMemory < 4);
+}
+
+let waveRequest = 0;           // counts waveform requests, so a slow old one can't replace a newer one
+
+async function loadFileWaveform(file, lengthRead) {
+    const request = ++waveRequest;
+    filePlayer.setPeaks(null);                 // a flat line while it works
+    if (isLowMemoryDevice()) {
+        await lengthRead;                      // the length the page reads anyway (fileLengthSeconds)
+        if (request !== waveRequest) return;
+        if (fileLengthSeconds === null || fileLengthSeconds > LOW_MEMORY_WAVE_SECONDS) {
+            filePlayer.setPlain(true);
+            return;
+        }
+    }
+    const peaks = await decodeMp3Peaks(file);
+    if (request !== waveRequest) return;
+    if (peaks) {
+        filePlayer.setPeaks(peaks);
+    } else {
+        filePlayer.setPlain(true);
+    }
+}
 
 function setupPlayer({ audio, playBtn, backBtn, fwdBtn, seek, time, name, getDuration, ownsUrl }) {
     let url = null;
     let dragging = false;
+    let peaks = null;              // null: a flat line
+    let plain = false;             // true: the plain slider look (no waveform available)
+    let shownShare = 0;            // how much has played, from 0 to 1
+    let pointer = null;            // the press currently on the waveform
+    const waveBox = seek.closest(".wave-seek");
+    const canvas = waveBox.querySelector(".wave-canvas");
 
     const duration = () => {
         const seconds = getDuration();
         return Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
     };
 
-    // Moves the slider and the "0:42 / 2:14" text to a position
+    // Draws the waveform: bars from the loudness values, gold up to the playhead, muted after it
+    function draw() {
+        if (plain) return;
+        const width = waveBox.clientWidth;
+        const height = waveBox.clientHeight;
+        if (width === 0 || height === 0) return;            // hidden: drawn when it appears
+        const ratio = window.devicePixelRatio || 1;
+        if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
+            canvas.width = Math.round(width * ratio);
+            canvas.height = Math.round(height * ratio);
+        }
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        ctx.clearRect(0, 0, width, height);
+
+        // About 64 bars on laptop and 40 on phones, fewer only if the box is too narrow for clear gaps
+        const target = window.matchMedia("(max-width: 600px)").matches ? WAVE_BARS_PHONE : WAVE_BARS_LAPTOP;
+        const bars = Math.max(1, Math.min(target, Math.floor(width / WAVE_MIN_SLOT_PX)));
+        const slot = width / bars;
+        const barWidth = Math.max(2, slot * 0.55);
+        const playX = shownShare * width;
+        for (let i = 0; i < bars; i++) {
+            let level = 0;
+            if (peaks) {
+                const from = Math.floor(i * peaks.length / bars);
+                const to = Math.max(from + 1, Math.floor((i + 1) * peaks.length / bars));
+                for (let j = from; j < to; j++) level = Math.max(level, peaks[j]);
+            }
+            const barHeight = Math.max(2, level * (height - 4));      // silence: a flat line
+            ctx.fillStyle = (i + 0.5) * slot <= playX ? WAVE_PLAYED : WAVE_REST;
+            // Whole device pixels keep the bars crisp, with a clean gap between them
+            const left = Math.round((i * slot + (slot - barWidth) / 2) * ratio) / ratio;
+            const top = Math.round(((height - barHeight) / 2) * ratio) / ratio;
+            ctx.fillRect(left, top, Math.max(1, Math.round(barWidth * ratio)) / ratio, Math.max(1, Math.round(barHeight * ratio)) / ratio);
+        }
+        // A thin playhead at the current position
+        ctx.fillStyle = WAVE_PLAYHEAD;
+        ctx.fillRect(Math.round(Math.min(Math.max(playX - 1, 0), width - 2) * ratio) / ratio, 0, 2, height);
+    }
+
+    new ResizeObserver(draw).observe(waveBox);
+
+    // Moves the slider, the waveform and the "0:42 / 2:14" text to a position
     function show(position) {
         const total = duration();
         const at = Math.min(Math.max(0, position), total);
@@ -1679,12 +1825,21 @@ function setupPlayer({ audio, playBtn, backBtn, fwdBtn, seek, time, name, getDur
         seek.style.setProperty("--pos", total > 0 ? `${(at / total) * 100}%` : "0%");
         time.textContent = `${formatTime(Math.floor(at))} / ${formatTime(total)}`;
         seek.setAttribute("aria-valuetext", `${formatTime(Math.floor(at))} of ${formatTime(total)}`);
+        shownShare = total > 0 ? at / total : 0;
+        draw();
     }
 
     function seekTo(position) {
         const at = Math.min(Math.max(0, position), duration());
         if (url) audio.currentTime = at;
         show(at);
+    }
+
+    // Seeks to the point under the pointer
+    function seekAt(clientX) {
+        const box = waveBox.getBoundingClientRect();
+        const share = Math.min(Math.max((clientX - box.left) / box.width, 0), 1);
+        seekTo(share * duration());
     }
 
     function showPlaying(playing) {
@@ -1707,7 +1862,53 @@ function setupPlayer({ audio, playBtn, backBtn, fwdBtn, seek, time, name, getDur
     backBtn.addEventListener("click", () => seekTo(audio.currentTime - SKIP_SECONDS));
     fwdBtn.addEventListener("click", () => seekTo(audio.currentTime + SKIP_SECONDS));
 
-    // Clicking or dragging the slider moves playback, and the time text follows while dragging
+    // Pointer on the waveform. A mouse or pen seeks as soon as it presses and follows while dragging.
+    // A finger only seeks on a tap, or once it clearly moves sideways: a mostly up-and-down swipe
+    // scrolls the page (the browser takes it over) and never changes the position.
+    function endPointer() {
+        pointer = null;
+        dragging = false;
+    }
+
+    waveBox.addEventListener("pointerdown", e => {
+        if (plain || !url) return;
+        if (e.pointerType === "touch") {
+            pointer = { id: e.pointerId, touch: true, x0: e.clientX, y0: e.clientY, drag: false };
+            return;
+        }
+        if (e.button !== 0) return;
+        pointer = { id: e.pointerId, touch: false, drag: true };
+        dragging = true;
+        waveBox.setPointerCapture(e.pointerId);
+        seekAt(e.clientX);
+        e.preventDefault();
+    });
+    waveBox.addEventListener("pointermove", e => {
+        if (!pointer || e.pointerId !== pointer.id) return;
+        if (pointer.drag) {
+            seekAt(e.clientX);
+            return;
+        }
+        const dx = e.clientX - pointer.x0;
+        const dy = e.clientY - pointer.y0;
+        if (Math.abs(dx) > TOUCH_SLOP_PX && Math.abs(dx) > Math.abs(dy)) {
+            pointer.drag = true;
+            dragging = true;
+            waveBox.setPointerCapture(e.pointerId);
+            seekAt(e.clientX);
+        }
+    });
+    waveBox.addEventListener("pointerup", e => {
+        if (!pointer || e.pointerId !== pointer.id) return;
+        if (pointer.touch && !pointer.drag
+            && Math.hypot(e.clientX - pointer.x0, e.clientY - pointer.y0) < TOUCH_SLOP_PX) {
+            seekAt(e.clientX);            // a tap
+        }
+        endPointer();
+    });
+    waveBox.addEventListener("pointercancel", endPointer);    // the page scrolled instead
+
+    // The plain slider (when there is no waveform) works by itself; the time text follows while dragging
     seek.addEventListener("input", () => seekTo(Number(seek.value)));
     seek.addEventListener("pointerdown", () => {
         dragging = true;
@@ -1740,12 +1941,21 @@ function setupPlayer({ audio, playBtn, backBtn, fwdBtn, seek, time, name, getDur
         show(0);
     });
 
+    function setPlain(on) {
+        plain = on;
+        waveBox.classList.toggle("plain", on);
+        draw();
+    }
+
     function clear() {
         audio.pause();
         audio.removeAttribute("src");
         audio.load();
         if (ownsUrl && url) URL.revokeObjectURL(url);
         url = null;
+        peaks = null;
+        endPointer();
+        setPlain(false);
         show(0);
     }
 
@@ -1760,7 +1970,13 @@ function setupPlayer({ audio, playBtn, backBtn, fwdBtn, seek, time, name, getDur
         clear,
         pause() {
             audio.pause();
-        }
+        },
+        // Loudness values from 0 to 1 (null draws a flat line)
+        setPeaks(values) {
+            peaks = values;
+            setPlain(false);
+        },
+        setPlain
     };
 }
 
@@ -1803,7 +2019,16 @@ let liveSamples = null;
 let liveLevels = [];
 let liveLastStep = 0;
 let liveShownSecond = -1;
-let showStopwatch = stopwatchToggle.getAttribute("aria-checked") === "true";
+const STOPWATCH_KEY = "speakreview.stopwatch";
+
+// The stopwatch choice is remembered on this device. Shown unless it was hidden before (or storage is blocked).
+function readStopwatchChoice() {
+    try {
+        return localStorage.getItem(STOPWATCH_KEY) !== "hidden";
+    } catch (err) {
+        return true;
+    }
+}
 
 // How loud the mic is right now, from 0 (silent, -60 dB or quieter) to 1 (loud, -10 dB)
 function micLevel(analyser) {
@@ -1864,6 +2089,7 @@ function liveTick(now) {
 
 function startLiveView() {
     stopLiveView();
+    setStopwatchShown(readStopwatchChoice());       // each recording uses the remembered choice
     liveAnalyser = mic ? mic.analyser : null;
     liveShownSecond = -1;
     updateStopwatch();
@@ -1879,18 +2105,20 @@ function stopLiveView() {
     renderWave(0);
 }
 
-// The settings switch and the Hide / Show buttons all change the same choice.
-// Only the Hide / Show buttons move focus (to the button that replaces the one just pressed).
+// Shows or hides the stopwatch in the live panel. A press on Hide / Show remembers the choice and moves
+// focus to the button that replaces the one just pressed.
 function setStopwatchShown(on, fromLiveButton = false) {
-    showStopwatch = on;
-    stopwatchToggle.setAttribute("aria-checked", String(on));
-    stopwatchWord.textContent = on ? "Show" : "Hidden";
     stopwatchRow.hidden = !on;
     stopwatchOff.hidden = on;
-    if (fromLiveButton) (on ? swHideBtn : swShowBtn).focus();
+    if (!fromLiveButton) return;
+    try {
+        localStorage.setItem(STOPWATCH_KEY, on ? "shown" : "hidden");
+    } catch (err) {
+        // Storage is blocked: the choice still applies to this recording
+    }
+    (on ? swHideBtn : swShowBtn).focus();
 }
 
-stopwatchToggle.addEventListener("click", () => setStopwatchShown(!showStopwatch));
 swHideBtn.addEventListener("click", () => setStopwatchShown(false, true));
 swShowBtn.addEventListener("click", () => setStopwatchShown(true, true));
 
@@ -1925,7 +2153,6 @@ if (micSupported) {
 } else {
     stageView.classList.add("no-mic");
     prepSetting.hidden = true;
-    stopwatchSetting.hidden = true;
     stepSpeakTitle.textContent = "Your turn on stage";
     actionText.textContent = `Upload an MP3 of your speech. Up to ${MAX_DURATION_MINUTES} minutes and ${MAX_FILE_MB} MB.`;
     uploadLabel.textContent = "Upload an MP3";

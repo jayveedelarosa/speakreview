@@ -706,22 +706,15 @@ textarea {
 }
 
 /* ---------- Settings strip ---------- */
-/* Speaking time and Prep time keep their chips on one row (their columns are as wide as their chips);
-   the stopwatch column takes the rest. The strip and the live panel share the same grid row. */
+/* Speaking time and Prep time side by side. The strip and the live panel share the same grid row. */
 .settings-strip {
     grid-row: 2;
     display: grid;
     grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr);
-    grid-template-columns: max-content max-content;
     margin-top: 16px;
     border-top: 1px solid var(--line);
     border-bottom: 1px solid var(--line);
-}
-
-/* Browsers that can't record have only the Speaking time column */
-.stage.no-mic .settings-strip {
-    grid-template-columns: minmax(0, 1fr);
 }
 
 .setting {
@@ -729,11 +722,7 @@ textarea {
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    padding: 14px 8px;
-}
-
-.setting .choice-group {
-    flex-wrap: nowrap;
+    padding: 14px 10px;
 }
 
 /* Thin vertical lines between columns (only between visible ones) */
@@ -908,54 +897,6 @@ textarea {
 
 .field-error:empty {
     display: none;
-}
-
-/* Stopwatch switch */
-.switch-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    height: var(--control-h);
-    padding: 0 14px;
-    border: 1px solid var(--chip-border);
-    border-radius: 999px;
-    background: transparent;
-    color: var(--text);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.switch-track {
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-start;
-    width: 34px;
-    height: 20px;
-    padding: 2px;
-    border-radius: 999px;
-    background: rgba(246, 234, 211, 0.25);
-}
-
-.switch-btn[aria-checked="true"] .switch-track {
-    justify-content: flex-end;
-    background: var(--gold);
-}
-
-.switch-thumb {
-    width: 16px;
-    height: 16px;
-    border-radius: 999px;
-    background: var(--on-gold);
-}
-
-.switch-btn:hover {
-    border-color: var(--gold-line);
-}
-
-.switch-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
 }
 
 /* ---------- Live panel while recording: stopwatch and sound wave ---------- */
@@ -1239,31 +1180,6 @@ textarea {
     box-shadow: 0 6px 22px rgba(217, 174, 82, 0.4);
 }
 
-/* "Take a bow" with "Send to the coach" under it */
-.btn-bow {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: auto;
-    min-height: 48px;
-    padding: 5px 24px;
-    line-height: 1.15;
-    white-space: nowrap;
-}
-
-.bow-main {
-    font-size: 15px;
-    font-weight: 800;
-}
-
-/* Solid dark brown on the gold: about 5.9 to 1 contrast */
-.bow-sub {
-    font-size: 12px;
-    font-weight: 600;
-    color: #4A3010;
-}
-
 .btn-gold:disabled {
     background: rgba(217, 174, 82, 0.35);
     color: rgba(30, 16, 6, 0.7);
@@ -1435,7 +1351,7 @@ textarea {
     display: flex;
     align-items: center;
     gap: 8px;
-    width: min(100%, 420px);
+    width: min(100%, 520px);
     margin-top: 4px;
 }
 
@@ -1487,12 +1403,57 @@ textarea {
     background: rgba(0, 0, 0, 0.3);
 }
 
-/* The seek slider: a thin track, gold up to the current position (--pos), and a small round thumb */
+/* The waveform: a canvas with the recording's bars. The real slider lies on top of it, invisible, for
+   keyboards and screen readers; clicks, taps and drags are handled on the box itself (app.js).
+   touch-action: pan-y lets an up-and-down swipe scroll the page. */
+.wave-seek {
+    position: relative;
+    flex: 1;
+    min-width: 80px;
+    height: 36px;
+    border-radius: 6px;
+    cursor: pointer;
+    touch-action: pan-y;
+}
+
+.wave-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.wave-seek .seek {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Keyboard focus on the hidden slider shows on the waveform */
+.wave-seek:has(.seek:focus-visible) {
+    outline: 2px solid var(--gold-light);
+    outline-offset: 2px;
+}
+
+/* No waveform (the MP3 can't be decoded, or is too long on a phone): the plain slider instead */
+.wave-seek.plain {
+    cursor: default;
+}
+
+.wave-seek.plain .wave-canvas {
+    display: none;
+}
+
+.wave-seek.plain .seek {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* The plain slider: a thin track, gold up to the current position (--pos), and a small round thumb */
 .seek {
     --pos: 0%;
-    flex: 1;
-    min-width: 60px;
-    height: 24px;
+    width: 100%;
+    height: 100%;
     margin: 0;
     background: transparent;
     cursor: pointer;
@@ -1540,9 +1501,7 @@ textarea {
 }
 
 .seek:focus-visible {
-    outline: 2px solid var(--gold-light);
-    outline-offset: 2px;
-    border-radius: 6px;
+    outline: none;
 }
 
 .take-time {
@@ -2275,7 +2234,7 @@ body.curtains-closed .drape {
 
     .setting {
         gap: 8px;
-        padding: 10px 8px;
+        padding: 10px;
     }
 
     .stage-floor {
@@ -2305,27 +2264,6 @@ body.curtains-closed .drape {
 
     .wave-bar {
         width: 4px;
-    }
-}
-
-/* ---------- Narrower laptop windows: Speaking time on its own row, Prep and Stopwatch under it ---------- */
-@media (min-width: 601px) and (max-width: 1150px) {
-    .settings-strip {
-        grid-auto-flow: row;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    }
-
-    .settings-strip .setting:first-child {
-        grid-column: 1 / -1;
-        border-bottom: 1px solid var(--line);
-    }
-
-    .settings-strip .setting-prep {
-        border-left: 0;
-    }
-
-    .setting .choice-group {
-        flex-wrap: wrap;
     }
 }
 
@@ -2636,41 +2574,12 @@ body.curtains-closed .drape {
         text-decoration-color: rgba(188, 169, 146, 0.35);
     }
 
-    /* Settings strip: label above, chips in one row, centered. Speaking time on top, then Prep time and
-       the Stopwatch switch side by side (as in the phone design). */
+    /* Settings strip: label above, chips in one row, centered */
     .settings-strip {
         grid-auto-flow: row;
-        grid-template-columns: minmax(0, 1fr) auto;
         margin-top: 6px;
         padding: 10px 0;
         gap: 12px;
-    }
-
-    .settings-strip .setting:first-child {
-        grid-column: 1 / -1;
-    }
-
-    .switch-btn {
-        width: 52px;
-        height: 34px;
-        padding: 0;
-        border: 0;
-        justify-content: center;
-    }
-
-    .switch-track {
-        width: 44px;
-        height: 24px;
-        padding: 3px;
-    }
-
-    .switch-thumb {
-        width: 18px;
-        height: 18px;
-    }
-
-    .switch-word {
-        display: none;
     }
 
     /* Live panel: stopwatch row, then a shorter wave with the 28 newest bars */
@@ -2821,20 +2730,6 @@ body.curtains-closed .drape {
         font-size: 13px;
     }
 
-    .btn-bow {
-        height: auto;
-        min-height: 40px;
-        padding: 3px 16px;
-    }
-
-    .bow-main {
-        font-size: 13px;
-    }
-
-    .bow-sub {
-        font-size: 11px;
-    }
-
     #status {
         font-size: 13px;
     }
@@ -2911,7 +2806,7 @@ body.curtains-closed .drape {
     }
 
     /* Easy to grab with a finger */
-    .seek {
+    .wave-seek {
         height: 34px;
     }
 
