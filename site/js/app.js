@@ -96,7 +96,6 @@ const countCancelBtn = document.getElementById("countCancelBtn");
 const finishBtn = document.getElementById("finishBtn");
 const startOverBtn = document.getElementById("startOverBtn");
 const takePlayBtn = document.getElementById("takePlayBtn");
-const takeFill = document.getElementById("takeFill");
 const takeTime = document.getElementById("takeTime");
 const takeAudio = document.getElementById("takeAudio");
 const takeLengthLine = document.getElementById("takeLengthLine");
@@ -104,8 +103,27 @@ const takeNote = document.getElementById("takeNote");
 const takeSendBtn = document.getElementById("takeSendBtn");
 const reRecordBtn = document.getElementById("reRecordBtn");
 const discardBtn = document.getElementById("discardBtn");
+const settingsStrip = document.getElementById("stepTime");
+const livePanel = document.getElementById("livePanel");
+const stopwatchSetting = document.getElementById("stopwatchSetting");
+const stopwatchToggle = document.getElementById("stopwatchToggle");
+const stopwatchWord = document.getElementById("stopwatchWord");
+const stopwatchRow = document.getElementById("stopwatchRow");
+const stopwatchOff = document.getElementById("stopwatchOff");
+const swElapsed = document.getElementById("swElapsed");
+const swLimit = document.getElementById("swLimit");
+const swPill = document.getElementById("swPill");
+const swHideBtn = document.getElementById("swHideBtn");
+const swShowBtn = document.getElementById("swShowBtn");
+const waveBars = document.querySelectorAll(".wave-bar");
+const levelFill = document.getElementById("levelFill");
+const filePlayerBox = document.getElementById("filePlayer");
 
-uploadBtn.addEventListener("click", () => upload());
+// Playback stops before sending, so the speech isn't still playing behind the curtains
+uploadBtn.addEventListener("click", () => {
+    pausePlayers();
+    upload();
+});
 
 // ---------------------------
 // Show the chosen file name
@@ -126,6 +144,13 @@ function showFileName() {
     uploadBtn.hidden = !file;
     // With the mic as the main action, upload is the second choice
     uploadLabel.textContent = file ? "Choose another MP3" : (micSupported ? "or upload an MP3" : "Upload an MP3");
+    // The player above the Send button: a new file replaces (and frees) the old one
+    if (file) {
+        filePlayer.load(URL.createObjectURL(file));
+    } else {
+        filePlayer.clear();
+    }
+    filePlayerBox.hidden = !file;
     updateLengthFromFile();
 }
 
@@ -759,8 +784,9 @@ function displayResult(data) {
     resultBox.style.display = "block";
     resultPlaceholder.hidden = true;
 
-    const confidenceRaw = Number(data.avg_confidence);
-    const confidenceScore = Number.isFinite(confidenceRaw) ? Math.round(confidenceRaw * 100) : 0;
+    // Clarity: how clearly the words came through (the server sends it as avg_confidence)
+    const clarityRaw = Number(data.avg_confidence);
+    const clarityScore = Number.isFinite(clarityRaw) ? Math.round(clarityRaw * 100) : 0;
 
     // Coach's notes. The AI's text is escaped FIRST, then its formatting (headings, numbered points,
     // **bold**) is turned into notes line by line. Every tag added after escaping is a fixed string.
@@ -790,6 +816,11 @@ function displayResult(data) {
         }
     }
 
+    // Where the speech came from, shown beside the time line (older results don't say)
+    const SOURCE_LABELS = { recording: "Live recording", upload: "Uploaded MP3" };
+    const sourceLabel = Object.hasOwn(SOURCE_LABELS, data.source) ? SOURCE_LABELS[data.source] : null;
+    const sourceHtml = sourceLabel ? `<span class="source-tag">${escapeHtml(sourceLabel)}</span>` : "";
+
     // Time line, for example "3:42 / 3:00" with "0:42 over", or "4:10 (untimed)"
     const speakingSeconds = Number(data.speaking_seconds);
     if (data.speaking_seconds != null && Number.isFinite(speakingSeconds)) {
@@ -804,7 +835,14 @@ function displayResult(data) {
             timeHtml = `<span class="perf-elapsed">${escapeHtml(formatTime(speakingSeconds))}</span>`
                 + `<span class="perf-limit">(untimed)</span>`;
         }
-        summaryHtml += `<div class="perf-time">${timeHtml}</div>`;
+        summaryHtml += `<div class="perf-time">${timeHtml}${sourceHtml}</div>`;
+    } else if (sourceHtml) {
+        summaryHtml += `<div class="perf-time">${sourceHtml}</div>`;
+    }
+
+    // A recording that reached the 10:00 maximum was cut off there
+    if (data.cut_off === true) {
+        summaryHtml += `<p class="perf-note">${escapeHtml(`Recording stopped at the ${formatTime(MAX_DURATION_MINUTES * 60)} maximum.`)}</p>`;
     }
 
     // The three numbers. Phones show the short labels (screen readers always hear the long ones).
@@ -819,9 +857,9 @@ function displayResult(data) {
                 <span class="stat-label"><span class="long-label">Filler words</span><span class="short-label" aria-hidden="true">fillers</span>${breakdownText ? `<span class="stat-sub">${breakdownText}</span>` : ''}</span>
             </div>
             <div class="stat">
-                <span class="stat-num">${confidenceScore}%</span>
-                <span class="stat-label"><span class="long-label">Confidence score</span><span class="short-label" aria-hidden="true">confidence</span></span>
-                <div class="score-bar-bg"><div id="confidenceFill" class="score-fill" style="width: 0%"></div></div>
+                <span class="stat-num">${clarityScore}%</span>
+                <span class="stat-label"><span class="long-label">Clarity</span><span class="short-label" aria-hidden="true">clarity</span><span class="stat-hint">How clearly your words came through</span></span>
+                <div class="score-bar-bg"><div id="clarityFill" class="score-fill" style="width: 0%"></div></div>
             </div>
         </div>`;
 
@@ -830,8 +868,8 @@ function displayResult(data) {
     coachNotesBody.scrollTop = 0;
 
     setTimeout(() => {
-        const fill = document.getElementById('confidenceFill');
-        if(fill) fill.style.width = confidenceScore + '%';
+        const fill = document.getElementById('clarityFill');
+        if(fill) fill.style.width = clarityScore + '%';
     }, 100);
 
     // Open Backstage on the notes (through Intermission if it is showing)
@@ -915,6 +953,7 @@ function announceScene(text) {
 // Shows one view right away and marks its menu item as the current page
 function showView(name) {
     const isStage = name === "stage";
+    if (!isStage) pausePlayers();      // nothing keeps playing behind the curtains
     currentView = name;
     dropZone.hidden = !isStage;
     backstageView.hidden = isStage;
@@ -1122,6 +1161,16 @@ function setRecState(name) {
     fileInput.disabled = locked;
     if (locked) stopDragHighlight();
 
+    // While recording, the stopwatch and sound wave take the settings strip's place
+    const recording = name === "recording";
+    settingsStrip.hidden = recording;
+    livePanel.hidden = !recording;
+    if (recording) {
+        startLiveView();
+    } else {
+        stopLiveView();
+    }
+
     updateTakeButtons();
     updateLeaveWarning();
     if (locked) {
@@ -1242,6 +1291,12 @@ async function startMic() {
         node.connect(mic.context.destination);   // keeps it running. It only outputs silence.
         mic.node = node;
 
+        // A second, listen-only connection for the live sound wave. It doesn't change what is recorded.
+        const analyser = mic.context.createAnalyser();
+        analyser.fftSize = 512;
+        source.connect(analyser);
+        mic.analyser = analyser;
+
         stream.getAudioTracks().forEach(track => track.addEventListener("ended", onMicInterrupted));
         mic.context.addEventListener("statechange", onContextStateChange);
 
@@ -1263,8 +1318,10 @@ async function startMic() {
 // Stops the mic and closes the audio context, so the browser's mic indicator turns off
 function releaseMic() {
     if (!mic) return;
-    const { stream, context, node } = mic;
+    const { stream, context, node, analyser } = mic;
     mic = null;
+    stopLiveView();
+    if (analyser) analyser.disconnect();
     if (node) {
         node.port.onmessage = null;
         node.disconnect();
@@ -1575,16 +1632,13 @@ function toLittleEndian(pcm) {
 function setTake(blob, seconds) {
     clearTake();
     currentTake = { blob, seconds, url: URL.createObjectURL(blob), sent: false };
-    takeAudio.src = currentTake.url;
-    showTakeProgress(0);
+    takePlayer.load(currentTake.url);
     renderLengthLine();
 }
 
 // Throws the take away and frees its memory
 function clearTake() {
-    takeAudio.pause();
-    takeAudio.removeAttribute("src");
-    takeAudio.load();
+    takePlayer.clear();
     if (currentTake) URL.revokeObjectURL(currentTake.url);
     currentTake = null;
     takeNote.hidden = true;
@@ -1602,33 +1656,243 @@ function markTakeSent(take) {
     updateLeaveWarning();
 }
 
-function showTakeProgress(currentSeconds) {
-    const total = currentTake ? currentTake.seconds : 0;
-    const share = total > 0 ? Math.min(1, currentSeconds / total) : 0;
-    takeFill.style.width = `${share * 100}%`;
-    takeTime.textContent = `${formatTime(Math.floor(currentSeconds))} / ${formatTime(total)}`;
-}
+// ---- Players: listen to a take or a picked MP3, and move through it ----
+// One player setup used twice. Back and Forward jump 5 seconds, the slider can be clicked or dragged,
+// and on the slider the arrow keys also jump 5 seconds (Home and End go to the start and end).
+const SKIP_SECONDS = 5;
 
-function showPlaying(playing) {
-    takePlayBtn.classList.toggle("playing", playing);
-    takePlayBtn.setAttribute("aria-label", playing ? "Pause your take" : "Play your take");
-}
+function setupPlayer({ audio, playBtn, backBtn, fwdBtn, seek, time, name, getDuration, ownsUrl }) {
+    let url = null;
+    let dragging = false;
 
-takePlayBtn.addEventListener("click", () => {
-    if (!currentTake) return;
-    if (takeAudio.paused) {
-        takeAudio.play().catch(err => console.error(err));
-    } else {
-        takeAudio.pause();
+    const duration = () => {
+        const seconds = getDuration();
+        return Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
+    };
+
+    // Moves the slider and the "0:42 / 2:14" text to a position
+    function show(position) {
+        const total = duration();
+        const at = Math.min(Math.max(0, position), total);
+        seek.max = String(total);
+        seek.value = String(at);
+        seek.style.setProperty("--pos", total > 0 ? `${(at / total) * 100}%` : "0%");
+        time.textContent = `${formatTime(Math.floor(at))} / ${formatTime(total)}`;
+        seek.setAttribute("aria-valuetext", `${formatTime(Math.floor(at))} of ${formatTime(total)}`);
     }
+
+    function seekTo(position) {
+        const at = Math.min(Math.max(0, position), duration());
+        if (url) audio.currentTime = at;
+        show(at);
+    }
+
+    function showPlaying(playing) {
+        playBtn.classList.toggle("playing", playing);
+        playBtn.setAttribute("aria-label", `${playing ? "Pause" : "Play"} ${name}`);
+    }
+
+    playBtn.addEventListener("click", () => {
+        if (!url) return;
+        if (audio.paused) {
+            if (audio.currentTime >= duration() - 0.05) audio.currentTime = 0;   // at the end: play from the start
+            // AbortError only means playback was stopped (paused or a new file) before it began
+            audio.play().catch(err => {
+                if (err.name !== "AbortError") console.error(err);
+            });
+        } else {
+            audio.pause();
+        }
+    });
+    backBtn.addEventListener("click", () => seekTo(audio.currentTime - SKIP_SECONDS));
+    fwdBtn.addEventListener("click", () => seekTo(audio.currentTime + SKIP_SECONDS));
+
+    // Clicking or dragging the slider moves playback, and the time text follows while dragging
+    seek.addEventListener("input", () => seekTo(Number(seek.value)));
+    seek.addEventListener("pointerdown", () => {
+        dragging = true;
+        window.addEventListener("pointerup", () => { dragging = false; }, { once: true });
+    });
+    seek.addEventListener("keydown", e => {
+        const jumps = { ArrowRight: SKIP_SECONDS, ArrowUp: SKIP_SECONDS, PageUp: SKIP_SECONDS,
+                        ArrowLeft: -SKIP_SECONDS, ArrowDown: -SKIP_SECONDS, PageDown: -SKIP_SECONDS };
+        if (e.key in jumps) {
+            seekTo(audio.currentTime + jumps[e.key]);
+        } else if (e.key === "Home") {
+            seekTo(0);
+        } else if (e.key === "End") {
+            seekTo(duration());
+        } else {
+            return;
+        }
+        e.preventDefault();      // the browser's own slider step is replaced by the 5 second jump
+    });
+
+    audio.addEventListener("play", () => showPlaying(true));
+    audio.addEventListener("pause", () => showPlaying(false));
+    audio.addEventListener("timeupdate", () => {
+        if (!dragging) show(audio.currentTime);
+    });
+    audio.addEventListener("loadedmetadata", () => show(audio.currentTime));
+    audio.addEventListener("ended", () => {
+        showPlaying(false);
+        audio.currentTime = 0;
+        show(0);
+    });
+
+    function clear() {
+        audio.pause();
+        audio.removeAttribute("src");
+        audio.load();
+        if (ownsUrl && url) URL.revokeObjectURL(url);
+        url = null;
+        show(0);
+    }
+
+    return {
+        // Never starts playing by itself: playback only starts from the play button
+        load(newUrl) {
+            clear();
+            url = newUrl;
+            audio.src = url;
+            show(0);
+        },
+        clear,
+        pause() {
+            audio.pause();
+        }
+    };
+}
+
+const takePlayer = setupPlayer({
+    audio: takeAudio,
+    playBtn: takePlayBtn,
+    backBtn: document.getElementById("takeBackBtn"),
+    fwdBtn: document.getElementById("takeFwdBtn"),
+    seek: document.getElementById("takeSeek"),
+    time: takeTime,
+    name: "your take",
+    getDuration: () => (currentTake ? currentTake.seconds : 0),
+    ownsUrl: false          // the take's URL is freed by clearTake()
 });
-takeAudio.addEventListener("play", () => showPlaying(true));
-takeAudio.addEventListener("pause", () => showPlaying(false));
-takeAudio.addEventListener("timeupdate", () => showTakeProgress(takeAudio.currentTime));
-takeAudio.addEventListener("ended", () => {
-    showPlaying(false);
-    showTakeProgress(0);
+
+const fileAudio = document.getElementById("fileAudio");
+const filePlayer = setupPlayer({
+    audio: fileAudio,
+    playBtn: document.getElementById("filePlayBtn"),
+    backBtn: document.getElementById("fileBackBtn"),
+    fwdBtn: document.getElementById("fileFwdBtn"),
+    seek: document.getElementById("fileSeek"),
+    time: document.getElementById("fileTime"),
+    name: "your MP3",
+    getDuration: () => (Number.isFinite(fileAudio.duration) ? fileAudio.duration : (fileLengthSeconds ?? 0)),
+    ownsUrl: true           // freed when the picked file changes or is cleared
 });
+
+function pausePlayers() {
+    takePlayer.pause();
+    filePlayer.pause();
+}
+
+// ---- Live view while recording: stopwatch and sound wave ----
+const WAVE_STEP_MS = 50;       // a new bar every 50 ms, so the wave scrolls left
+const WAVE_MIN = 0.06;         // a silent mic shows a flat line at this height
+let liveFrame = null;          // the running animation frame, or null when stopped
+let liveAnalyser = null;
+let liveSamples = null;
+let liveLevels = [];
+let liveLastStep = 0;
+let liveShownSecond = -1;
+let showStopwatch = stopwatchToggle.getAttribute("aria-checked") === "true";
+
+// How loud the mic is right now, from 0 (silent, -60 dB or quieter) to 1 (loud, -10 dB)
+function micLevel(analyser) {
+    if (!liveSamples || liveSamples.length !== analyser.fftSize) liveSamples = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(liveSamples);
+    let sum = 0;
+    for (let i = 0; i < liveSamples.length; i++) sum += liveSamples[i] * liveSamples[i];
+    const rms = Math.sqrt(sum / liveSamples.length);
+    const decibels = 20 * Math.log10(rms || 1e-8);
+    return Math.min(1, Math.max(0, (decibels + 60) / 50));
+}
+
+// Bars show the recent levels, newest on the right. With reduced motion only the level meter is shown.
+function renderWave(level) {
+    waveBars.forEach((bar, i) => {
+        bar.style.transform = `scaleY(${Math.max(WAVE_MIN, liveLevels[i] || 0)})`;
+    });
+    levelFill.style.width = `${Math.round(level * 100)}%`;
+}
+
+// The stopwatch counts recorded samples, so it always matches the take. It only changes once a second.
+function updateStopwatch() {
+    const elapsed = Math.floor(recCount / REC_SAMPLE_RATE);
+    if (elapsed === liveShownSecond) return;
+    liveShownSecond = elapsed;
+    swElapsed.textContent = formatTime(elapsed);
+
+    const { valid, seconds: limit } = getTimeLimit();
+    if (valid && limit !== null) {
+        const over = elapsed > limit;
+        swLimit.textContent = ` / ${formatTime(limit)}`;
+        swElapsed.className = `sw-elapsed ${over ? "timing-over" : "timing-ok"}`;
+        swPill.className = `sw-pill ${over ? "sw-over" : "sw-left"}`;
+        swPill.textContent = over ? `+${formatTime(elapsed - limit)} over` : `${formatTime(limit - elapsed)} left`;
+    } else {
+        swLimit.textContent = "";
+        swElapsed.className = "sw-elapsed";
+        swPill.className = "sw-pill";
+        swPill.textContent = "untimed";
+    }
+}
+
+function liveTick(now) {
+    if (recState !== "recording") {
+        liveFrame = null;
+        return;
+    }
+    if (now - liveLastStep >= WAVE_STEP_MS) {
+        liveLastStep = now;
+        const level = liveAnalyser ? micLevel(liveAnalyser) : 0;
+        liveLevels.push(level);
+        liveLevels.shift();
+        renderWave(level);
+    }
+    updateStopwatch();
+    liveFrame = requestAnimationFrame(liveTick);
+}
+
+function startLiveView() {
+    stopLiveView();
+    liveAnalyser = mic ? mic.analyser : null;
+    liveShownSecond = -1;
+    updateStopwatch();
+    liveFrame = requestAnimationFrame(liveTick);
+}
+
+// Stops the animation loop and lets go of the analyser (it is disconnected in releaseMic)
+function stopLiveView() {
+    if (liveFrame !== null) cancelAnimationFrame(liveFrame);
+    liveFrame = null;
+    liveAnalyser = null;
+    liveLevels = new Array(waveBars.length).fill(0);
+    renderWave(0);
+}
+
+// The settings switch and the Hide / Show buttons all change the same choice.
+// Only the Hide / Show buttons move focus (to the button that replaces the one just pressed).
+function setStopwatchShown(on, fromLiveButton = false) {
+    showStopwatch = on;
+    stopwatchToggle.setAttribute("aria-checked", String(on));
+    stopwatchWord.textContent = on ? "Show" : "Hidden";
+    stopwatchRow.hidden = !on;
+    stopwatchOff.hidden = on;
+    if (fromLiveButton) (on ? swHideBtn : swShowBtn).focus();
+}
+
+stopwatchToggle.addEventListener("click", () => setStopwatchShown(!showStopwatch));
+swHideBtn.addEventListener("click", () => setStopwatchShown(false, true));
+swShowBtn.addEventListener("click", () => setStopwatchShown(true, true));
 
 // ---- Buttons ----
 micBtn.addEventListener("click", () => {
@@ -1646,6 +1910,7 @@ countCancelBtn.addEventListener("click", cancelRecording);
 finishBtn.addEventListener("click", () => stopRecording(null));
 startOverBtn.addEventListener("click", restartRecording);
 takeSendBtn.addEventListener("click", () => {
+    pausePlayers();
     if (currentTake) upload(currentTake);
 });
 reRecordBtn.addEventListener("click", () => {
@@ -1660,6 +1925,7 @@ if (micSupported) {
 } else {
     stageView.classList.add("no-mic");
     prepSetting.hidden = true;
+    stopwatchSetting.hidden = true;
     stepSpeakTitle.textContent = "Your turn on stage";
     actionText.textContent = `Upload an MP3 of your speech. Up to ${MAX_DURATION_MINUTES} minutes and ${MAX_FILE_MB} MB.`;
     uploadLabel.textContent = "Upload an MP3";

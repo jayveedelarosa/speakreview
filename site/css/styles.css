@@ -706,13 +706,22 @@ textarea {
 }
 
 /* ---------- Settings strip ---------- */
+/* Speaking time and Prep time keep their chips on one row (their columns are as wide as their chips);
+   the stopwatch column takes the rest. The strip and the live panel share the same grid row. */
 .settings-strip {
+    grid-row: 2;
     display: grid;
     grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr);
+    grid-template-columns: max-content max-content;
     margin-top: 16px;
     border-top: 1px solid var(--line);
     border-bottom: 1px solid var(--line);
+}
+
+/* Browsers that can't record have only the Speaking time column */
+.stage.no-mic .settings-strip {
+    grid-template-columns: minmax(0, 1fr);
 }
 
 .setting {
@@ -720,7 +729,11 @@ textarea {
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    padding: 14px 10px;
+    padding: 14px 8px;
+}
+
+.setting .choice-group {
+    flex-wrap: nowrap;
 }
 
 /* Thin vertical lines between columns (only between visible ones) */
@@ -897,7 +910,7 @@ textarea {
     display: none;
 }
 
-/* Stage 3 stopwatch switch (hidden for now) */
+/* Stopwatch switch */
 .switch-btn {
     display: inline-flex;
     align-items: center;
@@ -934,6 +947,141 @@ textarea {
     height: 16px;
     border-radius: 999px;
     background: var(--on-gold);
+}
+
+.switch-btn:hover {
+    border-color: var(--gold-line);
+}
+
+.switch-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ---------- Live panel while recording: stopwatch and sound wave ---------- */
+/* It takes the settings strip's row, with the same thin lines above and below */
+.live-panel {
+    grid-row: 2;
+    position: relative;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin-top: 16px;
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+}
+
+/* Laptop: the wave sits beside the stopwatch, so the panel is no taller than the settings strip it replaces */
+@media (min-width: 601px) {
+    .live-panel {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px 24px;
+    }
+}
+
+.stopwatch-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px 16px;
+    min-height: 64px;
+}
+
+.stopwatch {
+    font-family: var(--mono);
+    font-size: 48px;
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+    color: var(--heading);
+}
+
+.sw-elapsed.timing-ok {
+    color: var(--ok);
+}
+
+.sw-elapsed.timing-over {
+    color: var(--over);
+}
+
+.sw-limit {
+    color: #8E7E6C;
+}
+
+/* "1:12 left" green, "+0:15 over" orange, "untimed" neutral: the words always say which */
+.sw-pill {
+    display: inline-flex;
+    align-items: center;
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(246, 234, 211, 0.1);
+    color: var(--text-sec);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.sw-pill.sw-left {
+    background: rgba(143, 224, 176, 0.14);
+    color: var(--ok);
+}
+
+.sw-pill.sw-over {
+    background: rgba(255, 176, 102, 0.16);
+    color: var(--over);
+}
+
+.sw-off-text {
+    font-size: 15px;
+    color: var(--text-sec);
+}
+
+/* The sound wave: gold bars that follow the mic level, newest on the right */
+.wave {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 64px;
+}
+
+.wave-bar {
+    display: block;
+    width: 4px;
+    height: 100%;
+    border-radius: 3px;
+    background: var(--gold);
+    transform: scaleY(0.06);
+    transform-origin: center;
+}
+
+/* Older bars are a little dimmer, like the design */
+.wave-bar:nth-child(-n + 11) { opacity: 0.45; }
+.wave-bar:nth-child(n + 12):nth-child(-n + 22) { opacity: 0.65; }
+.wave-bar:nth-child(n + 23):nth-child(-n + 33) { opacity: 0.85; }
+
+/* Reduced motion only: a plain level meter instead of the moving bars */
+.level-meter {
+    display: none;
+    width: min(320px, 100%);
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(246, 234, 211, 0.18);
+}
+
+.level-fill {
+    width: 0;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--gold);
 }
 
 /* ---------- Main action, standing on the floor ---------- */
@@ -1089,6 +1237,31 @@ textarea {
 .btn-gold:hover {
     background: var(--gold-light);
     box-shadow: 0 6px 22px rgba(217, 174, 82, 0.4);
+}
+
+/* "Take a bow" with "Send to the coach" under it */
+.btn-bow {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: auto;
+    min-height: 48px;
+    padding: 5px 24px;
+    line-height: 1.15;
+    white-space: nowrap;
+}
+
+.bow-main {
+    font-size: 15px;
+    font-weight: 800;
+}
+
+/* Solid dark brown on the gold: about 5.9 to 1 contrast */
+.bow-sub {
+    font-size: 12px;
+    font-weight: 600;
+    color: #4A3010;
 }
 
 .btn-gold:disabled {
@@ -1261,8 +1434,8 @@ textarea {
 .take-player {
     display: flex;
     align-items: center;
-    gap: 12px;
-    width: min(100%, 360px);
+    gap: 8px;
+    width: min(100%, 420px);
     margin-top: 4px;
 }
 
@@ -1294,19 +1467,82 @@ textarea {
     display: block;
 }
 
-.take-bar {
+/* Back and Forward 5 seconds */
+.take-skip {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--gold-light);
+    cursor: pointer;
+}
+
+.take-skip:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* The seek slider: a thin track, gold up to the current position (--pos), and a small round thumb */
+.seek {
+    --pos: 0%;
     flex: 1;
+    min-width: 60px;
+    height: 24px;
+    margin: 0;
+    background: transparent;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.seek::-webkit-slider-runnable-track {
     height: 4px;
-    overflow: hidden;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--gold) var(--pos), rgba(246, 234, 211, 0.22) var(--pos));
+}
+
+.seek::-webkit-slider-thumb {
+    width: 12px;
+    height: 12px;
+    margin-top: -4px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--gold-light);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.seek::-moz-range-track {
+    height: 4px;
     border-radius: 999px;
     background: rgba(246, 234, 211, 0.22);
 }
 
-.take-fill {
-    width: 0;
-    height: 100%;
+.seek::-moz-range-progress {
+    height: 4px;
     border-radius: 999px;
     background: var(--gold);
+}
+
+.seek::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--gold-light);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.seek:focus-visible {
+    outline: 2px solid var(--gold-light);
+    outline-offset: 2px;
+    border-radius: 6px;
 }
 
 .take-time {
@@ -1646,6 +1882,36 @@ textarea {
     font-weight: 400;
     color: var(--text-sec);
     overflow-wrap: anywhere;
+}
+
+.stat-hint {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--muted);
+}
+
+/* "Live recording" or "Uploaded MP3", beside the time line */
+.source-tag {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 10px;
+    border: 1px solid var(--chip-border);
+    border-radius: 999px;
+    color: var(--text-sec);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.perf-time .source-tag {
+    align-self: center;
+}
+
+.perf-note {
+    margin: 8px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--over);
 }
 
 .score-bar-bg {
@@ -2009,11 +2275,57 @@ body.curtains-closed .drape {
 
     .setting {
         gap: 8px;
-        padding: 10px;
+        padding: 10px 8px;
     }
 
     .stage-floor {
         padding: 12px 0;
+    }
+
+    /* A smaller stopwatch and wave, so the live panel fits in the strip's own height */
+    .live-panel {
+        gap: 6px 20px;
+        margin-top: 12px;
+        padding: 10px 0;
+    }
+
+    .stopwatch-row {
+        min-height: 44px;
+        gap: 6px 12px;
+    }
+
+    .stopwatch {
+        font-size: 36px;
+    }
+
+    .wave {
+        height: 40px;
+        gap: 4px;
+    }
+
+    .wave-bar {
+        width: 4px;
+    }
+}
+
+/* ---------- Narrower laptop windows: Speaking time on its own row, Prep and Stopwatch under it ---------- */
+@media (min-width: 601px) and (max-width: 1150px) {
+    .settings-strip {
+        grid-auto-flow: row;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .settings-strip .setting:first-child {
+        grid-column: 1 / -1;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .settings-strip .setting-prep {
+        border-left: 0;
+    }
+
+    .setting .choice-group {
+        flex-wrap: wrap;
     }
 }
 
@@ -2324,12 +2636,80 @@ body.curtains-closed .drape {
         text-decoration-color: rgba(188, 169, 146, 0.35);
     }
 
-    /* Settings strip: label above, chips in one row, centered */
+    /* Settings strip: label above, chips in one row, centered. Speaking time on top, then Prep time and
+       the Stopwatch switch side by side (as in the phone design). */
     .settings-strip {
         grid-auto-flow: row;
+        grid-template-columns: minmax(0, 1fr) auto;
         margin-top: 6px;
         padding: 10px 0;
         gap: 12px;
+    }
+
+    .settings-strip .setting:first-child {
+        grid-column: 1 / -1;
+    }
+
+    .switch-btn {
+        width: 52px;
+        height: 34px;
+        padding: 0;
+        border: 0;
+        justify-content: center;
+    }
+
+    .switch-track {
+        width: 44px;
+        height: 24px;
+        padding: 3px;
+    }
+
+    .switch-thumb {
+        width: 18px;
+        height: 18px;
+    }
+
+    .switch-word {
+        display: none;
+    }
+
+    /* Live panel: stopwatch row, then a shorter wave with the 28 newest bars */
+    .live-panel {
+        gap: 6px;
+        margin-top: 6px;
+        padding: 8px 0;
+    }
+
+    .stopwatch-row {
+        min-height: 36px;
+        gap: 4px 10px;
+    }
+
+    .stopwatch {
+        font-size: 30px;
+    }
+
+    .sw-pill {
+        height: 24px;
+        padding: 0 9px;
+        font-size: 11px;
+    }
+
+    .sw-off-text {
+        font-size: 12px;
+    }
+
+    .wave {
+        height: 36px;
+        gap: 4px;
+    }
+
+    .wave-bar {
+        width: 4px;
+    }
+
+    .wave-bar:nth-child(-n + 16) {
+        display: none;
     }
 
     .setting {
@@ -2441,6 +2821,20 @@ body.curtains-closed .drape {
         font-size: 13px;
     }
 
+    .btn-bow {
+        height: auto;
+        min-height: 40px;
+        padding: 3px 16px;
+    }
+
+    .bow-main {
+        font-size: 13px;
+    }
+
+    .bow-sub {
+        font-size: 11px;
+    }
+
     #status {
         font-size: 13px;
     }
@@ -2507,8 +2901,23 @@ body.curtains-closed .drape {
     }
 
     .take-player {
-        gap: 10px;
+        gap: 6px;
         margin-top: 2px;
+    }
+
+    .take-skip {
+        width: 34px;
+        height: 34px;
+    }
+
+    /* Easy to grab with a finger */
+    .seek {
+        height: 34px;
+    }
+
+    /* When Review scrolls itself into view, it stops above the tab bar */
+    .stage-action {
+        scroll-margin-bottom: calc(var(--tabbar-h) + 8px);
     }
 
     .take-play {
@@ -2661,6 +3070,21 @@ body.curtains-closed .drape {
         font-size: 10px;
     }
 
+    .stat-hint {
+        font-size: 11px;
+    }
+
+    .source-tag {
+        height: 22px;
+        padding: 0 8px;
+        font-size: 11px;
+    }
+
+    .perf-note {
+        margin-top: 0;
+        font-size: 12px;
+    }
+
     .score-bar-bg {
         width: 70%;
         height: 4px;
@@ -2776,5 +3200,13 @@ body.curtains-closed .drape {
         animation: none !important;
         transition: none !important;
         scroll-behavior: auto !important;
+    }
+
+    .wave-bar {
+        display: none !important;
+    }
+
+    .level-meter {
+        display: block;
     }
 }
