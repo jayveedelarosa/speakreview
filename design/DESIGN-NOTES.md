@@ -10,7 +10,7 @@ These files were made in a design tool. They use a small templating runtime (`su
 ## Concept
 
 The app is a theatre.
-- **Stage** (practice): red velvet curtains frame the sides, a warm gold spotlight shines from the top, a seated audience sits in rows across the back of the stage, and a wooden stage floor runs along the bottom. The topic is the hero, large and centered.
+- **Stage** (practice): red velvet curtains frame the sides, a warm gold spotlight shines from the top, a seated audience sits in rows across the back of the stage, and a wooden stage floor runs along the bottom. The topic is the hero, large and centered. A chrome stage mic stands center stage on the floor line, and an ON AIR sign sits in the middle of the top valance.
 - **Backstage** (your feedback): a dressing room mirror framed in warm wood and lined with glowing bulbs. The speech summary is on the left, Coach's notes on the right.
 - **Wall of Fame** (past performances): framed playbills hanging on a red wall, plus a trophy shelf. Built in a later stage.
 - **Intermission**: as soon as "Send to the coach" passes the page checks, the curtains close and an "Intermission" screen shows. It reads "Taking your speech backstage..." while the file uploads, then "Your coach is reviewing your speech..." (pulsing dots and the keep-this-page-open note) while the AI works. If the upload fails, the curtains open back on the Stage with the error.
@@ -43,6 +43,10 @@ Menu labels: **Stage** (small subtitle "Practice"), **Backstage** ("Your feedbac
 | Mirror glass | `#1E0F0C` |
 | Bulbs | `#FFDFA0`, glow `rgba(255,200,120,0.7)` |
 | Playbill paper | `#F4E7CC`, frame gradient `#E6C277`, `#9C7232`, `#D8B062` |
+| ON AIR sign (lit) | `#E5383B` with glow `0 0 20px rgba(229,56,59,0.7)`; unlit `#2A0A0E` with 40% white text |
+| Mic glow | gold `rgba(217,174,82,0.22)`, red `rgba(229,56,59,0.28)` while recording |
+
+The recording red is only for the ON AIR sign and the live mic. Time status never uses it.
 
 ## Fonts (Google Fonts)
 
@@ -54,19 +58,34 @@ Menu labels: **Stage** (small subtitle "Practice"), **Backstage** ("Your feedbac
 
 - **Seated audience**: the `<svg>` with red seat backs and dark heads and shoulders, three rows, sitting across the back of the stage. Its bottom edge sits exactly on the top edge of the wooden floor. Nothing in it touches the floor. Copy the SVG markup as it is.
 - **Curtains**: side curtains with rounded tied-back bottoms (`border-bottom-*-radius: 136px 300px` on laptop), the top valance with a gold bottom border, the scalloped edge under it, and the two gold tiebacks.
-- **Mic** (Stage 3 only): the chrome stage mic SVG on a stand.
+- **Mic**: the chrome stage mic SVG on a stand. It is the main action on the Stage.
 - **Bulbs, mirror, playbills, trophies, medals**: as drawn.
 
 ## Layout
 
-Laptop: content centered between the curtains (about 200px in from each side at 1280px wide). From top to bottom: header (logo left, menu right), topic row (label, type badge, hint), the big topic, topic buttons, the settings strip (thin lines above and below, columns split by thin vertical lines), the audience band, the main action standing on the stage floor, and the text under it.
+Laptop: content centered between the curtains (about 200px in from each side at 1280px wide). From top to bottom: header (logo left, menu right), topic row (label, type badge, hint), the big topic, topic buttons, the settings strip (Speaking time and Prep time columns, thin lines above and below, columns split by thin vertical lines), the audience band with the mic standing in front of it on the floor line, and the text under the mic on the floor.
 
 Phone (about 390 by 780): curtains become thin strips at the sides, the top valance stays, the menu becomes a bottom tab bar (Stage, Backstage, Wall of Fame with icons). The Stage screen must fit on one screen with no page scrolling on a typical Android phone. Backstage: the page does not scroll, only the Coach's notes scroll inside the mirror. Wall of Fame: only the frames area scrolls.
 
 Stage layout rules (laptop and phone):
 - **Privacy**: behind a "Privacy" link with a small lock icon at the top right on all screens (laptop: in the header, right of the menu). It is a quiet, muted button, not a menu item, and brightens on hover and focus. It opens a small panel right under it with the privacy note; the panel closes on a second click, a click outside it, or Escape (focus returns to the link).
-- **Main action**: always stacked and centered on the wooden floor: "Your turn on stage", the line under it, the Upload button, then the file name and length line, "Send to the coach", the status and the wait note. The floor grows to hold it. It never overlaps the audience.
-- **Audience**: always fully between the bottom of the settings strip (with a small gap) and the top of the floor. On shorter windows and when zoomed in it scales down proportionally to fit that space, down to about 70 percent of its normal height. If there is still not enough room, the stage grows and the page scrolls (scrollbar hidden). No button, label, line or text ever sits on top of it.
+- **Main action: the mic**. The chrome mic is a real button, centered, its stand's foot on the floor line and its head standing in front of the audience (120 x 156 on laptop, 88 x 114 on short laptop windows, 96 x 125 on phones, 74 x 96 on short phones). It never reaches the settings strip: the audience row is always at least the mic's height plus a small gap.
+- **Under the mic**, stacked and centered on the wooden floor: "Step up to the mic", "Tap the mic to begin." plus the prep time when one is set ("You get 30 seconds to prepare, then recording starts."), then the secondary upload button ("or upload an MP3", smaller, dashed outline) with "Up to 10 minutes and 25 MB" beside it, then the file name and length line, "Send to the coach", the status and the wait note. The floor grows to hold it. It never overlaps the audience.
+- **No recording support** (no microphone access or no AudioWorklet): the mic, ON AIR and Prep time are hidden and the Stage keeps the upload-first layout ("Your turn on stage", "Upload an MP3 of your speech. Up to 10 minutes and 25 MB.", full-size Upload button).
+- **Audience**: always fully between the bottom of the settings strip (with a small gap) and the top of the floor. On shorter windows and when zoomed in it scales down proportionally to fit that space, down to about 70 percent of its normal height. If there is still not enough room, the stage grows and the page scrolls (scrollbar hidden). Only the mic's head may stand in front of it. No other button, label, line or text ever sits on top of it.
+
+### Recording states (on the Stage, under the mic)
+
+- **Idle**: as above. Prep time choices: Off (default), 30 sec, 1 min, 2 min.
+- **Prep** (only when Prep time is not Off): the topic stays visible, a big countdown ("0:30", JetBrains Mono), "Prepare your speech", then "Start now" (gold) and "Cancel". Tapping the mic also starts now.
+- **Countdown**: "Recording starts in", a big 3, 2, 1 (a small pop per number), and "Cancel".
+- **Recording**: the ON AIR sign lights up red with a soft glow and the mic glow turns red. "Recording", "Tap the mic or Finish speech when done. Recording stops automatically at 10:00.", then "Finish speech" (gold) and "Start over" (restarts the 3, 2, 1). The mic button stops the recording.
+- **Review**: "Your take", a play/pause button with a thin progress bar and the time, the length line (Length / Limit with over or under), then "Send to the coach" (gold), "Re-record" (outline) and "Discard take" (text button, back to Idle). The mic is dimmed and can't be tapped.
+- While preparing, counting down or recording, the topic, time and prep controls, the menu, the file picker and drag and drop are locked, the screen is kept awake, and leaving the page asks first. Leaving also asks while a take has not been sent.
+- Takes under 15 seconds show "Recordings need at least 15 seconds." and can't be sent. At 9:30 the status says "30 seconds left before recording stops." At exactly 10:00 recording stops by itself and Review notes "Recording stopped at the 10:00 maximum." If the mic is cut off (or the page is hidden on a phone), Review notes "Recording was interrupted. You can listen back, re-record, or use what you have."
+- Screen readers hear each state change once (prep start, "Recording starts in 3 seconds.", "Recording.", the take's length), never every second.
+- Reduced motion: the mic glow doesn't pulse and the countdown numbers don't pop. Everything else works the same.
+- Idle, prep, countdown and recording fit without page scrolling on laptop and phone. Review may scroll on short screens and scrolls itself into view.
 
 ## Rules
 
@@ -83,5 +102,6 @@ Stage layout rules (laptop and phone):
 | Stage | Adds |
 | --- | --- |
 | Theatre redesign | Stage screen (topic, speaking time, upload in the mic's spot), Backstage with Coach's notes, curtain transitions, Intermission, phone layout. Wall of Fame tab hidden. Prep time and stopwatch controls hidden. |
-| Stage 3 | The mic replaces the upload button as the main action (upload moves under it), ON AIR light, live sound wave, stopwatch, prep time. |
+| Stage 3, part 1 | The mic replaces the upload button as the main action (upload moves under it), ON AIR light, prep time, live recording to a 16 kHz WAV, listen back and send. |
+| Stage 3, part 2 | Stopwatch while speaking, live sound wave, showing the recording source and the 10:00 cut-off on Backstage. |
 | Stage 4 | Wall of Fame tab, playbills, trophy shelf. |

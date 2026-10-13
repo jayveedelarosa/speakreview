@@ -37,6 +37,10 @@
     --backstage-wall: #3A0E14;
     --backstage-stripe: #2A080D;
 
+    /* Recording: only for the ON AIR sign and the live mic, never for time status */
+    --rec-red: #E5383B;
+    --rec-glow: rgba(229, 56, 59, 0.28);
+
     /* Fonts */
     --serif: Fraunces, Georgia, serif;
     --sans: Manrope, system-ui, sans-serif;
@@ -55,6 +59,9 @@
     --topic-lines: 3;
     --control-h: 44px;
     --roll-h: 46px;
+    /* The stage mic (the design draws it 120 x 156 on laptop) */
+    --mic-w: 120px;
+    --mic-h: 156px;
 }
 
 * {
@@ -249,9 +256,11 @@ textarea {
    (which holds the main action). Because the audience and the floor are real rows, nothing can
    sit on top of the audience. The audience row soaks up the spare height, but never gets smaller
    than 70% of the audience plus the gap above it; below that, the stage gets taller and the page
-   scrolls. The floor row grows with its content in the same way. */
+   scrolls. The floor row grows with its content in the same way.
+   The mic stands in the audience row too, so the row is also never shorter than the mic plus a small
+   gap: the mic's head can stand in front of the audience but never reaches the settings strip. */
 .stage {
-    --audience-min-row: calc(var(--audience-h) * 0.7 + var(--audience-gap));
+    --audience-min-row: max(calc(var(--audience-h) * 0.7 + var(--audience-gap)), calc(var(--mic-h) + 8px));
     position: relative;
     min-height: 100vh;
     min-height: 100dvh;
@@ -319,6 +328,7 @@ textarea {
    clips everything at its edges, and its bottom edge is the floor line. */
 .audience-band {
     grid-row: audience;
+    grid-column: 1;
     align-self: end;
     position: relative;
     z-index: 1;
@@ -428,6 +438,43 @@ textarea {
     z-index: 3;
     height: 22px;
     background: radial-gradient(circle at 50% 0, var(--velvet) 0 17px, rgba(0, 0, 0, 0) 18px) 0 0 / 40px 22px repeat-x;
+}
+
+/* Browsers that can't record: no mic, so the audience row goes back to its own minimum */
+.stage.no-mic {
+    --audience-min-row: calc(var(--audience-h) * 0.7 + var(--audience-gap));
+}
+
+/* ON AIR sign in the middle of the valance: dark until recording, then red with a soft glow */
+.on-air {
+    position: absolute;
+    top: 15px;
+    left: 50%;
+    z-index: 5;
+    transform: translateX(-50%);
+    padding: 5px 14px;
+    border-radius: 6px;
+    background: #2A0A0E;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.22em;
+    line-height: 1.5;
+    pointer-events: none;
+    transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stage.recording .on-air {
+    background: var(--rec-red);
+    box-shadow: 0 0 20px rgba(229, 56, 59, 0.7);
+    color: #FFFFFF;
+}
+
+.stage.no-mic .on-air,
+.stage.no-mic .mic-spot,
+.stage.no-mic .upload-limits {
+    display: none;
 }
 
 /* Everything that is not scenery sits above it */
@@ -1048,6 +1095,263 @@ textarea {
     background: rgba(217, 174, 82, 0.35);
     color: rgba(30, 16, 6, 0.7);
     box-shadow: none;
+    cursor: not-allowed;
+}
+
+/* ---------- The stage mic ---------- */
+/* It shares the audience row and sits at its bottom, so the stand's foot is on the floor line and the
+   head stands in front of the audience, like in the design */
+/* The column is set here and on the audience band, so both share one cell instead of the grid making
+   a new column beside it */
+.mic-spot {
+    grid-row: audience;
+    grid-column: 1;
+    align-self: end;
+    position: relative;
+    z-index: 4;
+    width: var(--mic-w);
+    height: var(--mic-h);
+    margin-bottom: -2px;
+}
+
+.mic-btn {
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.mic-btn svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.mic-btn:disabled {
+    cursor: default;
+}
+
+/* The mic stays visible but dimmed when it can't be used (reviewing a take, the 3, 2, 1, uploading) */
+.mic-btn:disabled svg {
+    filter: brightness(0.6) saturate(0.6);
+}
+
+/* During the 3, 2, 1 it can't be tapped, but it stays bright: recording is about to start */
+.stage[data-rec="countdown"] .mic-btn:disabled svg {
+    filter: none;
+}
+
+/* Soft glow behind the mic head: gold, red while recording. It pulses gently. */
+.mic-glow {
+    fill: rgba(217, 174, 82, 0.22);
+    animation: micGlow 2.4s ease-in-out infinite;
+    transition: fill 0.3s ease;
+}
+
+.stage.recording .mic-glow {
+    fill: var(--rec-glow);
+}
+
+@keyframes micGlow {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+/* The dark shadow under the stand's foot, centered on the floor line */
+.mic-shadow {
+    position: absolute;
+    left: 50%;
+    bottom: -5px;
+    width: calc(var(--mic-w) * 0.67);
+    height: 14px;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    background: radial-gradient(ellipse at 50% 40%, #4A4A50, #1A1A1D 70%);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* ---------- Recording panels under the mic ---------- */
+.rec-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+}
+
+.rec-label {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--floor-text);
+}
+
+/* Big prep countdown and the 3, 2, 1 */
+.rec-count {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 44px;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--heading);
+}
+
+.rec-count-big {
+    font-size: 56px;
+}
+
+.rec-count.pop {
+    animation: countPop 0.45s ease-out;
+}
+
+@keyframes countPop {
+    from { opacity: 0.2; transform: scale(1.35); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.rec-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 12px;
+    margin-top: 8px;
+}
+
+.rec-buttons .btn-outline {
+    height: 46px;
+    background: rgba(0, 0, 0, 0.25);
+    text-shadow: none;
+}
+
+/* Quiet text button: Cancel, Start over, Discard take */
+.btn-quiet {
+    height: 44px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-sec);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: rgba(216, 198, 174, 0.4);
+}
+
+.btn-quiet:hover {
+    color: var(--heading);
+}
+
+.btn-quiet:disabled,
+.rec-buttons .btn-outline:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Listening back: play/pause, a thin progress bar and the time */
+.take-player {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: min(100%, 360px);
+    margin-top: 4px;
+}
+
+.take-play {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid var(--gold-line);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.35);
+    color: var(--gold-light);
+    cursor: pointer;
+}
+
+.take-play:hover {
+    border-color: var(--gold);
+}
+
+.take-play .icon-pause,
+.take-play.playing .icon-play {
+    display: none;
+}
+
+.take-play.playing .icon-pause {
+    display: block;
+}
+
+.take-bar {
+    flex: 1;
+    height: 4px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(246, 234, 211, 0.22);
+}
+
+.take-fill {
+    width: 0;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--gold);
+}
+
+.take-time {
+    flex-shrink: 0;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--floor-text);
+}
+
+.take-note {
+    margin: 0;
+    max-width: 460px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--over);
+}
+
+/* Upload as the second choice under the mic: smaller, with the limits beside it */
+.upload-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px 12px;
+}
+
+.upload-limits {
+    font-size: 13px;
+    color: var(--floor-text-soft);
+}
+
+.stage:not(.no-mic) .btn-upload {
+    height: 36px;
+    padding: 0 14px;
+    font-size: 13px;
+}
+
+.stage:not(.no-mic) .btn-upload svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* While preparing or recording the file picker is locked */
+.stage.rec-locked .btn-upload {
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
@@ -1677,10 +1981,30 @@ body.curtains-closed .drape {
         --topic-lines: 2;
         --control-h: 40px;
         --roll-h: 42px;
+        --mic-w: 88px;
+        --mic-h: 114px;
     }
 
     .settings-strip {
         margin-top: 12px;
+    }
+
+    .rec-count {
+        font-size: 32px;
+    }
+
+    .rec-count-big {
+        font-size: 40px;
+    }
+
+    .rec-buttons {
+        margin-top: 2px;
+    }
+
+    .rec-buttons .btn-gold,
+    .rec-buttons .btn-outline,
+    .btn-quiet {
+        height: 40px;
     }
 
     .setting {
@@ -1707,6 +2031,8 @@ body.curtains-closed .drape {
         --control-h: 34px;
         --roll-h: 40px;
         --tabbar-h: 64px;
+        --mic-w: 96px;
+        --mic-h: 125px;
     }
 
     /* Room for the tab bar at the bottom */
@@ -1870,6 +2196,20 @@ body.curtains-closed .drape {
 
     #dropZone.dragging .stage::after {
         font-size: 20px;
+    }
+
+    .on-air {
+        top: 9px;
+        padding: 2px 9px;
+        border-radius: 5px;
+        font-size: 10px;
+        letter-spacing: 0.2em;
+    }
+
+    .mic-shadow {
+        bottom: -4px;
+        height: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
     }
 
     /* Topic: label and badge on top, the topic, then the hint under it.
@@ -2109,6 +2449,81 @@ body.curtains-closed .drape {
         font-size: 11px;
     }
 
+    /* The mic already takes room above the floor line, so the floor only needs to fit the text under it */
+    .stage:not(.no-mic) .stage-floor {
+        min-height: 110px;
+    }
+
+    .stage:not(.no-mic) .btn-upload {
+        height: 36px;
+        padding: 0 14px;
+        font-size: 12px;
+    }
+
+    .stage:not(.no-mic) .btn-upload svg {
+        width: 13px;
+        height: 13px;
+    }
+
+    .upload-row {
+        gap: 6px 10px;
+    }
+
+    .upload-limits {
+        font-size: 11px;
+    }
+
+    .rec-panel {
+        gap: 2px;
+    }
+
+    .rec-label {
+        font-size: 12px;
+    }
+
+    .rec-count {
+        font-size: 30px;
+    }
+
+    .rec-count-big {
+        font-size: 36px;
+    }
+
+    .rec-buttons {
+        gap: 8px;
+        margin-top: 0;
+    }
+
+    .rec-buttons .btn-outline {
+        height: 36px;
+        padding: 0 16px;
+        font-size: 13px;
+    }
+
+    .btn-quiet {
+        height: 36px;
+        padding: 0 8px;
+        font-size: 12px;
+    }
+
+    .take-player {
+        gap: 10px;
+        margin-top: 2px;
+    }
+
+    .take-play {
+        width: 36px;
+        height: 36px;
+    }
+
+    .take-time {
+        font-size: 11px;
+    }
+
+    .take-note {
+        font-size: 12px;
+    }
+
     /* Backstage on phones, following the "backstage" screen of theatre-phone.dc.html */
     .backstage {
         --backstage-top: 54px;
@@ -2333,6 +2748,23 @@ body.curtains-closed .drape {
 
     .intermission-note {
         font-size: 12px;
+    }
+}
+
+/* ---------- Shorter phones (for example 360 x 740): a smaller mic and tighter settings so the stage still fits ---------- */
+@media (max-width: 600px) and (max-height: 760px) {
+    :root {
+        --mic-w: 74px;
+        --mic-h: 96px;
+    }
+
+    .settings-strip {
+        gap: 8px;
+        padding: 8px 0;
+    }
+
+    .stage-floor {
+        padding: 10px 0;
     }
 }
 

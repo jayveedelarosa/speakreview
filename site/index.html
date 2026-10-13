@@ -71,6 +71,8 @@
                 <div class="tieback tieback-right" aria-hidden="true"></div>
                 <div class="valance" aria-hidden="true"></div>
                 <div class="scallops" aria-hidden="true"></div>
+                <!-- Lights up red while recording (state changes are announced through #sceneAnnounce) -->
+                <div id="onAir" class="on-air" aria-hidden="true">ON AIR</div>
 
                 <section class="topic-area" id="stepTopic" aria-label="Topic">
                     <div class="topic-meta">
@@ -138,18 +140,18 @@
                         </div>
                     </div>
 
-                    <!-- Stage 3: remove "hidden" to show the prep time choice -->
-                    <div class="setting" hidden>
+                    <!-- Prep time before recording (hidden when the browser can't record) -->
+                    <div class="setting setting-prep" id="prepSetting">
                         <span class="setting-label" id="prepTimeLabel">Prep time</span>
                         <div class="choice-group" role="radiogroup" aria-labelledby="prepTimeLabel">
-                            <label class="choice"><input type="radio" name="prepTime" value="0"><span>Off</span></label>
-                            <label class="choice"><input type="radio" name="prepTime" value="30" checked><span>30 sec</span></label>
-                            <label class="choice"><input type="radio" name="prepTime" value="60"><span>1 min</span></label>
-                            <label class="choice"><input type="radio" name="prepTime" value="120"><span>2 min</span></label>
+                            <label class="choice"><input type="radio" name="prepTime" value="0" checked><span>Off</span></label>
+                            <label class="choice"><input type="radio" name="prepTime" value="30"><span><span class="long-label">30 sec</span><span class="short-label" aria-hidden="true">30s</span></span></label>
+                            <label class="choice"><input type="radio" name="prepTime" value="60"><span><span class="long-label">1 min</span><span class="short-label" aria-hidden="true">1m</span></span></label>
+                            <label class="choice"><input type="radio" name="prepTime" value="120"><span><span class="long-label">2 min</span><span class="short-label" aria-hidden="true">2m</span></span></label>
                         </div>
                     </div>
 
-                    <!-- Stage 3: remove "hidden" to show the stopwatch switch -->
+                    <!-- Stage 3 part 2: remove "hidden" to show the stopwatch switch -->
                     <div class="setting" hidden>
                         <span class="setting-label" id="stopwatchLabel">Stopwatch while speaking</span>
                         <button type="button" id="stopwatchToggle" class="switch-btn" role="switch" aria-checked="true" aria-labelledby="stopwatchLabel">
@@ -165,33 +167,115 @@
                     <svg aria-hidden="true" width="390" height="100" viewBox="0 0 390 100" class="audience audience-phone" focusable="false"><rect x="-5" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="-2" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="10" cy="31" rx="16" ry="11" fill="#1C0608"></ellipse><ellipse cx="10" cy="13" rx="8" ry="10" fill="#1C0608"></ellipse><rect x="33" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="36" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="49" cy="31" rx="14" ry="9" fill="#1C0608"></ellipse><ellipse cx="49" cy="16" rx="7" ry="9" fill="#1C0608"></ellipse><rect x="71" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="74" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><rect x="109" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="112" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="123" cy="31" rx="14" ry="10" fill="#1C0608"></ellipse><ellipse cx="123" cy="16" rx="7" ry="9" fill="#1C0608"></ellipse><rect x="147" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="150" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="162" cy="33" rx="14" ry="10" fill="#1C0608"></ellipse><ellipse cx="162" cy="17" rx="8" ry="9" fill="#1C0608"></ellipse><rect x="185" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="188" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="202" cy="35" rx="15" ry="10" fill="#1C0608"></ellipse><ellipse cx="202" cy="19" rx="8" ry="9" fill="#1C0608"></ellipse><rect x="223" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="226" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><rect x="261" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="264" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="277" cy="29" rx="14" ry="10" fill="#1C0608"></ellipse><ellipse cx="277" cy="14" rx="7" ry="9" fill="#1C0608"></ellipse><rect x="299" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="302" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="318" cy="32" rx="14" ry="10" fill="#1C0608"></ellipse><ellipse cx="318" cy="16" rx="7" ry="9" fill="#1C0608"></ellipse><rect x="337" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="340" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="353" cy="30" rx="15" ry="10" fill="#1C0608"></ellipse><ellipse cx="353" cy="13" rx="8" ry="10" fill="#1C0608"></ellipse><rect x="375" y="12" width="34" height="48" rx="11" fill="#3E0A11"></rect><rect x="378" y="14" width="28" height="4" rx="2" fill="rgba(255,255,255,0.07)"></rect><rect x="-23" y="34" width="46" height="66" rx="15" fill="#560E17"></rect><rect x="-20" y="36" width="40" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="1" cy="62" rx="21" ry="14" fill="#0F0304"></ellipse><ellipse cx="1" cy="39" rx="11" ry="13" fill="#0F0304"></ellipse><rect x="29" y="34" width="46" height="66" rx="15" fill="#560E17"></rect><rect x="32" y="36" width="40" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="52" cy="64" rx="20" ry="14" fill="#0F0304"></ellipse><ellipse cx="52" cy="42" rx="11" ry="12" fill="#0F0304"></ellipse><rect x="81" y="34" width="46" height="66" rx="15" fill="#560E17"></rect><rect x="84" y="36" width="40" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="102" cy="64" rx="21" ry="15" fill="#0F0304"></ellipse><ellipse cx="102" cy="40" rx="11" ry="13" fill="#0F0304"></ellipse><rect x="133" y="34" width="46" height="66" rx="15" fill="#560E17"></rect><rect x="136" y="36" width="40" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="157" cy="65" rx="20" ry="14" fill="#0F0304"></ellipse><ellipse cx="157" cy="43" rx="11" ry="12" fill="#0F0304"></ellipse><rect x="185" y="34" width="46" height="66" rx="15" fill="#560E17"></rect><rect x="188" y="36" width="40" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="208" cy="62" rx="22" ry="15" fill="#0F0304"></ellipse><ellipse cx="208" cy="38" rx="12" ry="14" fill="#0F0304"></ellipse><rect x="237" y="34" width="46" height="66" rx="15" fill="#560E17"></rect><rect x="240" y="36" width="40" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="257" cy="65" rx="22" ry="15" fill="#0F0304"></ellipse><ellipse cx="257" cy="42" rx="11" ry="13" fill="#0F0304"></ellipse><rect x="289" y="34" width="46" height="66" rx="15" fill="#560E17"></rect><rect x="292" y="36" width="40" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="314" cy="63" rx="20" ry="14" fill="#0F0304"></ellipse><ellipse cx="314" cy="41" rx="11" ry="12" fill="#0F0304"></ellipse><rect x="341" y="34" width="46" height="66" rx="15" fill="#560E17"></rect><rect x="344" y="36" width="40" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="364" cy="65" rx="21" ry="14" fill="#0F0304"></ellipse><ellipse cx="364" cy="42" rx="11" ry="13" fill="#0F0304"></ellipse><rect x="393" y="34" width="46" height="66" rx="15" fill="#560E17"></rect><rect x="396" y="36" width="40" height="6" rx="3" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="416" cy="61" rx="22" ry="15" fill="#0F0304"></ellipse><ellipse cx="416" cy="37" rx="11" ry="13" fill="#0F0304"></ellipse><rect x="0" y="62" width="60" height="90" rx="19" fill="#6C131E"></rect><rect x="3" y="64" width="54" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="31" cy="107" rx="31" ry="21" fill="#050101"></ellipse><ellipse cx="31" cy="72" rx="16" ry="19" fill="#050101"></ellipse><rect x="68" y="62" width="60" height="90" rx="19" fill="#6C131E"></rect><rect x="71" y="64" width="54" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="97" cy="100" rx="29" ry="20" fill="#050101"></ellipse><ellipse cx="97" cy="67" rx="16" ry="18" fill="#050101"></ellipse><rect x="136" y="62" width="60" height="90" rx="19" fill="#6C131E"></rect><rect x="139" y="64" width="54" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="164" cy="96" rx="26" ry="18" fill="#050101"></ellipse><ellipse cx="164" cy="67" rx="14" ry="16" fill="#050101"></ellipse><rect x="204" y="62" width="60" height="90" rx="19" fill="#6C131E"></rect><rect x="207" y="64" width="54" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="232" cy="99" rx="27" ry="19" fill="#050101"></ellipse><ellipse cx="232" cy="69" rx="14" ry="17" fill="#050101"></ellipse><rect x="272" y="62" width="60" height="90" rx="19" fill="#6C131E"></rect><rect x="275" y="64" width="54" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="299" cy="101" rx="28" ry="19" fill="#050101"></ellipse><ellipse cx="299" cy="70" rx="15" ry="18" fill="#050101"></ellipse><rect x="340" y="62" width="60" height="90" rx="19" fill="#6C131E"></rect><rect x="343" y="64" width="54" height="8" rx="4" fill="rgba(255,255,255,0.07)"></rect><ellipse cx="372" cy="102" rx="31" ry="21" fill="#050101"></ellipse><ellipse cx="372" cy="69" rx="16" ry="19" fill="#050101"></ellipse></svg>
                 </div>
 
+                <!-- The chrome stage mic: the main action. It shares the audience row and stands on the floor line,
+                     so its head stands in front of the audience (as in the design). -->
+                <div class="mic-spot" id="micSpot">
+                    <button type="button" id="micBtn" class="mic-btn" aria-label="Start recording">
+                        <svg viewBox="0 0 200 260" aria-hidden="true" focusable="false">
+                            <defs>
+                                <radialGradient id="micGrille" cx="38%" cy="32%" r="70%"><stop offset="0" stop-color="#FFFFFF"></stop><stop offset="0.45" stop-color="#C9CCD3"></stop><stop offset="1" stop-color="#5E6168"></stop></radialGradient>
+                                <linearGradient id="micBody" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#2A2A2E"></stop><stop offset="0.45" stop-color="#5A5B61"></stop><stop offset="1" stop-color="#1A1A1D"></stop></linearGradient>
+                            </defs>
+                            <circle class="mic-glow" cx="100" cy="68" r="80"></circle>
+                            <path d="M74 118 L126 118 L112 196 L88 196 Z" fill="url(#micBody)"></path>
+                            <rect x="68" y="108" width="64" height="14" rx="5" fill="#B9BCC3"></rect>
+                            <circle cx="100" cy="68" r="50" fill="url(#micGrille)"></circle>
+                            <circle cx="100" cy="68" r="50" fill="none" stroke="#8E9198" stroke-width="3"></circle>
+                            <circle cx="100" cy="68" r="40" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"></circle>
+                            <circle cx="100" cy="68" r="30" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1.5"></circle>
+                            <circle cx="100" cy="68" r="20" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"></circle>
+                            <path d="M54 68 H146 M100 22 V114" stroke="rgba(0,0,0,0.10)" stroke-width="1.5"></path>
+                            <ellipse cx="82" cy="46" rx="17" ry="9" fill="rgba(255,255,255,0.6)" transform="rotate(-25 82 46)"></ellipse>
+                            <rect x="91" y="194" width="18" height="16" rx="3" fill="#2B2B2F"></rect>
+                            <rect x="97" y="208" width="6" height="52" fill="#3A3A3F"></rect>
+                        </svg>
+                    </button>
+                    <span class="mic-shadow" aria-hidden="true"></span>
+                </div>
+
                 <div class="stage-floor">
-                    <!-- Stage 3: the mic replaces this as the main action, upload moves under it -->
+                    <!-- Under the mic: one panel per recording state (idle, prep, countdown, recording, review) -->
                     <section class="stage-action" id="stepSpeak" aria-labelledby="stepSpeakTitle">
-                        <div class="action-intro">
-                            <h2 class="action-title" id="stepSpeakTitle">Your turn on stage</h2>
-                            <p class="action-text">Upload an MP3 of your speech. Up to 10 minutes and 25 MB.</p>
-                        </div>
+                        <!-- Idle: step up to the mic, or upload an MP3 -->
+                        <div id="recIdle" class="rec-panel">
+                            <div class="action-intro">
+                                <h2 class="action-title" id="stepSpeakTitle">Step up to the mic</h2>
+                                <p class="action-text" id="actionText">Tap the mic to begin.</p>
+                            </div>
 
-                        <div class="action-side">
-                            <div class="action-controls">
-                                <input type="file" id="audioFile" class="file-input-hidden" accept=".mp3,audio/mpeg">
-                                <label for="audioFile" class="btn-upload">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 16V4"></path><path d="M7 9l5-5 5 5"></path><path d="M5 20h14"></path></svg>
-                                    <span id="uploadLabel">Upload an MP3</span>
-                                </label>
+                            <div class="action-side">
+                                <div class="action-controls">
+                                    <div class="upload-row">
+                                        <input type="file" id="audioFile" class="file-input-hidden" accept=".mp3,audio/mpeg">
+                                        <label for="audioFile" class="btn-upload">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 16V4"></path><path d="M7 9l5-5 5 5"></path><path d="M5 20h14"></path></svg>
+                                            <span id="uploadLabel">or upload an MP3</span>
+                                        </label>
+                                        <span class="upload-limits"><span class="long-label">Up to 10 minutes and 25 MB</span><span class="short-label" aria-hidden="true">Up to 10 min, 25 MB</span></span>
+                                    </div>
 
-                                <div id="fileInfo" class="file-info" hidden>
-                                    <span id="fileName" class="file-name">No File Chosen</span>
-                                    <p id="lengthLine" class="length-line" hidden></p>
+                                    <div id="fileInfo" class="file-info" hidden>
+                                        <span id="fileName" class="file-name">No File Chosen</span>
+                                        <p id="lengthLine" class="length-line" hidden></p>
+                                    </div>
+
+                                    <button type="button" id="uploadBtn" class="btn-gold" hidden>Send to the coach</button>
                                 </div>
-
-                                <button type="button" id="uploadBtn" class="btn-gold" hidden>Send to the coach</button>
-
-                                <p id="status" role="status" aria-live="polite"></p>
-                                <p id="waitNote" class="wait-note" style="display:none;">Longer speeches can take a few minutes to analyze. Please keep this page open.</p>
                             </div>
                         </div>
+
+                        <!-- Prep: time to think before recording starts -->
+                        <div id="recPrep" class="rec-panel" hidden>
+                            <p id="prepCount" class="rec-count" aria-hidden="true">0:30</p>
+                            <p class="rec-label">Prepare your speech</p>
+                            <div class="rec-buttons">
+                                <button type="button" id="prepStartBtn" class="btn-gold">Start now</button>
+                                <button type="button" id="prepCancelBtn" class="btn-quiet">Cancel</button>
+                            </div>
+                        </div>
+
+                        <!-- Countdown: 3, 2, 1 -->
+                        <div id="recCountdown" class="rec-panel" hidden>
+                            <p class="rec-label">Recording starts in</p>
+                            <p id="countNum" class="rec-count rec-count-big" aria-hidden="true">3</p>
+                            <div class="rec-buttons">
+                                <button type="button" id="countCancelBtn" class="btn-quiet">Cancel</button>
+                            </div>
+                        </div>
+
+                        <!-- Recording -->
+                        <div id="recLive" class="rec-panel" hidden>
+                            <p class="action-title">Recording</p>
+                            <p class="action-text"><span class="long-label">Tap the mic or Finish speech when done. Recording stops automatically at 10:00.</span><span class="short-label" aria-hidden="true">Tap the mic or Finish speech when done. Stops at 10:00.</span></p>
+                            <div class="rec-buttons">
+                                <button type="button" id="finishBtn" class="btn-gold">Finish speech</button>
+                                <button type="button" id="startOverBtn" class="btn-quiet">Start over</button>
+                            </div>
+                        </div>
+
+                        <!-- Review: listen back, then send it, record again or throw it away -->
+                        <div id="recReview" class="rec-panel" hidden>
+                            <p class="action-title">Your take</p>
+                            <div class="take-player">
+                                <button type="button" id="takePlayBtn" class="take-play" aria-label="Play your take">
+                                    <svg class="icon-play" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 4l13 8-13 8z" fill="currentColor"></path></svg>
+                                    <svg class="icon-pause" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 4h4v16H6zM14 4h4v16h-4z" fill="currentColor"></path></svg>
+                                </button>
+                                <div class="take-bar" aria-hidden="true"><div id="takeFill" class="take-fill"></div></div>
+                                <span id="takeTime" class="take-time">0:00 / 0:00</span>
+                                <audio id="takeAudio" preload="auto" hidden></audio>
+                            </div>
+                            <p id="takeLengthLine" class="length-line"></p>
+                            <p id="takeNote" class="take-note" hidden></p>
+                            <div class="rec-buttons">
+                                <button type="button" id="takeSendBtn" class="btn-gold">Send to the coach</button>
+                                <button type="button" id="reRecordBtn" class="btn-outline">Re-record</button>
+                                <button type="button" id="discardBtn" class="btn-quiet">Discard take</button>
+                            </div>
+                        </div>
+
+                        <p id="status" role="status" aria-live="polite"></p>
+                        <p id="waitNote" class="wait-note" style="display:none;">Longer speeches can take a few minutes to analyze. Please keep this page open.</p>
                     </section>
                 </div>
             </section>

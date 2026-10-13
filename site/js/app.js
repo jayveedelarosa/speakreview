@@ -10,6 +10,13 @@ const MAX_TOPIC_LENGTH = 120;
 const MIN_TIME_LIMIT_SECONDS = 30;
 const MAX_TIME_LIMIT_SECONDS = 600;
 
+// Live recording (the server only accepts WAV that is 16 kHz, mono, 16-bit)
+const REC_SAMPLE_RATE = 16000;
+const MAX_REC_SAMPLES = MAX_DURATION_MINUTES * 60 * REC_SAMPLE_RATE;   // exactly 10:00 of audio
+const MIN_TAKE_SECONDS = 15;
+const REC_WARNING_SECONDS = MAX_DURATION_MINUTES * 60 - 30;           // 9:30
+const COUNTDOWN_FROM = 3;
+
 // Label and hint shown for each type of random topic
 const TOPIC_TYPE_INFO = {
     persuade: { label: "Persuade", hint: "Take a side and back it up" },
@@ -67,8 +74,38 @@ const sceneAnnounce = document.getElementById("sceneAnnounce");
 const appRoot = document.querySelector(".app");
 // Every topic and time control, so they can be locked while a speech is being analyzed
 const optionControls = document.querySelectorAll("#stepTopic textarea, #stepTopic button, #stepTime input, #stepTime button");
+const stageView = document.getElementById("stageView");
+const onAir = document.getElementById("onAir");
+const micBtn = document.getElementById("micBtn");
+const stepSpeakTitle = document.getElementById("stepSpeakTitle");
+const actionText = document.getElementById("actionText");
+const prepSetting = document.getElementById("prepSetting");
+const prepRadios = document.querySelectorAll('input[name="prepTime"]');
+const recPanels = {
+    idle: document.getElementById("recIdle"),
+    prep: document.getElementById("recPrep"),
+    countdown: document.getElementById("recCountdown"),
+    recording: document.getElementById("recLive"),
+    review: document.getElementById("recReview")
+};
+const prepCount = document.getElementById("prepCount");
+const prepStartBtn = document.getElementById("prepStartBtn");
+const prepCancelBtn = document.getElementById("prepCancelBtn");
+const countNum = document.getElementById("countNum");
+const countCancelBtn = document.getElementById("countCancelBtn");
+const finishBtn = document.getElementById("finishBtn");
+const startOverBtn = document.getElementById("startOverBtn");
+const takePlayBtn = document.getElementById("takePlayBtn");
+const takeFill = document.getElementById("takeFill");
+const takeTime = document.getElementById("takeTime");
+const takeAudio = document.getElementById("takeAudio");
+const takeLengthLine = document.getElementById("takeLengthLine");
+const takeNote = document.getElementById("takeNote");
+const takeSendBtn = document.getElementById("takeSendBtn");
+const reRecordBtn = document.getElementById("reRecordBtn");
+const discardBtn = document.getElementById("discardBtn");
 
-uploadBtn.addEventListener("click", upload);
+uploadBtn.addEventListener("click", () => upload());
 
 // ---------------------------
 // Show the chosen file name
@@ -87,7 +124,8 @@ function showFileName() {
     // The Send button and file details only appear once a file is picked
     fileInfo.hidden = !file;
     uploadBtn.hidden = !file;
-    uploadLabel.textContent = file ? "Choose another MP3" : "Upload an MP3";
+    // With the mic as the main action, upload is the second choice
+    uploadLabel.textContent = file ? "Choose another MP3" : (micSupported ? "or upload an MP3" : "Upload an MP3");
     updateLengthFromFile();
 }
 
@@ -106,9 +144,10 @@ function dragHasFiles(e) {
     return Boolean(e.dataTransfer) && Array.from(e.dataTransfer.types).includes("Files");
 }
 
-// Drops only work on the Stage with the controls unlocked (not on Backstage, during Intermission or an upload)
+// Drops only work on the Stage with the controls unlocked (not on Backstage, during Intermission or an upload,
+// and not while preparing, recording or reviewing a take)
 function canDropFile() {
-    return currentView === "stage" && !isBusy && !intermissionOn && !appRoot.inert;
+    return currentView === "stage" && !isBusy && !intermissionOn && !appRoot.inert && recState === "idle";
 }
 
 function stopDragHighlight() {
@@ -322,6 +361,8 @@ function rollToTopic(finalTopic) {
     writeTopicBtn.disabled = true;
     clearTopicBtn.disabled = true;
     uploadBtn.disabled = true;                      // so a half-rolled topic can't be sent
+    takeSendBtn.disabled = true;
+    micBtn.disabled = true;                         // and recording can't start with a half-rolled topic
 
     let step = 0;
     let shownIndex = -1;
@@ -360,6 +401,7 @@ function landTopic(topic) {
     writeTopicBtn.disabled = isBusy;
     clearTopicBtn.disabled = isBusy;
     uploadBtn.disabled = isBusy || !getTimeLimit().valid;
+    updateTakeButtons();
 }
 
 randomTopicBtn.addEventListener("click", pickRandomTopic);
@@ -442,6 +484,7 @@ function onTimeChange() {
     customSeconds.setAttribute("aria-invalid", String(!valid));
 
     if (!isBusy && !isRolling) uploadBtn.disabled = !valid;
+    updateTakeButtons();
     renderLengthLine();
 }
 
@@ -481,25 +524,32 @@ async function updateLengthFromFile() {
     renderLengthLine();
 }
 
+// Updates both length lines: the chosen MP3's and the recorded take's
 function renderLengthLine() {
-    if (fileLengthSeconds === null) {
-        lengthLine.hidden = true;
-        lengthLine.textContent = "";
+    renderLength(lengthLine, fileLengthSeconds);
+    renderLength(takeLengthLine, currentTake ? currentTake.seconds : null);
+}
+
+// Shows "Length: 4:12 / Limit: 3:00 (1:12 over)" in the given line, or hides it when seconds is null
+function renderLength(line, seconds) {
+    if (seconds === null) {
+        line.hidden = true;
+        line.textContent = "";
         return;
     }
 
     const { valid, seconds: limit } = getTimeLimit();
-    lengthLine.textContent = `Length: ${formatTime(fileLengthSeconds)}`;
+    line.textContent = `Length: ${formatTime(seconds)}`;
 
     if (valid && limit !== null) {
-        const timing = describeTiming(fileLengthSeconds, limit);
-        lengthLine.append(` / Limit: ${formatTime(limit)} `);
+        const timing = describeTiming(seconds, limit);
+        line.append(` / Limit: ${formatTime(limit)} `);
         const note = document.createElement("span");
         note.className = timing.className;
         note.textContent = `(${timing.text})`;
-        lengthLine.append(note);
+        line.append(note);
     }
-    lengthLine.hidden = false;
+    line.hidden = false;
 }
 
 // ---------------------------
@@ -510,6 +560,7 @@ function setOptionsDisabled(disabled) {
     optionControls.forEach(control => {
         control.disabled = disabled;
     });
+    updateTakeButtons();
 }
 
 // ---------------------------
@@ -524,16 +575,19 @@ function failUpload(message) {
     uploadBtn.disabled = !getTimeLimit().valid;
 }
 
-async function upload() {
+// Sends the chosen MP3, or a recorded take when one is given ({ blob, seconds }, sent as WAV)
+async function upload(take) {
+    const sendButton = take ? takeSendBtn : uploadBtn;
     // Locked before anything else, so a double click can't send the speech twice
-    uploadBtn.disabled = true;
-    const file = fileInput.files[0];
+    sendButton.disabled = true;
+    const file = take ? take.blob : fileInput.files[0];
 
     if(!file) {
-        uploadBtn.disabled = false;
+        sendButton.disabled = false;
         alert("Please select an audio file.");
         return;
     }
+    if(take) takeAudio.pause();
 
     const timeLimit = getTimeLimit();
     if(!timeLimit.valid) {
@@ -552,12 +606,15 @@ async function upload() {
     waitNote.style.display = "none";
 
     if(file.size > MAX_FILE_MB * 1024 * 1024) {
-        failUpload(`This file is too large. Please upload an MP3 under ${MAX_FILE_MB} MB.`);
+        failUpload(take
+            ? `This recording is too large to send. Recordings can be up to ${MAX_FILE_MB} MB.`
+            : `This file is too large. Please upload an MP3 under ${MAX_FILE_MB} MB.`);
         return;
     }
 
     statusText.innerText = "Checking your recording...";
-    const durationSeconds = await getAudioDurationSeconds(file);
+    // A take's exact length is already known from its samples
+    const durationSeconds = take ? take.seconds : await getAudioDurationSeconds(file);
     if(durationSeconds !== null && durationSeconds > MAX_DURATION_MINUTES * 60) {
         failUpload(`This recording is longer than ${MAX_DURATION_MINUTES} minutes. Please upload a shorter speech.`);
         return;
@@ -574,6 +631,7 @@ async function upload() {
         if(topic) params.set("topic", topic);
         if(topic && randomTopic && topic === randomTopic.text) params.set("topicType", randomTopic.type);
         if(timeLimit.seconds !== null) params.set("timeLimit", String(timeLimit.seconds));
+        if(take) params.set("format", "wav");
         const query = params.toString();
 
         const response = await fetch(`${API_BASE}/upload-url${query ? "?" + query : ""}`);
@@ -599,7 +657,11 @@ async function upload() {
         Object.entries(data.upload.fields).forEach(([key, value]) => {
             formData.append(key, value);
         });
-        formData.append("file", file);
+        if(take) {
+            formData.append("file", file, "speech.wav");
+        } else {
+            formData.append("file", file);
+        }
 
         const uploadResponse = await fetch(data.upload.url, {
             method: "POST",
@@ -608,9 +670,14 @@ async function upload() {
 
         if(!uploadResponse.ok) {
             console.error("S3 upload failed:", uploadResponse.status);
-            failUpload(`Upload failed. Please make sure your MP3 is under ${MAX_FILE_MB} MB and try again.`);
+            failUpload(take
+                ? "Upload failed. Please try again."
+                : `Upload failed. Please make sure your MP3 is under ${MAX_FILE_MB} MB and try again.`);
             return;
         }
+
+        // The take reached the server, so leaving the page no longer loses it
+        if(take) markTakeSent(take);
 
         // Uploaded: Intermission now says the coach is reviewing the speech
         setIntermissionPhase("review");
@@ -974,6 +1041,7 @@ goToStageBtn.addEventListener("click", () => goToView("stage"));
 tryAgainBtn.addEventListener("click", () => {
     fileInput.value = "";
     showFileName();
+    if (recState === "review") discardTake();
     statusText.textContent = "";
     goToView("stage");
 });
@@ -1005,3 +1073,595 @@ document.addEventListener("keydown", e => {
         privacyBtn.focus();
     }
 });
+
+// ---------------------------
+// Live recording: the mic on the stage
+// ---------------------------
+// The flow: idle → starting (asking for the mic) → prep (optional) → countdown (3, 2, 1) → recording → review.
+// The mic sound goes through recorder-worklet.js, gets converted to 16 kHz 16-bit samples here, and becomes a
+// WAV file that stays on this device until "Send to the coach".
+const micSupported = Boolean(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.AudioWorkletNode);
+const LOCKED_STATES = ["starting", "prep", "countdown", "recording"];   // the page is locked in these
+const WARNING_TEXT = "30 seconds left before recording stops.";
+const INTERRUPTED_TEXT = "Recording was interrupted. You can listen back, re-record, or use what you have.";
+
+let recState = "idle";
+let currentTake = null;        // { blob, url, seconds, sent } after recording stops
+let mic = null;                // { stream, context, node } while the mic is open
+let micSession = 0;            // counts mic starts, so a slow start that was cancelled can't continue
+let recChunks = [];            // the take so far, as 16-bit sample chunks
+let recCount = 0;              // number of samples recorded so far (16000 per second)
+let recWarned = false;
+let resample = null;
+let prepTimer = null;
+let countTimer = null;
+let wakeLock = null;
+let wakeLockPending = false;
+
+// Shows the panel for a state, sets the mic's label and glow, and locks or unlocks the page
+function setRecState(name) {
+    recState = name;
+    const panel = name === "starting" ? "idle" : name;
+    Object.entries(recPanels).forEach(([key, element]) => {
+        element.hidden = key !== panel;
+    });
+
+    const locked = LOCKED_STATES.includes(name);
+    stageView.dataset.rec = name;
+    stageView.classList.toggle("recording", name === "recording");
+    stageView.classList.toggle("rec-locked", locked);
+    micBtn.setAttribute("aria-label", name === "recording" ? "Stop recording" : "Start recording");
+
+    // Topic, time and prep controls, the menu and the file picker can't change while preparing or recording
+    optionControls.forEach(control => {
+        control.disabled = locked || isBusy;
+    });
+    navButtons.forEach(button => {
+        button.disabled = locked;
+    });
+    fileInput.disabled = locked;
+    if (locked) stopDragHighlight();
+
+    updateTakeButtons();
+    updateLeaveWarning();
+    if (locked) {
+        requestWakeLock();
+    } else {
+        releaseWakeLock();
+    }
+}
+
+// Enables or disables the mic and the take's buttons for the current state
+function updateTakeButtons() {
+    const busy = isBusy || isRolling;
+    micBtn.disabled = busy || recState === "starting" || recState === "countdown" || recState === "review";
+    const longEnough = currentTake !== null && currentTake.seconds >= MIN_TAKE_SECONDS;
+    takeSendBtn.disabled = busy || !longEnough || !getTimeLimit().valid;
+    reRecordBtn.disabled = busy;
+    discardBtn.disabled = busy;
+}
+
+// ---- Prep time ----
+function getPrepSeconds() {
+    const choice = document.querySelector('input[name="prepTime"]:checked');
+    return choice ? Number(choice.value) : 0;
+}
+
+// For example 30 becomes "30 seconds" and 120 becomes "2 minutes"
+function describePrep(seconds) {
+    if (seconds % 60 !== 0) return `${seconds} seconds`;
+    return seconds === 60 ? "1 minute" : `${seconds / 60} minutes`;
+}
+
+function updateActionText() {
+    if (!micSupported) return;
+    const prep = getPrepSeconds();
+    actionText.textContent = prep > 0
+        ? `Tap the mic to begin. You get ${describePrep(prep)} to prepare, then recording starts.`
+        : "Tap the mic to begin.";
+}
+
+prepRadios.forEach(radio => radio.addEventListener("change", updateActionText));
+
+// ---- Opening the mic ----
+const MIC_ERRORS = {
+    NotAllowedError: "SpeakReview needs microphone access. Allow it in your browser settings, then try again.",
+    SecurityError: "SpeakReview needs microphone access. Allow it in your browser settings, then try again.",
+    NotFoundError: "No microphone was found.",
+    OverconstrainedError: "No microphone was found.",
+    NotReadableError: "Your microphone is being used by another app.",
+    AbortError: "Your microphone is being used by another app."
+};
+
+function micErrorMessage(err) {
+    return MIC_ERRORS[err && err.name] || "The microphone could not start. Please try again.";
+}
+
+// Makes an audio context at the given sample rate (or the device's own rate). Returns null if the browser refuses.
+function createAudioContext(sampleRate) {
+    try {
+        return sampleRate ? new AudioContext({ sampleRate }) : new AudioContext();
+    } catch (err) {
+        return null;
+    }
+}
+
+async function startMic() {
+    const session = ++micSession;
+    statusText.textContent = "";
+    setRecState("starting");
+
+    // The audio context is created and started during the tap itself, because phones only let sound start from a tap
+    const context = createAudioContext(REC_SAMPLE_RATE);
+    if (context) context.resume().catch(() => {});
+    mic = { stream: null, context, node: null };
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+            video: false
+        });
+        if (session !== micSession || !mic) {
+            stream.getTracks().forEach(track => track.stop());
+            return;
+        }
+        mic.stream = stream;
+
+        // Some browsers (Firefox) can't connect a mic to a 16 kHz context. Then use the device's own rate
+        // and convert to 16 kHz in createResampler().
+        let source = null;
+        if (mic.context) {
+            try {
+                source = mic.context.createMediaStreamSource(stream);
+            } catch (err) {
+                mic.context.close().catch(() => {});
+                mic.context = null;
+            }
+        }
+        if (!mic.context) {
+            mic.context = createAudioContext();
+            if (!mic.context) throw new Error("No audio context");
+            source = mic.context.createMediaStreamSource(stream);
+        }
+
+        // Wait up to 3 seconds for the sound to start running
+        if (mic.context.state !== "running") {
+            await Promise.race([mic.context.resume(), wait(3000)]);
+            if (mic.context.state !== "running") throw new Error("The audio context did not start");
+        }
+
+        await mic.context.audioWorklet.addModule("js/recorder-worklet.js");
+        if (session !== micSession || !mic) return;
+
+        const node = new AudioWorkletNode(mic.context, "recorder-processor");
+        // Samples are only kept while recording. Anything heard during prep or the 3, 2, 1 is dropped.
+        node.port.onmessage = e => {
+            if (recState === "recording") addSamples(e.data);
+        };
+        source.connect(node);
+        node.connect(mic.context.destination);   // keeps it running. It only outputs silence.
+        mic.node = node;
+
+        stream.getAudioTracks().forEach(track => track.addEventListener("ended", onMicInterrupted));
+        mic.context.addEventListener("statechange", onContextStateChange);
+
+        const prep = getPrepSeconds();
+        if (prep > 0) {
+            startPrep(prep);
+        } else {
+            startCountdown();
+        }
+    } catch (err) {
+        if (session !== micSession) return;
+        console.error(err);
+        releaseMic();
+        setRecState("idle");
+        statusText.textContent = micErrorMessage(err);
+    }
+}
+
+// Stops the mic and closes the audio context, so the browser's mic indicator turns off
+function releaseMic() {
+    if (!mic) return;
+    const { stream, context, node } = mic;
+    mic = null;
+    if (node) {
+        node.port.onmessage = null;
+        node.disconnect();
+    }
+    if (stream) {
+        stream.getTracks().forEach(track => {
+            track.removeEventListener("ended", onMicInterrupted);
+            track.stop();
+        });
+    }
+    if (context) {
+        context.removeEventListener("statechange", onContextStateChange);
+        if (context.state !== "closed") context.close().catch(() => {});
+    }
+}
+
+function clearRecTimers() {
+    clearInterval(prepTimer);
+    clearInterval(countTimer);
+    prepTimer = null;
+    countTimer = null;
+}
+
+// Cancel during prep or the 3, 2, 1: back to the start, mic off
+function cancelRecording() {
+    micSession++;
+    clearRecTimers();
+    releaseMic();
+    setRecState("idle");
+}
+
+// ---- Prep and the 3, 2, 1 ----
+function startPrep(seconds) {
+    setRecState("prep");
+    const endsAt = Date.now() + seconds * 1000;    // counted from the clock, so it never drifts
+    function tick() {
+        const left = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+        prepCount.textContent = formatTime(left);
+        if (left === 0) startCountdown();
+    }
+    prepCount.textContent = formatTime(seconds);
+    prepTimer = setInterval(tick, 250);
+    announceScene(`Prepare your speech. ${describePrep(seconds)}.`);
+}
+
+function startCountdown() {
+    clearRecTimers();
+    setRecState("countdown");
+    let number = COUNTDOWN_FROM;
+    function show() {
+        countNum.textContent = String(number);
+        // Restart the small pop animation for each number (none with reduced motion)
+        countNum.classList.remove("pop");
+        void countNum.offsetWidth;
+        countNum.classList.add("pop");
+    }
+    show();
+    announceScene(`Recording starts in ${COUNTDOWN_FROM} seconds.`);
+    countTimer = setInterval(() => {
+        number--;
+        if (number <= 0) {
+            startRecording();
+        } else {
+            show();
+        }
+    }, 1000);
+}
+
+// ---- Recording ----
+function startRecording() {
+    clearRecTimers();
+    if (!mic || !mic.context) {
+        cancelRecording();
+        return;
+    }
+    // A fresh take: nothing from before this moment is kept
+    recChunks = [];
+    recCount = 0;
+    recWarned = false;
+    resample = createResampler(mic.context.sampleRate);
+    statusText.textContent = "";
+    setRecState("recording");
+    announceScene("Recording.");
+}
+
+// Adds a block of mic samples (any sample rate) to the take as 16 kHz 16-bit samples
+function addSamples(input) {
+    if (recState !== "recording") return;
+    const samples = resample(input);
+    const count = Math.min(samples.length, MAX_REC_SAMPLES - recCount);   // never past exactly 10:00
+    if (count > 0) {
+        const pcm = new Int16Array(count);
+        for (let i = 0; i < count; i++) {
+            // Clip to the allowed range, then scale to whole numbers from -32768 to 32767
+            const s = Math.max(-1, Math.min(1, samples[i]));
+            pcm[i] = s < 0 ? Math.round(s * 0x8000) : Math.round(s * 0x7FFF);
+        }
+        recChunks.push(pcm);
+        recCount += count;
+    }
+
+    if (!recWarned && recCount >= REC_WARNING_SECONDS * REC_SAMPLE_RATE) {
+        recWarned = true;
+        statusText.textContent = WARNING_TEXT;
+    }
+    if (recCount >= MAX_REC_SAMPLES) stopRecording("max");
+}
+
+// Ends the recording and shows the take. reason: null (finished), "max" or "interrupted".
+function stopRecording(reason) {
+    if (recState !== "recording") return;
+    const chunks = recChunks;
+    const count = recCount;
+    recChunks = [];
+    recCount = 0;
+    releaseMic();
+
+    setTake(buildWav(chunks, count), count / REC_SAMPLE_RATE);
+
+    const notes = [];
+    if (reason === "max") notes.push(`Recording stopped at the ${formatTime(MAX_REC_SAMPLES / REC_SAMPLE_RATE)} maximum.`);
+    if (reason === "interrupted") notes.push(INTERRUPTED_TEXT);
+    if (currentTake.seconds < MIN_TAKE_SECONDS) notes.push(`Recordings need at least ${MIN_TAKE_SECONDS} seconds.`);
+    takeNote.textContent = notes.join(" ");
+    takeNote.hidden = notes.length === 0;
+    if (statusText.textContent === WARNING_TEXT) statusText.textContent = "";
+
+    setRecState("review");
+    // On short screens the take's buttons can be below the fold, so bring them into view
+    recPanels.review.parentElement.scrollIntoView({ block: "nearest" });
+    announceScene(`Recording stopped. Your take is ${formatTime(currentTake.seconds)}. ${notes.join(" ")}`.trim());
+}
+
+// "Start over" while recording: throw the samples away and count down again (no prep)
+function restartRecording() {
+    if (recState !== "recording") return;
+    recChunks = [];
+    recCount = 0;
+    if (statusText.textContent === WARNING_TEXT) statusText.textContent = "";
+    startCountdown();
+}
+
+// ---- Interruptions ----
+function onMicInterrupted() {
+    if (recState === "recording") {
+        stopRecording("interrupted");
+    } else if (LOCKED_STATES.includes(recState)) {
+        cancelRecording();
+        statusText.textContent = "The microphone stopped before recording started. Tap the mic to try again.";
+    }
+}
+
+function onContextStateChange() {
+    if (!mic || !mic.context) return;
+    const state = mic.context.state;
+    if (state === "suspended" || state === "interrupted") onMicInterrupted();
+}
+
+function isTouchDevice() {
+    return window.matchMedia("(pointer: coarse)").matches;
+}
+
+document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+        // Phones pause or cut the mic when the page is hidden, so stop and keep what was recorded
+        if (recState === "recording" && isTouchDevice()) onMicInterrupted();
+    } else if (LOCKED_STATES.includes(recState)) {
+        requestWakeLock();      // the browser drops the wake lock while the page is hidden
+    }
+});
+
+// ---- Keep the screen awake while preparing and recording ----
+async function requestWakeLock() {
+    if (!("wakeLock" in navigator) || wakeLock || wakeLockPending || document.hidden) return;
+    wakeLockPending = true;
+    try {
+        const lock = await navigator.wakeLock.request("screen");
+        if (LOCKED_STATES.includes(recState)) {
+            wakeLock = lock;
+            lock.addEventListener("release", () => {
+                if (wakeLock === lock) wakeLock = null;
+            });
+        } else {
+            lock.release().catch(() => {});     // recording already ended while asking
+        }
+    } catch (err) {
+        // Not allowed right now (for example low battery). The page works without it.
+    }
+    wakeLockPending = false;
+}
+
+function releaseWakeLock() {
+    if (!wakeLock) return;
+    wakeLock.release().catch(() => {});
+    wakeLock = null;
+}
+
+// ---- Warn before leaving the page while recording or with an unsent take ----
+let leaveWarningOn = false;
+
+function warnBeforeLeaving(e) {
+    e.preventDefault();
+    e.returnValue = "";        // older browsers need this to show the standard "Leave site?" prompt
+}
+
+function updateLeaveWarning() {
+    const on = LOCKED_STATES.includes(recState) || (currentTake !== null && !currentTake.sent);
+    if (on === leaveWarningOn) return;
+    leaveWarningOn = on;
+    if (on) {
+        window.addEventListener("beforeunload", warnBeforeLeaving);
+    } else {
+        window.removeEventListener("beforeunload", warnBeforeLeaving);
+    }
+}
+
+// ---- 16 kHz conversion ----
+// Returns a function that turns mic samples at inRate into 16 kHz samples, one chunk at a time.
+// First a low-pass filter removes sounds too high for 16 kHz (they would turn into noise), then
+// every (inRate / 16000)th point is picked, blending the two nearest samples when it falls between them.
+function createResampler(inRate) {
+    if (inRate === REC_SAMPLE_RATE) return chunk => chunk;
+
+    const step = inRate / REC_SAMPLE_RATE;
+    const HALF = 31;
+    const TAPS = HALF * 2 + 1;
+    const cutoff = 7200 / inRate;          // keep sounds below 7.2 kHz
+    const taps = new Float32Array(TAPS);
+    let total = 0;
+    for (let i = 0; i < TAPS; i++) {
+        const k = i - HALF;
+        const sinc = k === 0 ? 2 * cutoff : Math.sin(2 * Math.PI * cutoff * k) / (Math.PI * k);
+        const blackman = 0.42 - 0.5 * Math.cos(2 * Math.PI * i / (TAPS - 1)) + 0.08 * Math.cos(4 * Math.PI * i / (TAPS - 1));
+        taps[i] = sinc * blackman;
+        total += taps[i];
+    }
+    for (let i = 0; i < TAPS; i++) taps[i] /= total;      // keeps the loudness the same
+
+    function filterAt(buffer, center) {
+        let sum = 0;
+        const start = center - HALF;
+        for (let k = 0; k < TAPS; k++) sum += taps[k] * buffer[start + k];
+        return sum;
+    }
+
+    let history = new Float32Array(TAPS);   // the end of the previous chunk (silence at first)
+    let position = TAPS;                    // where the next output sample falls, in history + chunk
+
+    return function (chunk) {
+        const buffer = new Float32Array(history.length + chunk.length);
+        buffer.set(history);
+        buffer.set(chunk, history.length);
+
+        const out = new Float32Array(Math.ceil(chunk.length / step) + 2);
+        let count = 0;
+        while (Math.floor(position) + 1 + HALF < buffer.length) {
+            const i = Math.floor(position);
+            const fraction = position - i;
+            const a = filterAt(buffer, i);
+            out[count++] = fraction > 0 ? a + (filterAt(buffer, i + 1) - a) * fraction : a;
+            position += step;
+        }
+
+        // Keep only what the next chunk still needs
+        const keepFrom = Math.floor(position) - HALF;
+        history = buffer.slice(keepFrom);
+        position -= keepFrom;
+        return out.subarray(0, count);
+    };
+}
+
+// ---- WAV file ----
+// WAV stores numbers with the smallest byte first ("little-endian"). Every current phone and laptop does too.
+const LITTLE_ENDIAN = new Uint8Array(new Uint16Array([1]).buffer)[0] === 1;
+
+// Builds a WAV file: a 44-byte header that describes the sound, then the samples
+function buildWav(chunks, count) {
+    const dataBytes = count * 2;
+    const header = new DataView(new ArrayBuffer(44));
+    const writeText = (offset, text) => {
+        for (let i = 0; i < text.length; i++) header.setUint8(offset + i, text.charCodeAt(i));
+    };
+    writeText(0, "RIFF");
+    header.setUint32(4, 36 + dataBytes, true);              // file size minus these first 8 bytes
+    writeText(8, "WAVE");
+    writeText(12, "fmt ");
+    header.setUint32(16, 16, true);                         // size of this format section
+    header.setUint16(20, 1, true);                          // 1 = plain PCM, not compressed
+    header.setUint16(22, 1, true);                          // 1 channel (mono)
+    header.setUint32(24, REC_SAMPLE_RATE, true);            // 16000 samples per second
+    header.setUint32(28, REC_SAMPLE_RATE * 2, true);        // bytes per second
+    header.setUint16(32, 2, true);                          // bytes per sample
+    header.setUint16(34, 16, true);                         // bits per sample
+    writeText(36, "data");
+    header.setUint32(40, dataBytes, true);                  // size of the samples
+
+    const parts = LITTLE_ENDIAN ? chunks : chunks.map(toLittleEndian);
+    return new Blob([header.buffer, ...parts], { type: "audio/wav" });
+}
+
+function toLittleEndian(pcm) {
+    const view = new DataView(new ArrayBuffer(pcm.length * 2));
+    pcm.forEach((value, i) => view.setInt16(i * 2, value, true));
+    return view.buffer;
+}
+
+// ---- The take: listen back, send, re-record or discard ----
+function setTake(blob, seconds) {
+    clearTake();
+    currentTake = { blob, seconds, url: URL.createObjectURL(blob), sent: false };
+    takeAudio.src = currentTake.url;
+    showTakeProgress(0);
+    renderLengthLine();
+}
+
+// Throws the take away and frees its memory
+function clearTake() {
+    takeAudio.pause();
+    takeAudio.removeAttribute("src");
+    takeAudio.load();
+    if (currentTake) URL.revokeObjectURL(currentTake.url);
+    currentTake = null;
+    takeNote.hidden = true;
+    takeNote.textContent = "";
+    renderLengthLine();
+}
+
+function discardTake() {
+    clearTake();
+    setRecState("idle");
+}
+
+function markTakeSent(take) {
+    take.sent = true;
+    updateLeaveWarning();
+}
+
+function showTakeProgress(currentSeconds) {
+    const total = currentTake ? currentTake.seconds : 0;
+    const share = total > 0 ? Math.min(1, currentSeconds / total) : 0;
+    takeFill.style.width = `${share * 100}%`;
+    takeTime.textContent = `${formatTime(Math.floor(currentSeconds))} / ${formatTime(total)}`;
+}
+
+function showPlaying(playing) {
+    takePlayBtn.classList.toggle("playing", playing);
+    takePlayBtn.setAttribute("aria-label", playing ? "Pause your take" : "Play your take");
+}
+
+takePlayBtn.addEventListener("click", () => {
+    if (!currentTake) return;
+    if (takeAudio.paused) {
+        takeAudio.play().catch(err => console.error(err));
+    } else {
+        takeAudio.pause();
+    }
+});
+takeAudio.addEventListener("play", () => showPlaying(true));
+takeAudio.addEventListener("pause", () => showPlaying(false));
+takeAudio.addEventListener("timeupdate", () => showTakeProgress(takeAudio.currentTime));
+takeAudio.addEventListener("ended", () => {
+    showPlaying(false);
+    showTakeProgress(0);
+});
+
+// ---- Buttons ----
+micBtn.addEventListener("click", () => {
+    if (recState === "idle") {
+        startMic();
+    } else if (recState === "prep") {
+        startCountdown();
+    } else if (recState === "recording") {
+        stopRecording(null);
+    }
+});
+prepStartBtn.addEventListener("click", startCountdown);
+prepCancelBtn.addEventListener("click", cancelRecording);
+countCancelBtn.addEventListener("click", cancelRecording);
+finishBtn.addEventListener("click", () => stopRecording(null));
+startOverBtn.addEventListener("click", restartRecording);
+takeSendBtn.addEventListener("click", () => {
+    if (currentTake) upload(currentTake);
+});
+reRecordBtn.addEventListener("click", () => {
+    clearTake();
+    startMic();
+});
+discardBtn.addEventListener("click", discardTake);
+
+// Browsers that can't record keep the upload-first layout
+if (micSupported) {
+    updateActionText();
+} else {
+    stageView.classList.add("no-mic");
+    prepSetting.hidden = true;
+    stepSpeakTitle.textContent = "Your turn on stage";
+    actionText.textContent = `Upload an MP3 of your speech. Up to ${MAX_DURATION_MINUTES} minutes and ${MAX_FILE_MB} MB.`;
+    uploadLabel.textContent = "Upload an MP3";
+}
+updateTakeButtons();
