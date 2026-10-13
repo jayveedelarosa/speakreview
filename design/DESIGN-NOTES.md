@@ -13,7 +13,7 @@ The app is a theatre.
 - **Stage** (practice): red velvet curtains frame the sides, a warm gold spotlight shines from the top, a seated audience sits in rows across the back of the stage, and a wooden stage floor runs along the bottom. The topic is the hero, large and centered.
 - **Backstage** (your feedback): a dressing room mirror framed in warm wood and lined with glowing bulbs. The speech summary is on the left, Coach's notes on the right.
 - **Wall of Fame** (past performances): framed playbills hanging on a red wall, plus a trophy shelf. Built in a later stage.
-- **Intermission**: while the AI works, the curtains close and an "Intermission" screen shows.
+- **Intermission**: as soon as "Send to the coach" passes the page checks, the curtains close and an "Intermission" screen shows. It reads "Taking your speech backstage..." while the file uploads, then "Your coach is reviewing your speech..." (pulsing dots and the keep-this-page-open note) while the AI works. If the upload fails, the curtains open back on the Stage with the error.
 
 Menu labels: **Stage** (small subtitle "Practice"), **Backstage** ("Your feedback"), **Wall of Fame** ("Past performances").
 
@@ -65,7 +65,7 @@ Phone (about 390 by 780): curtains become thin strips at the sides, the top vala
 
 Stage layout rules (laptop and phone):
 - **Privacy**: behind a "Privacy" link with a small lock icon at the top right on all screens (laptop: in the header, right of the menu). It is a quiet, muted button, not a menu item, and brightens on hover and focus. It opens a small panel right under it with the privacy note; the panel closes on a second click, a click outside it, or Escape (focus returns to the link).
-- **Main action**: always stacked and centered on the wooden floor: "Your turn on stage", the line under it, the Upload button, then the file name and length line, "Begin the performance", the status and the wait note. The floor grows to hold it. It never overlaps the audience.
+- **Main action**: always stacked and centered on the wooden floor: "Your turn on stage", the line under it, the Upload button, then the file name and length line, "Send to the coach", the status and the wait note. The floor grows to hold it. It never overlaps the audience.
 - **Audience**: always fully between the bottom of the settings strip (with a small gap) and the top of the floor. On shorter windows and when zoomed in it scales down proportionally to fit that space, down to about 70 percent of its normal height. If there is still not enough room, the stage grows and the page scrolls (scrollbar hidden). No button, label, line or text ever sits on top of it.
 
 ## Rules

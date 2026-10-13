@@ -60,6 +60,9 @@ const coachNotesTitle = document.getElementById("coachNotesTitle");
 const backstageEmptyTitle = document.getElementById("backstageEmptyTitle");
 const mirror = document.getElementById("mirror");
 const intermission = document.getElementById("intermission");
+const intermissionText = document.getElementById("intermissionText");
+const intermissionDots = document.getElementById("intermissionDots");
+const intermissionNote = document.getElementById("intermissionNote");
 const sceneAnnounce = document.getElementById("sceneAnnounce");
 const appRoot = document.querySelector(".app");
 // Every topic and time control, so they can be locked while a speech is being analyzed
@@ -81,7 +84,7 @@ function showFileName() {
         fileNameText.title = "";
         fileNameText.classList.remove("has-file");
     }
-    // The Begin button and file details only appear once a file is picked
+    // The Send button and file details only appear once a file is picked
     fileInfo.hidden = !file;
     uploadBtn.hidden = !file;
     uploadLabel.textContent = file ? "Choose another MP3" : "Upload an MP3";
@@ -93,21 +96,61 @@ fileInput.addEventListener("change", showFileName);
 // ---------------------------
 // Drag and drop
 // ---------------------------
-["dragenter", "dragover"].forEach(evt => {
-    dropZone.addEventListener(evt, e => {
-        e.preventDefault();
-        dropZone.classList.add("dragging");
-    });
+// The highlight shows while a file is dragged anywhere over the window. Enter and leave events
+// fire for every element the cursor crosses, so a counter on the document keeps it steady.
+const DRAG_IDLE_MS = 150;      // files dragged from another app don't always send a final dragleave
+let dragDepth = 0;
+let dragIdleTimer = null;
+
+function dragHasFiles(e) {
+    return Boolean(e.dataTransfer) && Array.from(e.dataTransfer.types).includes("Files");
+}
+
+// Drops only work on the Stage with the controls unlocked (not on Backstage, during Intermission or an upload)
+function canDropFile() {
+    return currentView === "stage" && !isBusy && !intermissionOn && !appRoot.inert;
+}
+
+function stopDragHighlight() {
+    dragDepth = 0;
+    clearTimeout(dragIdleTimer);
+    dropZone.classList.remove("dragging");
+}
+
+// Called on every dragenter and dragover with files. If they stop coming, the drag is over.
+function keepDragHighlight() {
+    dropZone.classList.toggle("dragging", canDropFile());
+    clearTimeout(dragIdleTimer);
+    dragIdleTimer = setTimeout(stopDragHighlight, DRAG_IDLE_MS);
+}
+
+document.addEventListener("dragenter", e => {
+    if (!dragHasFiles(e)) return;
+    e.preventDefault();
+    dragDepth++;
+    keepDragHighlight();
 });
 
-["dragleave", "drop"].forEach(evt => {
-    dropZone.addEventListener(evt, e => {
-        e.preventDefault();
-        dropZone.classList.remove("dragging");
-    });
+document.addEventListener("dragover", e => {
+    if (!dragHasFiles(e)) return;
+    keepDragHighlight();
 });
 
-dropZone.addEventListener("drop", e => {
+document.addEventListener("dragleave", e => {
+    if (!dragHasFiles(e)) return;
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) stopDragHighlight();      // the drag left the window
+});
+
+document.addEventListener("dragend", stopDragHighlight);
+
+// While the highlight shows, a file dropped anywhere in the window counts as a drop on the stage
+document.addEventListener("drop", e => {
+    e.preventDefault();
+    const accepted = dragHasFiles(e) && canDropFile();
+    stopDragHighlight();
+    if (!accepted) return;
+
     const file = e.dataTransfer.files[0];
     if (!file) return;
 
@@ -123,7 +166,7 @@ dropZone.addEventListener("drop", e => {
     showFileName();
 });
 
-// Stop the browser from opening the file if it's dropped outside the box
+// Stop the browser from opening the file wherever it's dropped
 ["dragover", "drop"].forEach(evt => {
     window.addEventListener(evt, e => e.preventDefault());
 });
@@ -472,46 +515,56 @@ function setOptionsDisabled(disabled) {
 // ---------------------------
 // Upload and analysis
 // ---------------------------
+// Stops an upload: opens the curtains back on the Stage (if closed), shows the message and unlocks the controls
+function failUpload(message) {
+    endIntermission("stage");
+    statusText.textContent = message;
+    waitNote.style.display = "none";
+    setOptionsDisabled(false);
+    uploadBtn.disabled = !getTimeLimit().valid;
+}
+
 async function upload() {
+    // Locked before anything else, so a double click can't send the speech twice
+    uploadBtn.disabled = true;
     const file = fileInput.files[0];
 
     if(!file) {
+        uploadBtn.disabled = false;
         alert("Please select an audio file.");
         return;
     }
 
     const timeLimit = getTimeLimit();
     if(!timeLimit.valid) {
-        statusText.textContent = TIME_LIMIT_ERROR;
+        failUpload(TIME_LIMIT_ERROR);
         return;
     }
 
     const topic = topicInput.value.trim();
     if(topic.length > MAX_TOPIC_LENGTH) {
-        statusText.textContent = `Topics can be up to ${MAX_TOPIC_LENGTH} characters.`;
+        failUpload(`Topics can be up to ${MAX_TOPIC_LENGTH} characters.`);
         return;
     }
 
-    uploadBtn.disabled = true;
     setOptionsDisabled(true);
     resultBox.style.display = "none";
     waitNote.style.display = "none";
 
     if(file.size > MAX_FILE_MB * 1024 * 1024) {
-        statusText.innerText = `This file is too large. Please upload an MP3 under ${MAX_FILE_MB} MB.`;
-        uploadBtn.disabled = false;
-        setOptionsDisabled(false);
+        failUpload(`This file is too large. Please upload an MP3 under ${MAX_FILE_MB} MB.`);
         return;
     }
 
     statusText.innerText = "Checking your recording...";
     const durationSeconds = await getAudioDurationSeconds(file);
     if(durationSeconds !== null && durationSeconds > MAX_DURATION_MINUTES * 60) {
-        statusText.innerText = `This recording is longer than ${MAX_DURATION_MINUTES} minutes. Please upload a shorter speech.`;
-        uploadBtn.disabled = false;
-        setOptionsDisabled(false);
+        failUpload(`This recording is longer than ${MAX_DURATION_MINUTES} minutes. Please upload a shorter speech.`);
         return;
     }
+
+    // The page checks passed: the curtains close right away while the speech uploads
+    startIntermission();
 
     try {
         statusText.innerText = "Initializing Stage...";
@@ -527,17 +580,13 @@ async function upload() {
 
         if(response.status === 429) {
             const limit = await response.json().catch(() => ({}));
-            statusText.innerText = limit.message || "Upload limit reached. Please try again later.";
-            uploadBtn.disabled = false;
-            setOptionsDisabled(false);
+            failUpload(limit.message || "Upload limit reached. Please try again later.");
             return;
         }
 
         if(response.status === 400) {
             const problem = await response.json().catch(() => ({}));
-            statusText.textContent = problem.message || "Please check your topic and time limit.";
-            uploadBtn.disabled = false;
-            setOptionsDisabled(false);
+            failUpload(problem.message || "Please check your topic and time limit.");
             return;
         }
 
@@ -559,25 +608,19 @@ async function upload() {
 
         if(!uploadResponse.ok) {
             console.error("S3 upload failed:", uploadResponse.status);
-            statusText.innerText = `Upload failed. Please make sure your MP3 is under ${MAX_FILE_MB} MB and try again.`;
-            uploadBtn.disabled = false;
-            setOptionsDisabled(false);
+            failUpload(`Upload failed. Please make sure your MP3 is under ${MAX_FILE_MB} MB and try again.`);
             return;
         }
 
+        // Uploaded: Intermission now says the coach is reviewing the speech
+        setIntermissionPhase("review");
         statusText.innerText = "Analyzing Performance Patterns...";
         waitNote.style.display = "block";
         pollResult(data.fileId);
-        // The curtains close and Intermission shows while the coach works
-        startIntermission();
 
     } catch(err) {
         console.error(err);
-        endIntermission("stage");       // never leave the curtains closed (does nothing if they are open)
-        statusText.innerText = "Technical error occurred.";
-        waitNote.style.display = "none";
-        uploadBtn.disabled = false;
-        setOptionsDisabled(false);
+        failUpload("Technical error occurred.");    // never leaves the curtains closed
     }
 }
 
@@ -856,18 +899,45 @@ function goToView(name) {
     });
 }
 
-// The curtains close and Intermission shows over them while the coach reviews the speech
+// What Intermission says while the speech uploads, then while the coach reviews it
+const INTERMISSION_PHASES = {
+    upload: {
+        text: "Taking your speech backstage...",
+        dots: false,
+        announce: "Taking your speech backstage."
+    },
+    review: {
+        text: "Your coach is reviewing your speech",
+        dots: true,
+        announce: "Your coach is reviewing your speech. Longer speeches can take a few minutes to analyze. Please keep this page open."
+    }
+};
+let intermissionPhase = "upload";
+
+// Changes the Intermission text. It is announced once, only if Intermission is already showing
+// (otherwise startIntermission announces it when the curtains finish closing).
+function setIntermissionPhase(phase) {
+    intermissionPhase = phase;
+    const info = INTERMISSION_PHASES[phase];
+    intermissionText.textContent = info.text;
+    intermissionDots.hidden = !info.dots;
+    intermissionNote.hidden = !info.dots;
+    if (!intermission.hidden) announceScene(info.announce);
+}
+
+// The curtains close and Intermission shows over them while the speech uploads and the coach reviews it
 function startIntermission() {
     if (intermissionOn) return;
     intermissionOn = true;
     setPrivacyOpen(false);
+    setIntermissionPhase("upload");
     // inert: everything behind the closed curtains is unclickable and hidden from keyboards and screen readers
     appRoot.inert = true;
     queueScene(async () => {
         await setCurtains(true);
         if (!intermissionOn) return;         // it already ended while the curtains were closing
         intermission.hidden = false;
-        announceScene("Intermission. Your coach is reviewing your speech. Longer speeches can take a few minutes to analyze. Please keep this page open.");
+        announceScene("Intermission. " + INTERMISSION_PHASES[intermissionPhase].announce);
     });
 }
 

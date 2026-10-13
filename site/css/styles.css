@@ -453,9 +453,11 @@ textarea {
     color: var(--heading);
     font-family: var(--serif);
     font-size: 28px;
+    pointer-events: none;
 }
 
-/* Stops the highlight from flickering when the cursor moves over the elements inside */
+/* The elements inside ignore the pointer while dragging, so they don't send extra enter and leave
+   events (a counter on the document in app.js keeps the highlight steady) */
 #dropZone.dragging * {
     pointer-events: none;
 }

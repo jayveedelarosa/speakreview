@@ -186,7 +186,7 @@
                                     <p id="lengthLine" class="length-line" hidden></p>
                                 </div>
 
-                                <button type="button" id="uploadBtn" class="btn-gold" hidden>Begin the performance</button>
+                                <button type="button" id="uploadBtn" class="btn-gold" hidden>Send to the coach</button>
 
                                 <p id="status" role="status" aria-live="polite"></p>
                                 <p id="waitNote" class="wait-note" style="display:none;">Longer speeches can take a few minutes to analyze. Please keep this page open.</p>
@@ -253,8 +253,8 @@
 <div id="intermission" class="intermission" aria-hidden="true" hidden>
     <p class="intermission-brand">SpeakReview</p>
     <p class="intermission-title">Intermission</p>
-    <p class="intermission-text">Your coach is reviewing your speech<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></p>
-    <p class="intermission-note">Longer speeches can take a few minutes to analyze. Please keep this page open.</p>
+    <p class="intermission-text"><span id="intermissionText">Your coach is reviewing your speech</span><span id="intermissionDots"><span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span></p>
+    <p id="intermissionNote" class="intermission-note">Longer speeches can take a few minutes to analyze. Please keep this page open.</p>
 </div>
 
 <!-- Screen reader announcements for scene changes -->
