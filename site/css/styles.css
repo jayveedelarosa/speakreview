@@ -1585,7 +1585,8 @@ textarea {
 }
 
 /* On Backstage the header moves up, above the mirror */
-.app[data-view="backstage"] .site-header {
+.app[data-view="backstage"] .site-header,
+.app[data-view="wall"] .site-header {
     top: 26px;
     left: max(24px, 7vw);
     right: max(24px, 7vw);
@@ -2029,6 +2030,578 @@ textarea {
     color: var(--heading);
 }
 
+/* ---------- Wall of Fame: framed playbills on a red wall ---------- */
+/* Following the "wall" state of theatre-laptop.dc.html. No floor here. The wall fills the window and
+   .wall-scroll scrolls under the header (no scrollbar, a fade at the bottom shows there is more). */
+.wall {
+    --wall-top: 100px;
+    display: flex;
+    flex-direction: column;
+    height: max(100vh, 480px);
+    height: max(100dvh, 480px);
+    background:
+        radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 214, 150, 0.12), rgba(0, 0, 0, 0) 70%),
+        repeating-linear-gradient(90deg, #3E0F16 0 60px, #380D13 60px 120px),
+        #3E0F16;
+}
+
+.wall-scroll {
+    flex: 1;
+    min-height: 0;
+    margin-top: var(--wall-top);
+    padding: 26px max(24px, 7vw) 90px;
+    overflow-y: auto;
+    -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 70px), rgba(0, 0, 0, 0));
+    mask-image: linear-gradient(180deg, #000 calc(100% - 70px), rgba(0, 0, 0, 0));
+}
+
+.wall-head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+}
+
+.wall-title {
+    margin: 0;
+    font-family: var(--serif);
+    font-size: 42px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    color: var(--heading);
+}
+
+.wall-sub {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-sec);
+}
+
+.wall-note {
+    margin: 4px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gold-light);
+}
+
+/* Empty state */
+.wall-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    max-width: 440px;
+    margin: 56px auto 0;
+    text-align: center;
+}
+
+.wall-empty-text {
+    margin: 0;
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--heading);
+}
+
+/* One group per day: a brass plaque, then the frames, centered like centered text */
+.wall-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 34px;
+}
+
+.wall-plaque {
+    display: inline-flex;
+    align-items: center;
+    height: 30px;
+    margin: 0;
+    padding: 0 16px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, #F0CF86, #B8893A);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+    color: #2A1806;
+    font-family: var(--serif);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.wall-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 40px;
+    width: 100%;
+    margin: 22px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.wall-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.wall-nail {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #C9A15A;
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* The framed playbill: a gold frame around paper, hanging slightly tilted from its nail */
+.playbill {
+    width: 210px;
+    margin-top: 6px;
+    padding: 10px;
+    border: 0;
+    border-radius: 4px;
+    background: linear-gradient(145deg, #E6C277, #9C7232 50%, #D8B062);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.5);
+    color: #2A1A0E;
+    text-align: left;
+    cursor: pointer;
+    transform: rotate(var(--tilt, 0deg));
+    transform-origin: 50% 0;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.playbill:hover,
+.playbill:focus-visible {
+    transform: rotate(0deg) translateY(-2px);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.6);
+}
+
+.playbill-paper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: 232px;
+    padding: 16px 14px;
+    overflow: hidden;
+    background: #F4E7CC;
+    box-shadow: inset 0 0 0 1px rgba(90, 60, 20, 0.25);
+}
+
+/* 12px (the smallest laptop text) with tight spacing, so it stays on one line as in the design */
+.playbill-presents {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    text-transform: uppercase;
+    color: #6E5A44;
+}
+
+.playbill-type {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #8C1426;
+    overflow-wrap: anywhere;
+}
+
+/* Long topics stop after 4 lines here; the open playbill shows all of it */
+.playbill-topic {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+    font-family: var(--serif);
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.playbill-source {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6E5A44;
+}
+
+.playbill-foot {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px solid rgba(90, 60, 20, 0.3);
+}
+
+.playbill-time {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.playbill-status {
+    font-size: 12px;
+    font-weight: 800;
+    color: #4A3826;
+    white-space: nowrap;
+}
+
+/* Time status on paper: darker shades of the usual green and orange, so they stay readable */
+.playbill .timing-over,
+.pb-paper .timing-over {
+    color: #9A4410;
+}
+
+.playbill .timing-ok,
+.pb-paper .timing-ok {
+    color: #1A6B43;
+}
+
+.wall-clear-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 44px;
+}
+
+.btn-wall-clear {
+    height: 44px;
+    padding: 0 16px;
+    border: 1px solid rgba(246, 234, 211, 0.28);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-sec);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.btn-wall-clear:hover {
+    border-color: var(--gold-line);
+    color: var(--text);
+}
+
+/* ---------- The open playbill and the "Clear the wall" question ---------- */
+.pb-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(12, 4, 4, 0.8);
+}
+
+.pb-frame {
+    display: flex;
+    flex-direction: column;
+    width: min(760px, 100%);
+    max-height: min(748px, 100%);
+    padding: 14px;
+    border-radius: 6px;
+    background: linear-gradient(145deg, #E6C277, #9C7232 50%, #D8B062);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7);
+    animation: playbillIn 0.4s ease-out both;
+}
+
+@keyframes playbillIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+}
+
+.pb-paper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 0 1 auto;
+    min-height: 0;
+    background: #F4E7CC;
+    color: #2A1A0E;
+}
+
+/* Focus outlines in dark ink on the light paper */
+.pb-paper :focus-visible {
+    outline-color: #2A1A0E;
+}
+
+.pb-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #2A1A0E;
+    cursor: pointer;
+}
+
+.pb-close:hover {
+    background: rgba(42, 26, 14, 0.08);
+}
+
+.pb-head {
+    flex-shrink: 0;
+    padding: 28px 36px 18px;
+    border-bottom: 1px solid rgba(90, 60, 20, 0.3);
+}
+
+.pb-presents {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: #6E5A44;
+}
+
+.pb-title {
+    margin: 8px 0 10px;
+    padding-right: 40px;
+    font-family: var(--serif);
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1.15;
+    color: #2A1A0E;
+    overflow-wrap: anywhere;
+}
+
+.pb-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 18px;
+    font-size: 13px;
+    color: #4A3826;
+}
+
+.pb-type {
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #8C1426;
+    overflow-wrap: anywhere;
+}
+
+.pb-time {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: #2A1A0E;
+}
+
+.pb-status {
+    font-weight: 800;
+}
+
+.pb-source {
+    padding: 1px 9px;
+    border: 1px solid rgba(90, 60, 20, 0.35);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.pb-cutoff {
+    margin: 10px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #9A4410;
+}
+
+.pb-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 28px;
+    margin-top: 14px;
+}
+
+.pb-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+}
+
+.pb-stat-num {
+    font-family: var(--serif);
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1.1;
+}
+
+.pb-stat-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #4A3826;
+    overflow-wrap: anywhere;
+}
+
+.pb-stat-sub {
+    font-weight: 400;
+    color: #6E5A44;
+}
+
+/* Coach's notes: the only part that scrolls, with the same formatting as Backstage.
+   The section colors keep their hues, in darker shades that read well on paper. */
+.pb-notes {
+    flex: 1 1 auto;
+    min-height: 90px;
+    padding: 18px 36px 40px;
+    overflow-y: auto;
+    -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 40px), rgba(0, 0, 0, 0));
+    mask-image: linear-gradient(180deg, #000 calc(100% - 40px), rgba(0, 0, 0, 0));
+}
+
+.pb-notes:focus-visible {
+    outline-offset: -2px;
+}
+
+.pb-notes .note-heading {
+    color: #7A4E12;
+}
+
+.pb-notes .note-good {
+    color: #1A6B43;
+}
+
+.pb-notes .note-over {
+    color: #9A4410;
+}
+
+.pb-notes .note-tip {
+    color: #1F5C99;
+}
+
+.pb-notes .note-gold {
+    color: #7A4E12;
+}
+
+.pb-notes .note-item,
+.pb-notes .note-text {
+    color: #3A2A1C;
+}
+
+.pb-notes .note-num {
+    color: #7A4E12;
+}
+
+.pb-notes .note-item strong,
+.pb-notes .note-text strong {
+    color: #1E1208;
+}
+
+.pb-actions {
+    flex-shrink: 0;
+    padding: 14px 36px 22px;
+    border-top: 1px solid rgba(90, 60, 20, 0.3);
+}
+
+.pb-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.pb-question {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #2A1A0E;
+}
+
+.pb-btn {
+    height: 44px;
+    padding: 0 18px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.pb-btn-dark {
+    background: #2A1A0E;
+    color: #F4E7CC;
+}
+
+.pb-btn-dark:hover {
+    background: #45301C;
+}
+
+.pb-btn-outline {
+    border-color: #2A1A0E;
+    background: transparent;
+    color: #2A1A0E;
+}
+
+.pb-btn-outline:hover {
+    background: rgba(42, 26, 14, 0.08);
+}
+
+.pb-btn-red-outline {
+    border-color: #8C1426;
+    background: transparent;
+    color: #8C1426;
+}
+
+.pb-btn-red-outline:hover {
+    background: rgba(140, 20, 38, 0.08);
+}
+
+.pb-btn-red {
+    background: #8C1426;
+    color: #FFF6E3;
+}
+
+.pb-btn-red:hover {
+    background: #A41D31;
+}
+
+/* The small "Clear the wall" question */
+.pb-frame-small {
+    width: min(460px, 100%);
+}
+
+.pb-paper-small {
+    gap: 18px;
+    padding: 26px 28px;
+}
+
+.pb-paper-small .pb-question {
+    font-family: var(--serif);
+    font-size: 19px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+/* Short laptop windows: the wall starts a little higher */
+@media (min-width: 601px) and (max-height: 820px) {
+    .wall {
+        --wall-top: 80px;
+    }
+
+    .wall-scroll {
+        padding-top: 16px;
+    }
+
+    .wall-title {
+        font-size: 36px;
+    }
+}
+
 /* ---------- Curtains for scene changes ---------- */
 /* Two full-screen curtains that sweep in from the sides. Only "transform" changes, which phones
    can animate smoothly. When open they are hidden, so their shadows never show at the edges. */
@@ -2147,7 +2720,8 @@ body.curtains-closed .drape {
         --backstage-bottom: 16px;
     }
 
-    .app[data-view="backstage"] .site-header {
+    .app[data-view="backstage"] .site-header,
+    .app[data-view="wall"] .site-header {
         top: 16px;
     }
 
@@ -2842,7 +3416,8 @@ body.curtains-closed .drape {
             var(--backstage-wall);
     }
 
-    .app[data-view="backstage"] .site-header {
+    .app[data-view="backstage"] .site-header,
+    .app[data-view="wall"] .site-header {
         top: 12px;
     }
 
@@ -3057,6 +3632,219 @@ body.curtains-closed .drape {
         font-size: 12px;
     }
 
+    /* Wall of Fame on phones, following the "wall" screen of theatre-phone.dc.html: the title stays put
+       and only the frames scroll, two per row */
+    .wall {
+        height: max(calc(100vh - var(--tabbar-h)), 460px);
+        height: max(calc(100dvh - var(--tabbar-h)), 460px);
+        background:
+            radial-gradient(ellipse 90% 30% at 50% 0%, rgba(255, 214, 150, 0.12), rgba(0, 0, 0, 0) 70%),
+            repeating-linear-gradient(90deg, #3E0F16 0 40px, #380D13 40px 80px),
+            #3E0F16;
+    }
+
+    .wall-scroll {
+        display: flex;
+        flex-direction: column;
+        margin-top: 46px;
+        padding: 0 18px;
+        overflow: visible;
+        -webkit-mask-image: none;
+        mask-image: none;
+    }
+
+    .wall-head {
+        flex-shrink: 0;
+        gap: 2px;
+    }
+
+    .wall-title {
+        font-size: 28px;
+    }
+
+    .wall-sub {
+        font-size: 12px;
+    }
+
+    .wall-note {
+        font-size: 11px;
+    }
+
+    .wall-frames {
+        flex: 1;
+        min-height: 0;
+        margin-top: 10px;
+        padding: 0 0 56px;
+        overflow-y: auto;
+        -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 10px, #000 calc(100% - 56px), rgba(0, 0, 0, 0));
+        mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 10px, #000 calc(100% - 56px), rgba(0, 0, 0, 0));
+    }
+
+    .wall-empty {
+        margin-top: 32px;
+        gap: 14px;
+    }
+
+    .wall-empty-text {
+        font-size: 18px;
+    }
+
+    .wall-group {
+        margin-top: 14px;
+    }
+
+    .wall-plaque {
+        height: 24px;
+        padding: 0 12px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+        font-size: 12px;
+    }
+
+    .wall-row {
+        gap: 16px;
+        margin-top: 12px;
+    }
+
+    .wall-nail,
+    .playbill-presents {
+        display: none;
+    }
+
+    /* 156px, a little narrower on small phones so two always fit side by side */
+    .playbill {
+        width: min(156px, calc((100vw - 52px) / 2));
+        margin-top: 0;
+        padding: 6px;
+        border-radius: 3px;
+        box-shadow: 0 10px 22px rgba(0, 0, 0, 0.5);
+    }
+
+    .playbill-paper {
+        gap: 5px;
+        height: 158px;
+        padding: 10px 9px;
+    }
+
+    .playbill-type {
+        font-size: 11px;
+        letter-spacing: 0.1em;
+    }
+
+    .playbill-topic {
+        font-size: 14px;
+        line-height: 1.22;
+    }
+
+    .playbill-source,
+    .playbill-time,
+    .playbill-status {
+        font-size: 11px;
+    }
+
+    /* At 11px the time and its status don't fit side by side, so the status goes under the time,
+       and the topic stops after 3 lines to make room */
+    .playbill-topic {
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+    }
+
+    .playbill-foot {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1px;
+        padding-top: 5px;
+    }
+
+    .wall-clear-row {
+        margin-top: 28px;
+    }
+
+    .btn-wall-clear {
+        height: 38px;
+        font-size: 12px;
+    }
+
+    /* The open playbill fills the screen, less a small margin */
+    .pb-overlay {
+        padding: 10px;
+    }
+
+    .pb-frame {
+        padding: 8px;
+    }
+
+    .pb-head {
+        padding: 18px 16px 12px;
+    }
+
+    .pb-presents {
+        font-size: 11px;
+    }
+
+    .pb-title {
+        margin: 6px 0 8px;
+        font-size: 22px;
+    }
+
+    .pb-meta {
+        gap: 4px 12px;
+        font-size: 12px;
+    }
+
+    .pb-source {
+        font-size: 11px;
+    }
+
+    .pb-cutoff {
+        margin-top: 8px;
+        font-size: 12px;
+    }
+
+    .pb-stats {
+        gap: 4px 16px;
+        margin-top: 10px;
+    }
+
+    .pb-stat-num {
+        font-size: 20px;
+    }
+
+    .pb-stat-label {
+        font-size: 12px;
+    }
+
+    .pb-notes {
+        min-height: 80px;
+        padding: 12px 16px 30px;
+    }
+
+    .pb-actions {
+        padding: 10px 16px 12px;
+    }
+
+    .pb-row {
+        gap: 8px;
+    }
+
+    .pb-question {
+        flex-basis: 100%;
+        font-size: 13px;
+    }
+
+    .pb-btn {
+        height: 38px;
+        padding: 0 14px;
+        font-size: 12px;
+    }
+
+    .pb-paper-small {
+        padding: 20px 16px;
+    }
+
+    .pb-paper-small .pb-question {
+        font-size: 17px;
+    }
+
     .intermission-title {
         font-size: 44px;
     }
@@ -3103,5 +3891,10 @@ body.curtains-closed .drape {
 
     .level-meter {
         display: block;
+    }
+
+    /* Playbills hang straight */
+    .playbill {
+        transform: none !important;
     }
 }

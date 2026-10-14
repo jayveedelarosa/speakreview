@@ -29,6 +29,15 @@ const TOPIC_TYPE_INFO = {
 // Pauses between topics in the random topic roll, getting longer so it slows down (770 ms in total)
 const ROLL_DELAYS_MS = [40, 40, 45, 50, 60, 70, 85, 100, 125, 155];
 
+// Wall of Fame: past performances, saved only in this browser (localStorage)
+const WALL_KEY = "speakreview.wall.v1";
+const WALL_MAX_ENTRIES = 100;
+const WALL_MAX_ID = 200;               // longest id kept
+const WALL_MAX_TOPIC = 500;            // longest topic or topic type kept
+const WALL_MAX_FEEDBACK = 20000;       // longest Coach's notes kept
+const WALL_MAX_FILLER_WORDS = 30;      // most filler words kept in the breakdown
+const WALL_MAX_SECONDS = 3600;
+
 const uploadBtn = document.getElementById("uploadBtn");
 const statusText = document.getElementById("status");
 const waitNote = document.getElementById("waitNote");
@@ -115,6 +124,15 @@ const swShowBtn = document.getElementById("swShowBtn");
 const waveBars = document.querySelectorAll(".wave-bar");
 const levelFill = document.getElementById("levelFill");
 const filePlayerBox = document.getElementById("filePlayer");
+const wallView = document.getElementById("wallView");
+const wallTitle = document.getElementById("wallTitle");
+const wallStorageNote = document.getElementById("wallStorageNote");
+const wallEmpty = document.getElementById("wallEmpty");
+const wallGroups = document.getElementById("wallGroups");
+const wallStageBtn = document.getElementById("wallStageBtn");
+const clearWallBtn = document.getElementById("clearWallBtn");
+const playbillDialog = document.getElementById("playbillDialog");
+const clearWallDialog = document.getElementById("clearWallDialog");
 
 // Playback stops before sending, so the speech isn't still playing behind the curtains
 uploadBtn.addEventListener("click", () => {
@@ -752,6 +770,7 @@ async function pollResult(speechId) {
                 uploadBtn.disabled = false;
                 setOptionsDisabled(false);
                 statusText.innerText = "Spotlight Ready.";
+                saveToWall(speechId, result);   // never throws; only real results get here, not console tests
                 displayResult(result);      // fills Backstage and opens the curtains on it
                 return;
             }
@@ -958,7 +977,8 @@ function showView(name) {
     if (!isStage) pausePlayers();      // nothing keeps playing behind the curtains
     currentView = name;
     dropZone.hidden = !isStage;
-    backstageView.hidden = isStage;
+    backstageView.hidden = name !== "backstage";
+    wallView.hidden = name !== "wall";
     appRoot.dataset.view = name;
     navButtons.forEach(button => {
         if (button.dataset.view === name) {
@@ -967,11 +987,16 @@ function showView(name) {
             button.removeAttribute("aria-current");
         }
     });
-    if (!isStage) {
+    if (name === "backstage") {
         // A new upload hides the old results, so the empty state shows until new ones arrive
         resultPlaceholder.hidden = resultBox.style.display !== "none";
         restartBulbs();
     }
+    if (name === "wall") {
+        loadWall();             // read again, in case another tab changed it
+        renderWall();
+    }
+    if (isStage) fitTopicHeight();      // the topic may have changed while the stage was hidden
     window.scrollTo(0, 0);
 }
 
@@ -1004,6 +1029,7 @@ function goToView(name) {
             }
         }
         if (name === "backstage") focusBackstageHeading();
+        if (name === "wall") wallTitle.focus({ preventScroll: true });
     });
 }
 
@@ -1113,6 +1139,541 @@ document.addEventListener("keydown", e => {
         setPrivacyOpen(false);
         privacyBtn.focus();
     }
+});
+
+// ---------------------------
+// Wall of Fame: past performances, saved only in this browser
+// ---------------------------
+// Saved under WALL_KEY as a JSON array of entries, newest first. Anything read back from storage is
+// untrusted (it can be edited by hand or by another script), so every entry goes through
+// cleanWallEntry() and every value is shown with textContent. The Coach's notes go through
+// escapeHtml() first and then the same formatter as Backstage.
+const WALL_TILTS = [-1.2, 0.8, -0.6, 1.1, -0.9];       // degrees, as in the design
+const WALL_SOURCES = { recording: "Live recording", upload: "Uploaded MP3" };
+const WALL_BAD = Symbol("bad");                        // marks a value with the wrong type or size
+let wallEntries = [];
+let wallSavingWorks = true;    // false once reading or writing storage fails (blocked or full)
+let wallOrder = [];            // the entries in the order they are shown, for moving focus after a removal
+let wallButtons = new Map();   // entry id → its playbill button
+
+// A string (null when missing or blank), or WALL_BAD
+function wallString(value, maxLength) {
+    if (value === undefined || value === null) return null;
+    if (typeof value !== "string" || value.length > maxLength) return WALL_BAD;
+    return value.trim() === "" ? null : value;
+}
+
+// A number from min to max (a plain number written as text also counts), null when missing, or WALL_BAD
+function wallNumber(value, min, max) {
+    if (value === undefined || value === null) return null;
+    let number = value;
+    if (typeof value === "string" && /^\d+(\.\d+)?$/.test(value.trim())) number = Number(value);
+    if (typeof number !== "number" || !Number.isFinite(number) || number < min || number > max) return WALL_BAD;
+    return number;
+}
+
+// Filler word counts, for example { um: 3, uh: 1 }, or null, or WALL_BAD
+function wallBreakdown(value) {
+    if (value === undefined || value === null) return null;
+    if (typeof value !== "object" || Array.isArray(value)) return WALL_BAD;
+    const pairs = Object.entries(value);
+    if (pairs.length > WALL_MAX_FILLER_WORDS) return WALL_BAD;
+    const clean = Object.create(null);   // no prototype, so a word like "__proto__" is just a word
+    for (const [word, count] of pairs) {
+        const number = wallNumber(count, 0, 100000);
+        if (word.length > 40 || number === null || number === WALL_BAD) return WALL_BAD;
+        clean[word] = number;
+    }
+    return clean;
+}
+
+// Returns a new entry with only the allowed fields, or null if anything is missing or the wrong type.
+// Used both when saving and when reading back, so nothing else (audio, a transcript) can ever be kept.
+function cleanWallEntry(raw) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+    if (typeof raw.id !== "string" || raw.id === "" || raw.id.length > WALL_MAX_ID) return null;
+    if (typeof raw.savedAt !== "string" || raw.savedAt.length > 40) return null;
+    const savedAt = Date.parse(raw.savedAt);
+    if (!Number.isFinite(savedAt)) return null;
+    const wpm = wallNumber(raw.wpm, 0, 10000);
+    if (wpm === null || wpm === WALL_BAD) return null;
+
+    let source = null;
+    if (raw.source !== undefined && raw.source !== null) {
+        if (typeof raw.source !== "string") return null;
+        source = Object.hasOwn(WALL_SOURCES, raw.source) ? raw.source : null;   // unknown names are just not shown
+    }
+    let cutOff = null;
+    if (raw.cut_off !== undefined && raw.cut_off !== null) {
+        if (typeof raw.cut_off !== "boolean") return null;
+        cutOff = raw.cut_off;
+    }
+
+    const entry = {
+        id: raw.id,
+        savedAt: new Date(savedAt).toISOString(),
+        topic: wallString(raw.topic, WALL_MAX_TOPIC),
+        topic_type: wallString(raw.topic_type, WALL_MAX_TOPIC),
+        time_limit_seconds: wallNumber(raw.time_limit_seconds, 0, WALL_MAX_SECONDS),
+        speaking_seconds: wallNumber(raw.speaking_seconds, 0, WALL_MAX_SECONDS),
+        source,
+        cut_off: cutOff,
+        wpm,
+        filler_word_total: wallNumber(raw.filler_word_total, 0, 100000),
+        filler_word_breakdown: wallBreakdown(raw.filler_word_breakdown),
+        avg_confidence: wallNumber(raw.avg_confidence, 0, 1),
+        ai_feedback: wallString(raw.ai_feedback, WALL_MAX_FEEDBACK)
+    };
+    return Object.values(entry).includes(WALL_BAD) ? null : entry;
+}
+
+// Cleans a list: drops bad entries, keeps the newest of any repeated id, newest first, at most 100
+function tidyWall(list) {
+    const seen = new Set();
+    return list
+        .map(cleanWallEntry)
+        .filter(Boolean)
+        .sort((a, b) => Date.parse(b.savedAt) - Date.parse(a.savedAt))
+        .filter(entry => {
+            if (seen.has(entry.id)) return false;
+            seen.add(entry.id);
+            return true;
+        })
+        .slice(0, WALL_MAX_ENTRIES);
+}
+
+// Reads the wall from storage. Once saving has failed (storage blocked or full), storage no longer
+// matches what this visit has, so the entries in memory are kept instead.
+function loadWall() {
+    if (!wallSavingWorks) return;
+    let saved;
+    try {
+        saved = localStorage.getItem(WALL_KEY);
+    } catch (err) {
+        wallSavingWorks = false;
+        return;
+    }
+    let list = [];
+    if (saved) {
+        try {
+            list = JSON.parse(saved);
+        } catch (err) {
+            list = [];           // damaged: start again (it is replaced on the next save)
+        }
+    }
+    wallEntries = tidyWall(Array.isArray(list) ? list : []);
+}
+
+function writeWall() {
+    try {
+        if (wallEntries.length === 0) {
+            localStorage.removeItem(WALL_KEY);
+        } else {
+            localStorage.setItem(WALL_KEY, JSON.stringify(wallEntries));
+        }
+        wallSavingWorks = true;
+    } catch (err) {
+        wallSavingWorks = false;  // blocked or full: the page keeps working without saving
+    }
+}
+
+// Adds a finished performance to the wall. Only what the page already shows is kept. Never throws.
+function saveToWall(fileId, result) {
+    try {
+        loadWall();              // start from what is saved now (another tab may have added some)
+        const entry = cleanWallEntry({
+            id: String(fileId),
+            savedAt: new Date().toISOString(),
+            topic: result.topic,
+            topic_type: result.topic_type,
+            time_limit_seconds: result.time_limit_seconds,
+            speaking_seconds: result.speaking_seconds,
+            source: result.source,
+            cut_off: result.cut_off,
+            wpm: result.wpm,
+            filler_word_total: result.filler_word_total,
+            filler_word_breakdown: result.filler_word_breakdown,
+            avg_confidence: result.avg_confidence,
+            ai_feedback: result.ai_feedback
+        });
+        if (!entry) return;
+        wallEntries = tidyWall([entry, ...wallEntries.filter(saved => saved.id !== entry.id)]);
+        writeWall();
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+// Groups entries by the visitor's own calendar day
+function wallDayKey(date) {
+    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+// "Today", "Yesterday", or the full date like "Thursday, October 1" (with the year if it isn't this year)
+function wallDayLabel(date) {
+    const today = new Date();
+    const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+    if (wallDayKey(date) === wallDayKey(today)) return "Today";
+    if (wallDayKey(date) === wallDayKey(yesterday)) return "Yesterday";
+    const options = { weekday: "long", month: "long", day: "numeric" };
+    if (date.getFullYear() !== today.getFullYear()) options.year = "numeric";
+    return date.toLocaleDateString("en-US", options);
+}
+
+function wallClockTime(date) {
+    return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+// The words shown for an entry on its playbill and in the open playbill
+function describeWallEntry(entry) {
+    let type = "Free speech";
+    if (entry.topic) {
+        if (entry.topic_type && Object.hasOwn(TOPIC_TYPE_INFO, entry.topic_type)) {
+            type = TOPIC_TYPE_INFO[entry.topic_type].label;
+        } else {
+            type = entry.topic_type || "Own topic";
+        }
+    }
+
+    let time = null;
+    let status = null;
+    let statusClass = "";
+    if (entry.speaking_seconds !== null) {
+        if (entry.time_limit_seconds) {
+            const timing = describeTiming(entry.speaking_seconds, entry.time_limit_seconds);
+            time = `${formatTime(entry.speaking_seconds)} / ${formatTime(entry.time_limit_seconds)}`;
+            status = timing.text;
+            statusClass = timing.className;
+        } else {
+            time = formatTime(entry.speaking_seconds);
+            status = "Untimed";
+        }
+    }
+
+    return {
+        type,
+        title: entry.topic || "Spoke freely",
+        time,
+        status,
+        statusClass,
+        source: entry.source ? WALL_SOURCES[entry.source] : null
+    };
+}
+
+function makeSpan(className, text) {
+    const span = document.createElement("span");
+    span.className = className;
+    span.textContent = text;
+    return span;
+}
+
+// One framed playbill (a real button) hanging from a nail
+function buildPlaybill(entry, index) {
+    const info = describeWallEntry(entry);
+    const item = document.createElement("li");
+    item.className = "wall-item";
+
+    const nail = document.createElement("span");
+    nail.className = "wall-nail";
+    nail.setAttribute("aria-hidden", "true");
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "playbill";
+    button.style.setProperty("--tilt", `${WALL_TILTS[index % WALL_TILTS.length]}deg`);
+    button.setAttribute("aria-label", `Open performance: ${info.title}, ${wallClockTime(new Date(entry.savedAt))}`);
+
+    const paper = makeSpan("playbill-paper", "");
+    paper.append(
+        makeSpan("playbill-presents", "SpeakReview presents"),
+        makeSpan("playbill-type", info.type),
+        makeSpan("playbill-topic", info.title)
+    );
+    if (info.source) paper.append(makeSpan("playbill-source", info.source));
+    if (info.time) {
+        const foot = makeSpan("playbill-foot", "");
+        foot.append(makeSpan("playbill-time", info.time), makeSpan(`playbill-status ${info.statusClass}`.trim(), info.status));
+        paper.append(foot);
+    }
+    button.append(paper);
+    button.addEventListener("click", () => openPlaybill(entry, button));
+
+    item.append(nail, button);
+    wallButtons.set(entry.id, button);
+    return item;
+}
+
+// Draws the whole wall: a brass plaque for each day, newest day first, then its playbills
+function renderWall() {
+    wallStorageNote.hidden = wallSavingWorks;
+    wallGroups.replaceChildren();
+    wallButtons = new Map();
+    wallOrder = wallEntries.slice();
+    const empty = wallEntries.length === 0;
+    wallEmpty.hidden = !empty;
+    clearWallBtn.hidden = empty;
+
+    let dayKey = null;
+    let row = null;
+    wallEntries.forEach((entry, index) => {
+        const date = new Date(entry.savedAt);
+        if (wallDayKey(date) !== dayKey) {
+            dayKey = wallDayKey(date);
+            const group = document.createElement("section");
+            group.className = "wall-group";
+            const plaque = document.createElement("h3");
+            plaque.className = "wall-plaque";
+            plaque.textContent = wallDayLabel(date);
+            row = document.createElement("ul");
+            row.className = "wall-row";
+            group.append(plaque, row);
+            wallGroups.append(group);
+        }
+        row.append(buildPlaybill(entry, index));
+    });
+}
+
+// ---- Dialogs: the open playbill and "Clear the wall" ----
+// While one is open the page behind it is inert, Tab stays inside it, and Escape closes it.
+let openOverlay = null;
+let dialogReturnFocus = null;
+let openEntry = null;          // the entry shown in the open playbill
+
+function openDialog(overlay, focusTarget, returnTo) {
+    setPrivacyOpen(false);
+    openOverlay = overlay;
+    dialogReturnFocus = returnTo;
+    overlay.hidden = false;
+    appRoot.inert = true;
+    focusTarget.focus();
+}
+
+// Focus goes back to where the dialog was opened from, or to focusTarget, or nowhere when it is false
+function closeDialog(focusTarget) {
+    if (!openOverlay) return;
+    openOverlay.hidden = true;
+    openOverlay = null;
+    openEntry = null;
+    appRoot.inert = false;
+    const target = focusTarget === undefined ? dialogReturnFocus : focusTarget;
+    dialogReturnFocus = null;
+    if (target && target.isConnected) target.focus();
+}
+
+function dialogFocusables(overlay) {
+    return Array.from(overlay.querySelectorAll('button, [tabindex="0"]'))
+        .filter(element => !element.disabled && element.getClientRects().length > 0);
+}
+
+document.addEventListener("keydown", e => {
+    if (!openOverlay) return;
+    if (e.key === "Escape") {
+        e.preventDefault();
+        onDialogEscape();
+    } else if (e.key === "Tab") {
+        const items = dialogFocusables(openOverlay);
+        if (items.length === 0) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        const inside = openOverlay.contains(document.activeElement);
+        if (e.shiftKey && (!inside || document.activeElement === first)) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && (!inside || document.activeElement === last)) {
+            e.preventDefault();
+            first.focus();
+        }
+    }
+});
+
+// ---- The open playbill ----
+const pbTitle = document.getElementById("pbTitle");
+const pbButtons = document.getElementById("pbButtons");
+const pbConfirm = document.getElementById("pbConfirm");
+const pbReplace = document.getElementById("pbReplace");
+const pbReplaceText = document.getElementById("pbReplaceText");
+const pbNotes = document.getElementById("pbNotes");
+const pbPracticeBtn = document.getElementById("pbPracticeBtn");
+const pbRemoveBtn = document.getElementById("pbRemoveBtn");
+const pbKeepBtn = document.getElementById("pbKeepBtn");
+const pbReplaceKeepBtn = document.getElementById("pbReplaceKeepBtn");
+const clearWallKeepBtn = document.getElementById("clearWallKeepBtn");
+
+// Shows one row of buttons at the bottom of the open playbill: the normal buttons, the remove
+// question or the replace question
+function showPlaybillRow(name, focusTarget) {
+    pbButtons.hidden = name !== "buttons";
+    pbConfirm.hidden = name !== "confirm";
+    pbReplace.hidden = name !== "replace";
+    if (focusTarget) focusTarget.focus();
+}
+
+function onDialogEscape() {
+    if (openOverlay === playbillDialog && !pbConfirm.hidden) {
+        showPlaybillRow("buttons", pbRemoveBtn);       // Escape means "Keep it"
+    } else if (openOverlay === playbillDialog && !pbReplace.hidden) {
+        showPlaybillRow("buttons", pbPracticeBtn);     // Escape means "Keep it"
+    } else {
+        closeDialog();
+    }
+}
+
+function setField(id, text) {
+    const element = document.getElementById(id);
+    element.textContent = text || "";
+    element.hidden = !text;
+    return element;
+}
+
+function openPlaybill(entry, button) {
+    const info = describeWallEntry(entry);
+    const date = new Date(entry.savedAt);
+    openEntry = entry;
+
+    pbTitle.textContent = info.title;
+    setField("pbType", info.type);
+    setField("pbWhen", `${wallDayLabel(date)}, ${wallClockTime(date)}`);
+    setField("pbTime", info.time);
+    setField("pbStatus", info.status).className = `pb-status ${info.statusClass}`.trim();
+    setField("pbSource", info.source);
+    setField("pbCutOff", entry.cut_off === true ? `Recording stopped at the ${formatTime(MAX_DURATION_MINUTES * 60)} maximum.` : null);
+
+    // The numbers, worked out the same way as on Backstage
+    document.getElementById("pbWpm").textContent = String(entry.wpm);
+    document.getElementById("pbFillers").textContent = String(entry.filler_word_total ?? 0);
+    const breakdown = entry.filler_word_breakdown
+        ? Object.entries(entry.filler_word_breakdown).map(([word, count]) => `${word} ${count}`).join(", ")
+        : "";
+    setField("pbBreakdown", breakdown);
+    const clarity = entry.avg_confidence !== null ? Math.round(entry.avg_confidence * 100) : 0;
+    document.getElementById("pbClarity").textContent = `${clarity}%`;
+
+    // Coach's notes: escaped FIRST, then formatted line by line by the Backstage formatter
+    if (entry.ai_feedback) {
+        pbNotes.innerHTML = escapeHtml(entry.ai_feedback)
+            .trim()
+            .split(/\r?\n/)
+            .map(formatNoteLine)
+            .join("");
+    } else {
+        const none = document.createElement("p");
+        none.className = "note-text";
+        none.textContent = "No notes were saved for this performance.";
+        pbNotes.replaceChildren(none);
+    }
+    pbNotes.scrollTop = 0;
+
+    showPlaybillRow("buttons");
+    openDialog(playbillDialog, pbTitle, button);
+}
+
+pbRemoveBtn.addEventListener("click", () => showPlaybillRow("confirm", pbKeepBtn));
+pbKeepBtn.addEventListener("click", () => showPlaybillRow("buttons", pbRemoveBtn));
+document.getElementById("pbCloseBtn").addEventListener("click", () => closeDialog());
+document.getElementById("pbCloseX").addEventListener("click", () => closeDialog());
+
+// "Remove": takes it off the wall, then focus moves to the next playbill (or the one before it)
+document.getElementById("pbConfirmRemoveBtn").addEventListener("click", () => {
+    if (!openEntry) return;
+    const id = openEntry.id;
+    const at = wallOrder.findIndex(entry => entry.id === id);
+    const neighbour = wallOrder[at + 1] || wallOrder[at - 1] || null;
+
+    loadWall();
+    wallEntries = wallEntries.filter(entry => entry.id !== id);
+    writeWall();
+    renderWall();
+
+    const next = neighbour ? wallButtons.get(neighbour.id) : null;
+    closeDialog(next || (wallEmpty.hidden ? wallTitle : wallStageBtn));
+    announceScene("Removed from your wall.");
+});
+
+// "Practice this topic again": never throws away an unsent take or a picked MP3 without asking
+pbPracticeBtn.addEventListener("click", () => {
+    const takeUnsent = currentTake !== null && !currentTake.sent;
+    const filePicked = Boolean(fileInput.files[0]);
+    if (takeUnsent || filePicked) {
+        pbReplaceText.textContent = takeUnsent ? "This replaces your unsent take." : "This replaces your picked MP3.";
+        showPlaybillRow("replace", pbReplaceKeepBtn);
+        return;
+    }
+    practiceOpenEntry();
+});
+document.getElementById("pbReplaceBtn").addEventListener("click", practiceOpenEntry);
+pbReplaceKeepBtn.addEventListener("click", () => showPlaybillRow("buttons", pbPracticeBtn));
+
+// Selects a time limit on the Stage: a preset, untimed, or Custom minutes and seconds
+function selectTimeLimit(limit) {
+    const seconds = limit ? Math.round(limit) : 0;
+    let value = "0";
+    if ([60, 180, 300].includes(seconds)) {
+        value = String(seconds);
+    } else if (seconds >= MIN_TIME_LIMIT_SECONDS && seconds <= MAX_TIME_LIMIT_SECONDS) {
+        value = "custom";
+        customMinutes.value = String(Math.floor(seconds / 60));
+        customSeconds.value = String(seconds % 60);
+    }
+    timeRadios.forEach(radio => {
+        radio.checked = radio.value === value;
+    });
+    onTimeChange();
+}
+
+// Back to the Stage with the entry's topic, type and time limit, and nothing recorded or picked
+function practiceOpenEntry() {
+    const entry = openEntry;
+    if (!entry) return;
+
+    fileInput.value = "";
+    showFileName();
+    if (recState === "review") discardTake();
+    statusText.textContent = "";
+
+    if (entry.topic) {
+        topicInput.value = entry.topic.replace(/[\r\n]+/g, " ");
+        const type = entry.topic_type;
+        randomTopic = type && Object.hasOwn(TOPIC_TYPE_INFO, type) ? { text: topicInput.value, type } : null;
+        speakFreely = false;
+        if (randomTopic) {
+            showTopicBadge(type);
+        } else {
+            topicBadge.hidden = true;
+        }
+        topicAnnounce.textContent = topicInput.value;
+    } else {
+        topicInput.value = "";
+        randomTopic = null;
+        speakFreely = true;
+        topicBadge.hidden = true;
+        topicAnnounce.textContent = "No topic. Speak on anything you like.";
+    }
+    updateTopicPlaceholder();
+    selectTimeLimit(entry.time_limit_seconds);
+
+    closeDialog(false);
+    goToView("stage");
+}
+
+// ---- Clear the wall ----
+clearWallBtn.addEventListener("click", () => openDialog(clearWallDialog, clearWallKeepBtn, clearWallBtn));
+clearWallKeepBtn.addEventListener("click", () => closeDialog());
+document.getElementById("clearWallConfirmBtn").addEventListener("click", () => {
+    wallEntries = [];
+    writeWall();
+    renderWall();
+    closeDialog(wallTitle);
+    announceScene("Your wall is clear.");
+});
+
+wallStageBtn.addEventListener("click", () => goToView("stage"));
+
+// Another tab changed the wall: show it, unless a dialog is open (it is drawn again when this tab opens the wall)
+window.addEventListener("storage", e => {
+    if (e.key !== WALL_KEY && e.key !== null) return;
+    if (currentView !== "wall" || openOverlay) return;
+    loadWall();
+    renderWall();
 });
 
 // ---------------------------

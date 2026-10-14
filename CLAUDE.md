@@ -14,6 +14,7 @@
 - Topic text is user input (typed or returned by the API), so always escape it.
 - Prefer `textContent` over `innerHTML`.
 - Limits enforced on the page (file size, duration, etc.) must also be enforced on the server. The page checks are only for convenience.
+- Wall of Fame data in localStorage is untrusted when read back: validate it and always escape it.
 
 ## Code style
 - Plain HTML, CSS and JavaScript only. No frameworks, build tools or modules (`type="module"`).

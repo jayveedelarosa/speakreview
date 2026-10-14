@@ -37,8 +37,7 @@
                 <span class="nav-label">Backstage</span>
                 <span class="nav-sub">Your feedback</span>
             </button>
-            <!-- Stage 4: remove "hidden" to show the Wall of Fame -->
-            <button type="button" class="nav-item" id="navWall" data-view="wall" hidden>
+            <button type="button" class="nav-item" id="navWall" data-view="wall">
                 <svg class="nav-icon" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 4h10v5a5 5 0 0 1-10 0z M7 6H4a3 3 0 0 0 4 4 M17 6h3a3 3 0 0 1-4 4 M12 14v4 M8 20h8"></path></svg>
                 <span class="nav-label">Wall of Fame</span>
                 <span class="nav-sub">Past performances</span>
@@ -51,7 +50,7 @@
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
                 Privacy
             </button>
-            <p id="privacyNote" class="privacy-note" hidden>Recordings are used only to create your feedback. They are deleted automatically after 7 days, and results after 30 days.</p>
+            <p id="privacyNote" class="privacy-note" hidden>Recordings are used only to create your feedback. They are deleted automatically after 7 days, and results after 30 days. Your Wall of Fame is saved only in this browser on this device.</p>
         </div>
     </header>
 
@@ -362,6 +361,32 @@
                 </div>
             </div>
         </section>
+
+        <!-- Wall of Fame: past performances as framed playbills on a red wall (saved only in this browser) -->
+        <section id="wallView" class="wall" aria-labelledby="wallTitle" hidden>
+            <!-- On laptops this whole area scrolls. On phones only #wallFrames scrolls. -->
+            <div class="wall-scroll">
+                <div class="wall-head">
+                    <h2 id="wallTitle" class="wall-title" tabindex="-1">Wall of Fame</h2>
+                    <p class="wall-sub">Your past performances. Saved only on this device.</p>
+                    <p id="wallStorageNote" class="wall-note" hidden>Saving isn't available in this browser, so performances can't be kept on your wall.</p>
+                </div>
+
+                <!-- Part 2: the trophy shelf goes here, between the title and the playbills -->
+
+                <div id="wallFrames" class="wall-frames">
+                    <div id="wallEmpty" class="wall-empty" hidden>
+                        <p class="wall-empty-text">Your wall is empty. Take the stage to hang your first playbill.</p>
+                        <button type="button" id="wallStageBtn" class="btn-gold">Go to the stage</button>
+                    </div>
+                    <!-- Filled by renderWall(): one brass plaque per day, then its playbills -->
+                    <div id="wallGroups"></div>
+                    <div class="wall-clear-row">
+                        <button type="button" id="clearWallBtn" class="btn-wall-clear" hidden>Clear the wall</button>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 </div>
 
@@ -375,6 +400,78 @@
     <p class="intermission-title">Intermission</p>
     <p class="intermission-text"><span id="intermissionText">Your coach is reviewing your speech</span><span id="intermissionDots"><span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span></p>
     <p id="intermissionNote" class="intermission-note">Longer speeches can take a few minutes to analyze. Please keep this page open.</p>
+</div>
+
+<!-- An open playbill from the Wall of Fame. Filled by openPlaybill() with textContent; the notes use the
+     same formatter as Backstage. While it is open the rest of the page is inert and focus stays inside. -->
+<div id="playbillDialog" class="pb-overlay" hidden>
+    <div class="pb-frame" role="dialog" aria-modal="true" aria-labelledby="pbTitle">
+        <div class="pb-paper">
+            <button type="button" id="pbCloseX" class="pb-close" aria-label="Close">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+            </button>
+            <div class="pb-head">
+                <p class="pb-presents">SpeakReview presents</p>
+                <h2 id="pbTitle" class="pb-title" tabindex="-1"></h2>
+                <div class="pb-meta">
+                    <span id="pbType" class="pb-type"></span>
+                    <span id="pbWhen"></span>
+                    <span id="pbTime" class="pb-time"></span>
+                    <span id="pbStatus" class="pb-status"></span>
+                    <span id="pbSource" class="pb-source"></span>
+                </div>
+                <p id="pbCutOff" class="pb-cutoff" hidden></p>
+                <div class="pb-stats">
+                    <div class="pb-stat">
+                        <span id="pbWpm" class="pb-stat-num"></span>
+                        <span class="pb-stat-label">Words per minute</span>
+                    </div>
+                    <div class="pb-stat">
+                        <span id="pbFillers" class="pb-stat-num"></span>
+                        <span class="pb-stat-label">Filler words <span id="pbBreakdown" class="pb-stat-sub"></span></span>
+                    </div>
+                    <div class="pb-stat">
+                        <span id="pbClarity" class="pb-stat-num"></span>
+                        <span class="pb-stat-label">Clarity</span>
+                    </div>
+                </div>
+            </div>
+            <!-- The only part of the open playbill that scrolls -->
+            <div id="pbNotes" class="pb-notes" tabindex="0" aria-label="Coach's notes, scrollable"></div>
+            <div class="pb-actions">
+                <div id="pbButtons" class="pb-row">
+                    <button type="button" id="pbPracticeBtn" class="pb-btn pb-btn-dark">Practice this topic again</button>
+                    <button type="button" id="pbRemoveBtn" class="pb-btn pb-btn-red-outline">Remove from the wall</button>
+                    <button type="button" id="pbCloseBtn" class="pb-btn pb-btn-outline">Close</button>
+                </div>
+                <div id="pbConfirm" class="pb-row" hidden>
+                    <span class="pb-question">Remove this performance from your wall? This can't be undone.</span>
+                    <button type="button" id="pbConfirmRemoveBtn" class="pb-btn pb-btn-red">Remove</button>
+                    <button type="button" id="pbKeepBtn" class="pb-btn pb-btn-outline">Keep it</button>
+                </div>
+                <!-- Shown before "Practice this topic again" when an unsent take or a picked MP3 would be replaced -->
+                <div id="pbReplace" class="pb-row" hidden>
+                    <span id="pbReplaceText" class="pb-question"></span>
+                    <button type="button" id="pbReplaceBtn" class="pb-btn pb-btn-dark">Replace it</button>
+                    <button type="button" id="pbReplaceKeepBtn" class="pb-btn pb-btn-outline">Keep it</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- "Clear the wall" asks first -->
+<div id="clearWallDialog" class="pb-overlay" hidden>
+    <div class="pb-frame pb-frame-small" role="dialog" aria-modal="true" aria-labelledby="clearWallQuestion">
+        <div class="pb-paper pb-paper-small">
+            <p id="clearWallQuestion" class="pb-question">Clear every performance from your wall? This can't be undone.</p>
+            <!-- Part 2: the option about trophies goes here -->
+            <div class="pb-row">
+                <button type="button" id="clearWallConfirmBtn" class="pb-btn pb-btn-red">Clear the wall</button>
+                <button type="button" id="clearWallKeepBtn" class="pb-btn pb-btn-outline">Keep them</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Screen reader announcements for scene changes -->
