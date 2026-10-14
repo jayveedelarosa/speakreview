@@ -15,7 +15,7 @@
 - Prefer `textContent` over `innerHTML`.
 - Limits enforced on the page (file size, duration, etc.) must also be enforced on the server. The page checks are only for convenience.
 - Wall of Fame data in localStorage is untrusted when read back: validate it and always escape it.
-- The site runs under a strict Content Security Policy set in CloudFront: no inline scripts, no inline event handlers, no style attributes (use classes or element.style.setProperty), no eval. Any new external origin must also be added to the CloudFront policy.
+- The site runs under a strict Content Security Policy: no inline scripts, no inline event handlers, no style attributes (use classes or element.style.setProperty), no eval. The Content-Security-Policy and Permissions-Policy headers are added by the CloudFront Function `SpeakReviewSecurityHeaders` (viewer response, Default behavior on distribution `EF3O4X1L9YG15`), not by a response headers policy, because the CloudFront Free plan doesn't allow custom header policies. Any new external origin must be added to that function's code, then saved and published.
 
 ## Code style
 - Plain HTML, CSS and JavaScript only. No frameworks, build tools or modules (`type="module"`).
