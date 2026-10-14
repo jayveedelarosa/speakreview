@@ -38,6 +38,10 @@ const WALL_MAX_FEEDBACK = 20000;       // longest Coach's notes kept
 const WALL_MAX_FILLER_WORDS = 30;      // most filler words kept in the breakdown
 const WALL_MAX_SECONDS = 3600;
 
+// Trophies: progress saved in this browser, separate from the wall, so removing playbills never lowers it
+const TROPHY_KEY = "speakreview.trophies.v1";
+const TROPHY_MAX_DAYS = 60;            // practice days kept
+
 const uploadBtn = document.getElementById("uploadBtn");
 const statusText = document.getElementById("status");
 const waitNote = document.getElementById("waitNote");
@@ -133,6 +137,12 @@ const wallStageBtn = document.getElementById("wallStageBtn");
 const clearWallBtn = document.getElementById("clearWallBtn");
 const playbillDialog = document.getElementById("playbillDialog");
 const clearWallDialog = document.getElementById("clearWallDialog");
+const shelfTitle = document.getElementById("shelfTitle");
+const shelfList = document.getElementById("shelfList");
+const trophyPopover = document.getElementById("trophyPopover");
+const trophyBanner = document.getElementById("trophyBanner");
+const trophyBannerText = document.getElementById("trophyBannerText");
+const clearTrophiesBox = document.getElementById("clearTrophiesBox");
 
 // Playback stops before sending, so the speech isn't still playing behind the curtains
 uploadBtn.addEventListener("click", () => {
@@ -770,8 +780,12 @@ async function pollResult(speechId) {
                 uploadBtn.disabled = false;
                 setOptionsDisabled(false);
                 statusText.innerText = "Spotlight Ready.";
-                saveToWall(speechId, result);   // never throws; only real results get here, not console tests
+                // Never throw; only real results get here, not console tests. A performance already
+                // on the wall is never counted toward trophies twice.
+                const isNew = saveToWall(speechId, result);
+                const unlocked = isNew ? recordTrophies(result) : [];
                 displayResult(result);      // fills Backstage and opens the curtains on it
+                showTrophyBanner(unlocked);
                 return;
             }
         } catch(err) {
@@ -994,7 +1008,10 @@ function showView(name) {
     }
     if (name === "wall") {
         loadWall();             // read again, in case another tab changed it
+        loadTrophies();
         renderWall();
+    } else {
+        closeTrophyPopover(false);
     }
     if (isStage) fitTopicHeight();      // the topic may have changed while the stage was hidden
     window.scrollTo(0, 0);
@@ -1278,6 +1295,8 @@ function writeWall() {
 }
 
 // Adds a finished performance to the wall. Only what the page already shows is kept. Never throws.
+// Returns true only when this performance was not on the wall yet (checked against the saved list, or
+// the list in memory when storage is blocked or full), so trophies never count it twice.
 function saveToWall(fileId, result) {
     try {
         loadWall();              // start from what is saved now (another tab may have added some)
@@ -1296,11 +1315,14 @@ function saveToWall(fileId, result) {
             avg_confidence: result.avg_confidence,
             ai_feedback: result.ai_feedback
         });
-        if (!entry) return;
+        if (!entry) return false;
+        const isNew = !wallEntries.some(saved => saved.id === entry.id);
         wallEntries = tidyWall([entry, ...wallEntries.filter(saved => saved.id !== entry.id)]);
         writeWall();
+        return isNew;
     } catch (err) {
         console.error(err);
+        return false;
     }
 }
 
@@ -1405,7 +1427,8 @@ function buildPlaybill(entry, index) {
 
 // Draws the whole wall: a brass plaque for each day, newest day first, then its playbills
 function renderWall() {
-    wallStorageNote.hidden = wallSavingWorks;
+    wallStorageNote.hidden = wallSavingWorks && trophySavingWorks;
+    renderShelf();
     wallGroups.replaceChildren();
     wallButtons = new Map();
     wallOrder = wallEntries.slice();
@@ -1461,7 +1484,7 @@ function closeDialog(focusTarget) {
 }
 
 function dialogFocusables(overlay) {
-    return Array.from(overlay.querySelectorAll('button, [tabindex="0"]'))
+    return Array.from(overlay.querySelectorAll('button, input, [tabindex="0"]'))
         .filter(element => !element.disabled && element.getClientRects().length > 0);
 }
 
@@ -1656,25 +1679,435 @@ function practiceOpenEntry() {
 }
 
 // ---- Clear the wall ----
-clearWallBtn.addEventListener("click", () => openDialog(clearWallDialog, clearWallKeepBtn, clearWallBtn));
+clearWallBtn.addEventListener("click", () => {
+    clearTrophiesBox.checked = false;      // trophies are only removed when asked for each time
+    openDialog(clearWallDialog, clearWallKeepBtn, clearWallBtn);
+});
 clearWallKeepBtn.addEventListener("click", () => closeDialog());
 document.getElementById("clearWallConfirmBtn").addEventListener("click", () => {
+    const alsoTrophies = clearTrophiesBox.checked;
     wallEntries = [];
     writeWall();
+    if (alsoTrophies) resetTrophies();
     renderWall();
     closeDialog(wallTitle);
-    announceScene("Your wall is clear.");
+    announceScene(alsoTrophies ? "Your wall, trophies and progress are clear." : "Your wall is clear.");
 });
 
 wallStageBtn.addEventListener("click", () => goToView("stage"));
 
 // Another tab changed the wall: show it, unless a dialog is open (it is drawn again when this tab opens the wall)
 window.addEventListener("storage", e => {
-    if (e.key !== WALL_KEY && e.key !== null) return;
+    if (e.key !== WALL_KEY && e.key !== TROPHY_KEY && e.key !== null) return;
     if (currentView !== "wall" || openOverlay) return;
     loadWall();
+    loadTrophies();
     renderWall();
 });
+
+// ---------------------------
+// Trophies: the shelf on the Wall of Fame
+// ---------------------------
+// Progress is saved under TROPHY_KEY as { performances, topicTypes, practiceDays, earned }, apart from
+// the wall, so removing playbills never lowers it. Only real results count (from pollResult, never
+// displayResult() from the console), and each performance only once. Like the wall, what is read back
+// is untrusted: cleanProgress() checks every piece, and the shelf only uses textContent.
+const TROPHY_GOLD = { fill: "#E3B65A", base: "#9C7232" };
+const TROPHY_GREY = { fill: "#6A5A52", base: "#4A3C36" };
+const TROPHY_MAX_PERFORMANCES = 1000000;
+const TOPIC_TYPE_COUNT = Object.keys(TOPIC_TYPE_INFO).length;
+
+// "rule" is shown under an earned trophy; "progress" (or the rule) under a locked one.
+// earnedBy() gets the progress after this performance was added, and the performance itself.
+const TROPHIES = [
+    { id: "opening-night", name: "Opening night", cup: true, rule: "First performance",
+      earnedBy: p => p.performances >= 1, progress: () => null },
+    { id: "five-shows", name: "Five shows", cup: true, rule: "5 performances",
+      earnedBy: p => p.performances >= 5, progress: p => `${Math.min(p.performances, 5)} of 5` },
+    { id: "ten-shows", name: "Ten shows", cup: true, rule: "10 performances",
+      earnedBy: p => p.performances >= 10, progress: p => `${Math.min(p.performances, 10)} of 10` },
+    // A recording stopped by the 10:00 maximum never counts as "on cue"
+    { id: "right-on-cue", name: "Right on cue", cup: false, rule: "Within 10 seconds of the limit",
+      earnedBy: (p, perf) => perf.limit !== null && perf.limit > 0 && perf.speaking !== null && !perf.cutOff
+          && Math.abs(perf.speaking - perf.limit) <= 10,
+      progress: () => null },
+    // At least 60 words per minute too, so a long silence with a couple of words can't earn it
+    { id: "clean-delivery", name: "Clean delivery", cup: false, rule: "1 min+ of speech, 2 fillers or fewer",
+      earnedBy: (p, perf) => perf.speaking !== null && perf.speaking >= 60 && perf.wpm !== null && perf.wpm >= 60
+          && perf.fillers !== null && perf.fillers <= 2,
+      progress: () => null },
+    { id: "full-repertoire", name: "Full repertoire", cup: false, rule: `All ${TOPIC_TYPE_COUNT} topic types`,
+      earnedBy: p => p.topicTypes.length >= TOPIC_TYPE_COUNT, progress: p => `${p.topicTypes.length} of ${TOPIC_TYPE_COUNT} types` },
+    { id: "long-run", name: "Long run", cup: false, rule: "Speak 5 minutes or more",
+      earnedBy: (p, perf) => perf.speaking !== null && perf.speaking >= 300, progress: () => null },
+    { id: "three-night-run", name: "Three-night run", cup: true, rule: "3 days in a row",
+      earnedBy: p => longestRun(p.practiceDays) >= 3, progress: p => `${Math.min(currentRun(p.practiceDays), 3)} of 3 days` }
+];
+
+let trophyProgress = emptyProgress();
+let trophySavingWorks = true;  // false once reading or writing storage fails (blocked or full)
+
+function emptyProgress() {
+    return { performances: 0, topicTypes: [], practiceDays: [], earned: {} };
+}
+
+// Local calendar days as "2026-10-14"
+function dayKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function dayFromKey(key) {
+    const [year, month, day] = key.split("-").map(Number);
+    return new Date(year, month - 1, day);
+}
+
+function isRealDay(key) {
+    return typeof key === "string" && /^\d{4}-\d{2}-\d{2}$/.test(key) && dayKey(dayFromKey(key)) === key;
+}
+
+function nextDayKey(key) {
+    const date = dayFromKey(key);
+    date.setDate(date.getDate() + 1);
+    return dayKey(date);
+}
+
+// The most days in a row anywhere in the (sorted) list
+function longestRun(days) {
+    let best = 0;
+    let run = 0;
+    days.forEach((day, i) => {
+        run = i > 0 && nextDayKey(days[i - 1]) === day ? run + 1 : 1;
+        best = Math.max(best, run);
+    });
+    return best;
+}
+
+// The streak still going: days in a row ending today or yesterday (0 if it has lapsed)
+function currentRun(days) {
+    if (days.length === 0) return 0;
+    const today = dayKey(new Date());
+    const last = days[days.length - 1];
+    if (last !== today && nextDayKey(last) !== today) return 0;
+    let run = 1;
+    for (let i = days.length - 1; i > 0 && nextDayKey(days[i - 1]) === days[i]; i--) run++;
+    return run;
+}
+
+// Keeps only well-formed pieces of saved progress; anything else starts from empty
+function cleanProgress(raw) {
+    const progress = emptyProgress();
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return progress;
+    if (Number.isInteger(raw.performances) && raw.performances >= 0 && raw.performances <= TROPHY_MAX_PERFORMANCES) {
+        progress.performances = raw.performances;
+    }
+    if (Array.isArray(raw.topicTypes)) {
+        progress.topicTypes = [...new Set(raw.topicTypes.filter(type => typeof type === "string" && Object.hasOwn(TOPIC_TYPE_INFO, type)))];
+    }
+    if (Array.isArray(raw.practiceDays)) {
+        progress.practiceDays = [...new Set(raw.practiceDays.filter(isRealDay))].sort().slice(-TROPHY_MAX_DAYS);
+    }
+    if (raw.earned && typeof raw.earned === "object" && !Array.isArray(raw.earned)) {
+        TROPHIES.forEach(trophy => {
+            if (!Object.hasOwn(raw.earned, trophy.id)) return;
+            const when = raw.earned[trophy.id];
+            if (typeof when === "string" && when.length <= 40 && Number.isFinite(Date.parse(when))) {
+                progress.earned[trophy.id] = new Date(Date.parse(when)).toISOString();
+            }
+        });
+    }
+    return progress;
+}
+
+// Once saving has failed, the progress in memory is kept instead (as with the wall)
+function loadTrophies() {
+    if (!trophySavingWorks) return;
+    let saved;
+    try {
+        saved = localStorage.getItem(TROPHY_KEY);
+    } catch (err) {
+        trophySavingWorks = false;
+        return;
+    }
+    let raw = null;
+    if (saved) {
+        try {
+            raw = JSON.parse(saved);
+        } catch (err) {
+            raw = null;
+        }
+    }
+    trophyProgress = cleanProgress(raw);
+}
+
+function writeTrophies() {
+    try {
+        localStorage.setItem(TROPHY_KEY, JSON.stringify(trophyProgress));
+        trophySavingWorks = true;
+    } catch (err) {
+        trophySavingWorks = false;
+    }
+}
+
+// What the rules need from a result or a wall entry (both use the same field names). Times and fillers
+// always come from the result, never from the page's own stopwatch.
+function trophyPerformance(source) {
+    const number = (value, max) => {
+        const parsed = wallNumber(value, 0, max);
+        return parsed === WALL_BAD ? null : parsed;
+    };
+    return {
+        topicType: typeof source.topic_type === "string" && Object.hasOwn(TOPIC_TYPE_INFO, source.topic_type) ? source.topic_type : null,
+        limit: number(source.time_limit_seconds, WALL_MAX_SECONDS),
+        speaking: number(source.speaking_seconds, WALL_MAX_SECONDS),
+        fillers: number(source.filler_word_total, 100000),
+        wpm: number(source.wpm, 10000),
+        cutOff: source.cut_off === true
+    };
+}
+
+// Adds one performance at the time "when" and marks every trophy it newly earns. Returns those trophies.
+function applyPerformance(progress, perf, when) {
+    progress.performances = Math.min(progress.performances + 1, TROPHY_MAX_PERFORMANCES);
+    if (perf.topicType && !progress.topicTypes.includes(perf.topicType)) progress.topicTypes.push(perf.topicType);
+    const day = dayKey(when);
+    if (!progress.practiceDays.includes(day)) {
+        progress.practiceDays = [...progress.practiceDays, day].sort().slice(-TROPHY_MAX_DAYS);
+    }
+    const unlocked = [];
+    TROPHIES.forEach(trophy => {
+        if (!progress.earned[trophy.id] && trophy.earnedBy(progress, perf)) {
+            progress.earned[trophy.id] = when.toISOString();
+            unlocked.push(trophy);
+        }
+    });
+    return unlocked;
+}
+
+// A new real result: count it and return the trophies it unlocked. Never throws.
+function recordTrophies(result) {
+    try {
+        loadTrophies();
+        const unlocked = applyPerformance(trophyProgress, trophyPerformance(result), new Date());
+        writeTrophies();
+        return unlocked;
+    } catch (err) {
+        console.error(err);
+        return [];
+    }
+}
+
+function resetTrophies() {
+    trophyProgress = emptyProgress();
+    writeTrophies();           // an empty record (not a missing one), so the catch-up below never runs again
+}
+
+// One time only: the wall existed before trophies did (part 1), so the first time the page finds wall
+// entries but no trophy record, the progress is built from those entries, at the times they were saved.
+// No banner for these.
+function initTrophies() {
+    try {
+        let saved;
+        try {
+            saved = localStorage.getItem(TROPHY_KEY);
+        } catch (err) {
+            trophySavingWorks = false;
+            return;
+        }
+        if (saved !== null) {
+            loadTrophies();
+            return;
+        }
+        loadWall();
+        if (wallEntries.length === 0) return;   // the record is written with the first performance
+        const progress = emptyProgress();
+        wallEntries.slice().reverse().forEach(entry => {
+            applyPerformance(progress, trophyPerformance(entry), new Date(entry.savedAt));
+        });
+        trophyProgress = progress;
+        writeTrophies();
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+// ---- The shelf ----
+const SVG_NS = "http://www.w3.org/2000/svg";
+const trophyButtons = new Map();
+let openTrophyId = null;
+
+function svgPart(tag, attributes) {
+    const element = document.createElementNS(SVG_NS, tag);
+    Object.entries(attributes).forEach(([name, value]) => element.setAttribute(name, value));
+    return element;
+}
+
+// The cup or the medal from the design, in gold or grey
+function trophyIcon(cup, colors) {
+    const svg = svgPart("svg", { class: "trophy-icon", viewBox: "0 0 64 64", "aria-hidden": "true", focusable: "false" });
+    if (cup) {
+        svg.append(
+            svgPart("path", { d: "M20 8h24v14a12 12 0 0 1-24 0z", fill: colors.fill }),
+            svgPart("path", { d: "M20 12h-7a7 7 0 0 0 9 10M44 12h7a7 7 0 0 1-9 10", fill: "none", stroke: colors.fill, "stroke-width": "3" }),
+            svgPart("rect", { x: "29", y: "33", width: "6", height: "11", fill: colors.fill }),
+            svgPart("rect", { x: "21", y: "44", width: "22", height: "6", rx: "2", fill: colors.fill }),
+            svgPart("rect", { x: "17", y: "50", width: "30", height: "8", rx: "2", fill: colors.base })
+        );
+    } else {
+        svg.append(
+            svgPart("path", { d: "M22 2h8l6 18h-8zM42 2h-8l-6 18h8z", fill: "#8C1426" }),
+            svgPart("circle", { cx: "32", cy: "40", r: "17", fill: colors.fill }),
+            svgPart("circle", { cx: "32", cy: "40", r: "12", fill: "none", stroke: colors.base, "stroke-width": "2" }),
+            svgPart("path", { d: "M32 32l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z", fill: colors.base })
+        );
+    }
+    return svg;
+}
+
+// "October 14" (with the year when it isn't this year)
+function trophyDate(iso) {
+    const date = new Date(iso);
+    const options = { month: "long", day: "numeric" };
+    if (date.getFullYear() !== new Date().getFullYear()) options.year = "numeric";
+    return date.toLocaleDateString("en-US", options);
+}
+
+function trophyState(trophy) {
+    const earnedAt = trophyProgress.earned[trophy.id] || null;
+    const progress = earnedAt ? null : trophy.progress(trophyProgress);
+    return { earnedAt, progress, line: earnedAt ? trophy.rule : (progress || trophy.rule) };
+}
+
+function renderShelf() {
+    closeTrophyPopover(false);
+    const earnedCount = TROPHIES.filter(trophy => trophyProgress.earned[trophy.id]).length;
+    shelfTitle.textContent = `Trophy shelf, ${earnedCount} of ${TROPHIES.length} earned`;
+    shelfList.replaceChildren();
+    trophyButtons.clear();
+
+    TROPHIES.forEach(trophy => {
+        const { earnedAt, progress, line } = trophyState(trophy);
+        const item = document.createElement("li");
+        item.className = "trophy";
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = earnedAt ? "trophy-btn" : "trophy-btn is-locked";
+        button.setAttribute("aria-label", earnedAt
+            ? `${trophy.name}, earned ${trophyDate(earnedAt)}`
+            : `${trophy.name}, not earned yet, ${line}`);
+        button.append(trophyIcon(trophy.cup, earnedAt ? TROPHY_GOLD : TROPHY_GREY),
+            makeSpan("trophy-name", trophy.name), makeSpan("trophy-line", line));
+        item.append(button);
+
+        // The rule is also read out when the name doesn't already say it
+        if (earnedAt || progress) {
+            const rule = makeSpan("", trophy.rule);
+            rule.id = `trophyRule-${trophy.id}`;
+            rule.hidden = true;
+            button.setAttribute("aria-describedby", rule.id);
+            item.append(rule);
+        }
+
+        // A tap or click toggles it. Enter or Space (detail 0) only opens it, since focus already did.
+        button.addEventListener("click", e => {
+            if (openTrophyId === trophy.id && e.detail !== 0) {
+                closeTrophyPopover(false);
+            } else {
+                openTrophyPopover(trophy.id);
+            }
+        });
+        // Keyboard focus opens it too (a tap is handled by the click above)
+        button.addEventListener("focus", () => {
+            if (button.matches(":focus-visible")) openTrophyPopover(trophy.id);
+        });
+        shelfList.append(item);
+        trophyButtons.set(trophy.id, button);
+    });
+}
+
+// ---- The small card under a trophy ----
+function openTrophyPopover(id) {
+    const trophy = TROPHIES.find(item => item.id === id);
+    const button = trophyButtons.get(id);
+    if (!trophy || !button) return;
+    const { earnedAt, progress } = trophyState(trophy);
+    document.getElementById("trophyPopName").textContent = trophy.name;
+    document.getElementById("trophyPopRule").textContent = trophy.rule;
+    const state = document.getElementById("trophyPopState");
+    state.textContent = earnedAt ? `Earned on ${trophyDate(earnedAt)}` : (progress ? `So far: ${progress}` : "Not earned yet");
+    state.classList.toggle("is-earned", Boolean(earnedAt));
+    trophyPopover.hidden = false;
+    openTrophyId = id;
+
+    // Under the trophy, but never past the edges of the window
+    const shelf = trophyPopover.parentElement.getBoundingClientRect();
+    const spot = button.getBoundingClientRect();
+    const width = trophyPopover.offsetWidth;
+    const margin = 8;
+    const left = Math.max(margin, Math.min(spot.left + spot.width / 2 - width / 2, window.innerWidth - margin - width));
+    trophyPopover.style.left = `${left - shelf.left}px`;
+    trophyPopover.style.top = `${spot.bottom - shelf.top + 8}px`;
+}
+
+// Escape puts focus back on the trophy (refocus true)
+function closeTrophyPopover(refocus) {
+    if (!openTrophyId) return;
+    const button = trophyButtons.get(openTrophyId);
+    trophyPopover.hidden = true;
+    openTrophyId = null;
+    if (refocus && button) button.focus();
+}
+
+// A tap or click anywhere else closes it
+document.addEventListener("pointerdown", e => {
+    if (openTrophyId && !e.target.closest(".trophy-btn") && !trophyPopover.contains(e.target)) closeTrophyPopover(false);
+});
+
+document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && openTrophyId && !openOverlay) closeTrophyPopover(true);
+});
+
+// Tabbing away from the trophies closes it as well
+shelfList.addEventListener("focusout", e => {
+    if (!e.relatedTarget || !shelfList.contains(e.relatedTarget)) closeTrophyPopover(false);
+});
+
+window.addEventListener("resize", () => closeTrophyPopover(false));
+
+// ---- "Trophy unlocked" on Backstage ----
+let trophyAnnounceTimer = null;
+
+// Shows the banner above Coach's notes for the trophies this result unlocked (hidden when there are none).
+// It is announced once, a moment after "Your coach's notes are ready.", once the curtains are open.
+function showTrophyBanner(unlocked) {
+    try {
+        hideTrophyBanner();
+        if (!unlocked || unlocked.length === 0) return;
+        const text = `${unlocked.length === 1 ? "Trophy" : "Trophies"} unlocked: ${unlocked.map(trophy => trophy.name).join(", ")}`;
+        trophyBannerText.textContent = text;
+        trophyBanner.hidden = false;
+        queueScene(() => {
+            clearTimeout(trophyAnnounceTimer);
+            trophyAnnounceTimer = setTimeout(() => {
+                if (!trophyBanner.hidden) announceScene(`${text}.`);
+            }, 1500);
+        });
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+function hideTrophyBanner() {
+    clearTimeout(trophyAnnounceTimer);
+    trophyBanner.hidden = true;
+}
+
+document.getElementById("trophyBannerBtn").addEventListener("click", () => goToView("wall"));
+
+// The banner goes away when another performance starts (recording or sending)
+[micBtn, reRecordBtn, uploadBtn, takeSendBtn].forEach(button => button.addEventListener("click", hideTrophyBanner));
+
+initTrophies();
 
 // ---------------------------
 // Live recording: the mic on the stage

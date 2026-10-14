@@ -50,7 +50,7 @@
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
                 Privacy
             </button>
-            <p id="privacyNote" class="privacy-note" hidden>Recordings are used only to create your feedback. They are deleted automatically after 7 days, and results after 30 days. Your Wall of Fame is saved only in this browser on this device.</p>
+            <p id="privacyNote" class="privacy-note" hidden>Recordings are used only to create your feedback. They are deleted automatically after 7 days, and results after 30 days. Your Wall of Fame and trophies are saved only in this browser on this device.</p>
         </div>
     </header>
 
@@ -346,6 +346,12 @@
                             </aside>
 
                             <section class="notes" aria-labelledby="coachNotesTitle">
+                                <!-- Shown when this result earned trophies. Filled by showTrophyBanner(). -->
+                                <div id="trophyBanner" class="trophy-banner" hidden>
+                                    <svg class="trophy-banner-icon" width="20" height="20" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M20 8h24v14a12 12 0 0 1-24 0z" fill="currentColor"></path><path d="M20 12h-7a7 7 0 0 0 9 10M44 12h7a7 7 0 0 1-9 10" fill="none" stroke="currentColor" stroke-width="3"></path><rect x="29" y="33" width="6" height="11" fill="currentColor"></rect><rect x="21" y="44" width="22" height="6" rx="2" fill="currentColor"></rect><rect x="17" y="50" width="30" height="8" rx="2" fill="currentColor"></rect></svg>
+                                    <span id="trophyBannerText" class="trophy-banner-text"></span>
+                                    <button type="button" id="trophyBannerBtn" class="trophy-banner-link">See your wall</button>
+                                </div>
                                 <div class="notes-head">
                                     <div>
                                         <p class="eyebrow">Backstage</p>
@@ -372,7 +378,19 @@
                     <p id="wallStorageNote" class="wall-note" hidden>Saving isn't available in this browser, so performances can't be kept on your wall.</p>
                 </div>
 
-                <!-- Part 2: the trophy shelf goes here, between the title and the playbills -->
+                <!-- Trophy shelf: shown even when the wall is empty. Filled by renderShelf(). -->
+                <section class="shelf" aria-labelledby="shelfTitle">
+                    <h3 id="shelfTitle" class="shelf-title">Trophy shelf</h3>
+                    <ul id="shelfList" class="shelf-list"></ul>
+                    <div class="shelf-board" aria-hidden="true"></div>
+                    <p class="shelf-hint">Tap a trophy to see how to earn it</p>
+                    <!-- A small card under the chosen trophy (it repeats what the trophy's name says, for sighted people) -->
+                    <div id="trophyPopover" class="trophy-pop" aria-hidden="true" hidden>
+                        <p id="trophyPopName" class="trophy-pop-name"></p>
+                        <p id="trophyPopRule" class="trophy-pop-rule"></p>
+                        <p id="trophyPopState" class="trophy-pop-state"></p>
+                    </div>
+                </section>
 
                 <div id="wallFrames" class="wall-frames">
                     <div id="wallEmpty" class="wall-empty" hidden>
@@ -465,7 +483,7 @@
     <div class="pb-frame pb-frame-small" role="dialog" aria-modal="true" aria-labelledby="clearWallQuestion">
         <div class="pb-paper pb-paper-small">
             <p id="clearWallQuestion" class="pb-question">Clear every performance from your wall? This can't be undone.</p>
-            <!-- Part 2: the option about trophies goes here -->
+            <label class="pb-check"><input type="checkbox" id="clearTrophiesBox"> Also remove my trophies and progress</label>
             <div class="pb-row">
                 <button type="button" id="clearWallConfirmBtn" class="pb-btn pb-btn-red">Clear the wall</button>
                 <button type="button" id="clearWallKeepBtn" class="pb-btn pb-btn-outline">Keep them</button>

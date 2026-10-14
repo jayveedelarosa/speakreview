@@ -12,7 +12,7 @@ These files were made in a design tool. They use a small templating runtime (`su
 The app is a theatre.
 - **Stage** (practice): red velvet curtains frame the sides, a warm gold spotlight shines from the top, a seated audience sits in rows across the back of the stage, and a wooden stage floor runs along the bottom. The topic is the hero, large and centered. A chrome stage mic stands center stage on the floor line, and an ON AIR sign sits in the middle of the top valance.
 - **Backstage** (your feedback): a dressing room mirror framed in warm wood and lined with glowing bulbs. The speech summary is on the left, Coach's notes on the right. The summary shows the topic, the time line (with a small "Live recording" or "Uploaded MP3" label beside it when the result says where the speech came from, and "Recording stopped at the 10:00 maximum." under it when a recording was cut off), then Words per minute, Filler words and **Clarity** (with the muted hint "How clearly your words came through" under it; same value and bar as the old "Confidence score").
-- **Wall of Fame** (past performances, saved only in this browser): framed playbills hanging on a red wall under brass day plaques, plus a trophy shelf (Stage 4, part 2). Details in "Wall of Fame" below.
+- **Wall of Fame** (past performances, saved only in this browser): framed playbills hanging on a red wall under brass day plaques, plus a trophy shelf under the title. Details in "Wall of Fame" and "Trophy shelf" below.
 - **Intermission**: as soon as "Send to the coach" passes the page checks, the curtains close and an "Intermission" screen shows. It reads "Taking your speech backstage..." while the file uploads, then "Your coach is reviewing your speech..." (pulsing dots and the keep-this-page-open note) while the AI works. If the upload fails, the curtains open back on the Stage with the error.
 
 Menu labels: **Stage** (small subtitle "Practice"), **Backstage** ("Your feedback"), **Wall of Fame** ("Past performances").
@@ -44,7 +44,8 @@ Menu labels: **Stage** (small subtitle "Practice"), **Backstage** ("Your feedbac
 | Bulbs | `#FFDFA0`, glow `rgba(255,200,120,0.7)` |
 | Playbill paper | `#F4E7CC`, frame gradient `#E6C277`, `#9C7232`, `#D8B062` |
 | Wall of Fame wall | stripes `#3E0F16` and `#380D13` (60px wide on laptop, 40px on phones), soft glow `rgba(255,214,150,0.12)` from the top |
-| Brass plaque | gradient `#F0CF86` to `#B8893A`, text `#2A1806`; nails `#C9A15A` |
+| Brass plaque | gradient `#F0CF86` to `#B8893A`, text `#2A1806`; nails `#C9A15A`; the same gold for the "Trophy unlocked" banner |
+| Trophies | earned `#E3B65A` with `#9C7232`; locked `#6A5A52` with `#4A3C36` at 55% opacity; medal ribbon `#8C1426`; shelf `#8A5A2E` to `#5C3519` |
 | Ink on paper | text `#2A1A0E`, secondary `#4A3826`, muted `#6E5A44`, type label `#8C1426` |
 | Status and note colors on paper | darker shades of the usual ones so they stay readable: over / weaknesses `#9A4410`, under / strengths `#1A6B43`, tips `#1F5C99`, other headings and numbers `#7A4E12` |
 | ON AIR sign (lit) | `#E5383B` with glow `0 0 20px rgba(229,56,59,0.7)`; unlit `#2A0A0E` with 40% white text |
@@ -126,15 +127,40 @@ Stage layout rules (laptop and phone):
 - **Saving**: each real result from `/result` after a send is saved in `localStorage` under `speakreview.wall.v1` (a JSON array, newest first, at most 100 entries, the same id replaces the old one). An entry keeps only what the page already shows: `id` (the upload's fileId), `savedAt` (ISO time), `topic`, `topic_type`, `time_limit_seconds`, `speaking_seconds`, `source`, `cut_off`, `wpm`, `filler_word_total`, `filler_word_breakdown`, `avg_confidence`, `ai_feedback`. Never audio, never a transcript. Calling `displayResult()` from the console never saves anything.
 - **Untrusted when read back**: every entry is checked (types, ranges, lengths) and anything malformed is dropped. Every value is shown with `textContent`; the Coach's notes go through `escapeHtml()` and the Backstage note formatter, exactly as on Backstage.
 - **Storage blocked or full**: the app still works and the wall shows "Saving isn't available in this browser, so performances can't be kept on your wall." Performances from the current visit still show on the wall until the page is closed.
-- **Screen**: header "Wall of Fame" with "Your past performances. Saved only on this device." under it, centered on the red wall, no floor. The trophy shelf (part 2) goes right under it. Entries are grouped by the visitor's local day under brass plaques: "Today", "Yesterday", then the full date ("Thursday, October 1", with the year when it is not this year). Newest group first, newest entry first.
+- **Screen**: header "Wall of Fame" with "Your past performances. Saved only on this device." under it, centered on the red wall, no floor. The trophy shelf sits right under it. Entries are grouped by the visitor's local day under brass plaques: "Today", "Yesterday", then the full date ("Thursday, October 1", with the year when it is not this year). Newest group first, newest entry first.
 - **Playbill** (a real button, hanging from a nail, slightly tilted, no tilt with reduced motion): "SPEAKREVIEW PRESENTS" (laptop only, as in Phone v2), the type in red (the topic type, "Own topic" for a typed topic, "Free speech" with no topic), the topic in Fraunces (up to 4 lines; "Spoke freely" with no topic), "Live recording" or "Uploaded MP3" when known, then the time line ("3:42 / 3:00" with "0:42 over" / "under" / "on time", or "4:10" with "Untimed"). Frames are centered in each group however many there are. Laptop: 210px frames, 40px apart. Phones: two per row, 156px, 16px apart.
 - **Scrolling**: on laptops the wall area under the header scrolls; on phones only the frames area scrolls and the title (and trophy shelf) stay. No scrollbars, fade at the bottom.
 - **Empty**: "Your wall is empty. Take the stage to hang your first playbill." with "Go to the stage".
 - **Open playbill**: a framed paper dialog (`role="dialog"`, `aria-modal`, labelled by the topic). Topic, type, date and time, the time line, source, words per minute, filler words with the breakdown, Clarity, the cut-off note when it applies, and the full Coach's notes (only the notes scroll). Buttons: "Practice this topic again", "Remove from the wall", "Close". Focus moves into it and stays there; Escape and Close close it and focus returns to the playbill.
 - **Remove**: the buttons are swapped for "Remove this performance from your wall? This can't be undone." with "Remove" and "Keep it" (Escape = Keep it). After removing, focus goes to the next playbill (or the one before it).
 - **Practice this topic again**: back to the Stage with that topic, its type and its time limit selected, nothing recorded or picked. If there is an unsent take or a picked MP3, it asks first: "This replaces your unsent take." (or "This replaces your picked MP3.") with "Replace it" and "Keep it" (Escape = Keep it).
-- **Clear the wall**: a quiet button at the bottom, only when there are entries. It asks "Clear every performance from your wall? This can't be undone." with "Clear the wall" and "Keep them".
+- **Clear the wall**: a quiet button at the bottom, only when there are entries. It asks "Clear every performance from your wall? This can't be undone." with an unchecked "Also remove my trophies and progress" box, "Clear the wall" and "Keep them". Trophies and progress are only reset when the box is checked.
 - The Wall of Fame tab is locked while preparing, recording and during Intermission, like the other tabs, and uses the same curtain sweep.
+
+### Trophy shelf
+
+- **Progress** is saved in `localStorage` under `speakreview.trophies.v1`, apart from the wall: `{ "performances": 7, "topicTypes": ["persuade", "story"], "practiceDays": ["2026-10-12", "2026-10-13"], "earned": { "opening-night": "2026-10-12T18:40:00.000Z" } }`. `performances` counts every performance ever, `topicTypes` the rolled topic types used, `practiceDays` the local dates practiced (last 60 kept), `earned` the date each trophy was earned. Removing playbills or clearing the wall never lowers it (unless the Clear box is checked).
+- **What counts**: only real results arriving from `/result` (never `displayResult()` from the console), and only when that performance's id was not already on the wall, so nothing counts twice. Speaking time and fillers come from the result (`speaking_seconds`, `filler_word_total`), never from the page's stopwatch.
+- **Same safety as the wall**: every read and write is wrapped, each piece is checked on load (bad pieces are dropped), and everything is shown with `textContent`. If saving fails, this visit's progress stays in memory and the storage note shows.
+- **One-time catch-up**: the first time the page loads with wall entries but no trophy record, the progress (and any trophies already earned) is built from the wall entries, at each entry's `savedAt` time. No banner for these.
+
+| Trophy | Icon | Earned by | Locked line |
+| --- | --- | --- | --- |
+| Opening night | cup | the first performance | "First performance" |
+| Five shows | cup | 5 performances | "3 of 5" |
+| Ten shows | cup | 10 performances | "7 of 10" |
+| Right on cue | medal | a timed performance within 10 seconds of its limit, over or under (a recording stopped at the 10:00 maximum never counts) | "Within 10 seconds of the limit" |
+| Clean delivery | medal | 1 minute or more of speech at 60 words per minute or more, with 2 filler words or fewer | "1 min+ of speech, 2 fillers or fewer" |
+| Full repertoire | medal | all 5 topic types (rolled topics) | "4 of 5 types" |
+| Long run | medal | speaking 5 minutes or more | "Speak 5 minutes or more" |
+| Three-night run | cup | practicing on 3 local days in a row | "2 of 3 days" (the streak still going, ending today or yesterday) |
+
+- **Shelf**: under the title, centered, also when the wall is empty. "TROPHY SHELF, 4 OF 8 EARNED", the 8 trophies standing on a wooden shelf (`#8A5A2E` to `#5C3519`). Earned: gold cup or medal. Locked: grey and dimmed, with muted text.
+- **Laptop**: icon (58px), name and a short line: the rule for earned ones ("First performance", "5 performances", "10 performances", "Within 10 seconds of the limit", "1 min+ of speech, 2 fillers or fewer", "All 5 topic types", "Speak 5 minutes or more", "3 days in a row"), the progress or the rule for locked ones.
+- **Phones**: one centered row of icons only (32px in 36 by 40 buttons), the thin shelf, then "Tap a trophy to see how to earn it".
+- **Small card**: tapping, clicking or keyboard-focusing a trophy shows a card under it with its name, its rule, and "Earned on October 14" or its progress ("So far: 7 of 10", or "Not earned yet"). It closes on a tap or click outside it, on Escape (focus stays on the trophy) and when leaving the wall.
+- **Names for screen readers**: every trophy is a real button named like "Right on cue, earned October 14" or "Ten shows, not earned yet, 7 of 10"; the rule is read as its description.
+- **Trophy unlocked**: when a new result earns trophies, Backstage shows a small gold banner above Coach's notes: "Trophy unlocked: Right on cue" (or "Trophies unlocked: Five shows, Clean delivery") with "See your wall". It is announced once, after "Your coach's notes are ready.", and hidden when another performance starts (tapping the mic, re-recording or sending). No animation with reduced motion.
 
 ## Rules
 
@@ -156,4 +182,4 @@ Stage layout rules (laptop and phone):
 | Stage 3, part 2 | Stopwatch while speaking, live sound wave, seekable players (take and picked MP3), Clarity, the recording source and the 10:00 cut-off on Backstage. |
 | Stage 3, follow-up | Stopwatch controlled only from the live panel (remembered on the device), waveform players, single-line "Send to the coach". |
 | Stage 4, part 1 | Wall of Fame tab, saving results in this browser, day plaques, playbills, the open playbill (remove, practice again), Clear the wall. |
-| Stage 4, part 2 | Trophy shelf. |
+| Stage 4, part 2 | Trophy shelf (progress saved in this browser, 8 trophies), "Trophy unlocked" banner on Backstage, the trophy option in Clear the wall. |
