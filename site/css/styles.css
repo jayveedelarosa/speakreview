@@ -1721,7 +1721,7 @@ textarea {
     color: var(--heading);
 }
 
-/* #result is shown with an inline display: block by displayResult(), so the two columns live in
+/* #result is shown by displayResult() removing its hidden attribute, so the two columns live in
    .backstage-grid inside it */
 .backstage-content {
     flex: 1;

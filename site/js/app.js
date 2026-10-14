@@ -625,7 +625,7 @@ function setOptionsDisabled(disabled) {
 function failUpload(message) {
     endIntermission("stage");
     statusText.textContent = message;
-    waitNote.style.display = "none";
+    waitNote.hidden = true;
     setOptionsDisabled(false);
     uploadBtn.disabled = !getTimeLimit().valid;
 }
@@ -657,8 +657,8 @@ async function upload(take) {
     }
 
     setOptionsDisabled(true);
-    resultBox.style.display = "none";
-    waitNote.style.display = "none";
+    resultBox.hidden = true;
+    waitNote.hidden = true;
 
     if(file.size > MAX_FILE_MB * 1024 * 1024) {
         failUpload(take
@@ -737,7 +737,7 @@ async function upload(take) {
         // Uploaded: Intermission now says the coach is reviewing the speech
         setIntermissionPhase("review");
         statusText.innerText = "Analyzing Performance Patterns...";
-        waitNote.style.display = "block";
+        waitNote.hidden = false;
         pollResult(data.fileId);
 
     } catch(err) {
@@ -759,7 +759,7 @@ async function pollResult(speechId) {
             stopped = true;
             clearInterval(interval);
             endIntermission("stage");   // curtains open back on the Stage before the message shows
-            waitNote.style.display = "none";
+            waitNote.hidden = true;
             statusText.innerText = "This is taking longer than expected. Please try again in a few minutes.";
             uploadBtn.disabled = false;
             setOptionsDisabled(false);
@@ -776,7 +776,7 @@ async function pollResult(speechId) {
                 stopped = true;
                 showingResult = true;
                 clearInterval(interval);
-                waitNote.style.display = "none";
+                waitNote.hidden = true;
                 uploadBtn.disabled = false;
                 setOptionsDisabled(false);
                 statusText.innerText = "Spotlight Ready.";
@@ -796,7 +796,7 @@ async function pollResult(speechId) {
             // existing error message.
             if(showingResult) {
                 endIntermission("stage");
-                waitNote.style.display = "none";
+                waitNote.hidden = true;
                 statusText.innerText = "Technical error occurred.";
                 uploadBtn.disabled = false;
                 setOptionsDisabled(false);
@@ -816,7 +816,7 @@ function escapeHtml(value) {
 }
 
 function displayResult(data) {
-    resultBox.style.display = "block";
+    resultBox.hidden = false;
     resultPlaceholder.hidden = true;
 
     // Clarity: how clearly the words came through (the server sends it as avg_confidence)
@@ -894,7 +894,7 @@ function displayResult(data) {
             <div class="stat">
                 <span class="stat-num">${clarityScore}%</span>
                 <span class="stat-label"><span class="long-label">Clarity</span><span class="short-label" aria-hidden="true">clarity</span><span class="stat-hint">How clearly your words came through</span></span>
-                <div class="score-bar-bg"><div id="clarityFill" class="score-fill" style="width: 0%"></div></div>
+                <div class="score-bar-bg"><div id="clarityFill" class="score-fill"></div></div>
             </div>
         </div>`;
 
@@ -1003,7 +1003,7 @@ function showView(name) {
     });
     if (name === "backstage") {
         // A new upload hides the old results, so the empty state shows until new ones arrive
-        resultPlaceholder.hidden = resultBox.style.display !== "none";
+        resultPlaceholder.hidden = !resultBox.hidden;
         restartBulbs();
     }
     if (name === "wall") {
@@ -1025,7 +1025,7 @@ function restartBulbs() {
 }
 
 function focusBackstageHeading() {
-    const heading = resultBox.style.display === "none" ? backstageEmptyTitle : coachNotesTitle;
+    const heading = resultBox.hidden ? backstageEmptyTitle : coachNotesTitle;
     heading.focus({ preventScroll: true });
 }
 

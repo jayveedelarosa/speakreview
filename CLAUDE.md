@@ -15,6 +15,7 @@
 - Prefer `textContent` over `innerHTML`.
 - Limits enforced on the page (file size, duration, etc.) must also be enforced on the server. The page checks are only for convenience.
 - Wall of Fame data in localStorage is untrusted when read back: validate it and always escape it.
+- The site runs under a strict Content Security Policy set in CloudFront: no inline scripts, no inline event handlers, no style attributes (use classes or element.style.setProperty), no eval. Any new external origin must also be added to the CloudFront policy.
 
 ## Code style
 - Plain HTML, CSS and JavaScript only. No frameworks, build tools or modules (`type="module"`).
