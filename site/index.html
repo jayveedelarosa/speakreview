@@ -105,51 +105,99 @@
                     </div>
                 </section>
 
+                <!-- Speaking time and Prep time as two ticket stubs. A ticket opens only its own setting: a wooden panel
+                     under the tickets on laptops, a bottom sheet on phones. The radio buttons inside hold the values. -->
                 <section class="settings-strip" id="stepTime" aria-label="Practice settings">
-                    <div class="setting">
-                        <span class="setting-label" id="speakingTimeLabel">Speaking time</span>
-                        <div class="choice-group" role="radiogroup" aria-labelledby="speakingTimeLabel">
-                            <label class="choice"><input type="radio" name="timeLimit" value="0" checked><span>Untimed</span></label>
-                            <label class="choice"><input type="radio" name="timeLimit" value="60"><span><span class="long-label">1 min</span><span class="short-label" aria-hidden="true">1m</span></span></label>
-                            <label class="choice"><input type="radio" name="timeLimit" value="180"><span><span class="long-label">3 min</span><span class="short-label" aria-hidden="true">3m</span></span></label>
-                            <label class="choice"><input type="radio" name="timeLimit" value="300"><span><span class="long-label">5 min</span><span class="short-label" aria-hidden="true">5m</span></span></label>
-                            <label class="choice"><input type="radio" name="timeLimit" value="custom"><span>Custom</span></label>
-                        </div>
+                    <div class="tickets">
+                        <button type="button" id="timeTicket" class="ticket" aria-expanded="false" aria-controls="settingsPanel" aria-label="Speaking time: No limit. Click to change">
+                            <span class="ticket-main">
+                                <span class="ticket-label">Speaking time</span>
+                                <span id="timeTicketValue" class="ticket-value">No limit</span>
+                                <span class="ticket-hint"><span class="long-label">Click to change</span><span class="short-label" aria-hidden="true">Tap to change</span><svg class="ticket-chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 9l6 6 6-6"></path></svg></span>
+                            </span>
+                            <span class="ticket-stub" aria-hidden="true">
+                                <span class="ticket-notch ticket-notch-top"></span>
+                                <span class="ticket-notch ticket-notch-bottom"></span>
+                                <svg class="ticket-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M12 13m-8 0a8 8 0 1 0 16 0a8 8 0 1 0 -16 0 M12 9v4l2.5 2 M9 2h6"></path></svg>
+                            </span>
+                        </button>
+                        <!-- Prep time (hidden when the browser can't record) -->
+                        <button type="button" id="prepSetting" class="ticket" aria-expanded="false" aria-controls="settingsPanel" aria-label="Prep time: None. Click to change">
+                            <span class="ticket-main">
+                                <span class="ticket-label">Prep time</span>
+                                <span id="prepTicketValue" class="ticket-value">None</span>
+                                <span class="ticket-hint"><span class="long-label">Click to change</span><span class="short-label" aria-hidden="true">Tap to change</span><svg class="ticket-chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 9l6 6 6-6"></path></svg></span>
+                            </span>
+                            <span class="ticket-stub" aria-hidden="true">
+                                <span class="ticket-notch ticket-notch-top"></span>
+                                <span class="ticket-notch ticket-notch-bottom"></span>
+                                <svg class="ticket-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M7 3h10 M7 21h10 M8 3c0 5 8 5 8 9s-8 4-8 9 M16 3c0 5-8 5-8 9s8 4 8 9"></path></svg>
+                            </span>
+                        </button>
+                    </div>
 
-                        <div id="customTime" class="custom-time" hidden>
-                            <div class="custom-fields">
-                                <div class="custom-field">
-                                    <label for="customMinutes" class="field-label"><span class="long-label">Minutes</span><span class="short-label" aria-hidden="true">Min</span></label>
-                                    <div class="stepper">
-                                        <button type="button" class="stepper-btn" data-target="customMinutes" data-step="-1" aria-label="Decrease minutes">−</button>
-                                        <input type="number" id="customMinutes" class="text-input" min="0" max="10" step="1" value="2" inputmode="numeric" aria-describedby="customTimeError">
-                                        <button type="button" class="stepper-btn" data-target="customMinutes" data-step="1" aria-label="Increase minutes">+</button>
-                                    </div>
-                                </div>
-                                <div class="custom-field">
-                                    <label for="customSeconds" class="field-label"><span class="long-label">Seconds</span><span class="short-label" aria-hidden="true">Sec</span></label>
-                                    <div class="stepper">
-                                        <button type="button" class="stepper-btn" data-target="customSeconds" data-step="-1" aria-label="Decrease seconds">−</button>
-                                        <input type="number" id="customSeconds" class="text-input" min="0" max="59" step="1" value="0" inputmode="numeric" aria-describedby="customTimeError">
-                                        <button type="button" class="stepper-btn" data-target="customSeconds" data-step="1" aria-label="Increase seconds">+</button>
-                                    </div>
-                                </div>
+                    <!-- Phones only: dims the stage behind the bottom sheet -->
+                    <div id="settingsBackdrop" class="settings-backdrop" aria-hidden="true" hidden></div>
+
+                    <div id="settingsPanel" class="settings-panel" role="dialog" aria-labelledby="speakingTimeLabel" hidden>
+                        <span class="panel-arrow" aria-hidden="true"></span>
+                        <span class="sheet-handle" aria-hidden="true"></span>
+
+                        <div id="timePage" class="panel-page">
+                            <div class="panel-head">
+                                <h2 class="panel-title" id="speakingTimeLabel">Speaking time</h2>
+                                <p class="panel-help">How long you aim to speak. You can still go over: the timer just shows it.</p>
                             </div>
-                            <p id="customTimeError" class="field-error" aria-live="polite"></p>
+                            <div class="choice-group" role="radiogroup" aria-labelledby="speakingTimeLabel">
+                                <label class="choice"><input type="radio" name="timeLimit" value="0" checked><span>No limit</span></label>
+                                <label class="choice"><input type="radio" name="timeLimit" value="60"><span>1 minute</span></label>
+                                <label class="choice"><input type="radio" name="timeLimit" value="180"><span>3 minutes</span></label>
+                                <label class="choice"><input type="radio" name="timeLimit" value="300"><span>5 minutes</span></label>
+                                <label class="choice"><input type="radio" name="timeLimit" value="custom"><span>Custom</span></label>
+                            </div>
+
+                            <div id="customTime" class="custom-time" hidden>
+                                <div class="custom-fields">
+                                    <div class="custom-field">
+                                        <label for="customMinutes" class="field-label"><span class="long-label">Minutes</span><span class="short-label" aria-hidden="true">Min</span></label>
+                                        <div class="stepper">
+                                            <button type="button" class="stepper-btn" data-target="customMinutes" data-step="-1" aria-label="Decrease minutes">−</button>
+                                            <input type="number" id="customMinutes" class="text-input" min="0" max="10" step="1" value="2" inputmode="numeric" aria-describedby="customTimeError">
+                                            <button type="button" class="stepper-btn" data-target="customMinutes" data-step="1" aria-label="Increase minutes">+</button>
+                                        </div>
+                                    </div>
+                                    <div class="custom-field">
+                                        <label for="customSeconds" class="field-label"><span class="long-label">Seconds</span><span class="short-label" aria-hidden="true">Sec</span></label>
+                                        <div class="stepper">
+                                            <button type="button" class="stepper-btn" data-target="customSeconds" data-step="-1" aria-label="Decrease seconds">−</button>
+                                            <input type="number" id="customSeconds" class="text-input" min="0" max="59" step="1" value="0" inputmode="numeric" aria-describedby="customTimeError">
+                                            <button type="button" class="stepper-btn" data-target="customSeconds" data-step="1" aria-label="Increase seconds">+</button>
+                                        </div>
+                                    </div>
+                                    <span class="custom-range">Anywhere from 0:30 to 10:00</span>
+                                </div>
+                                <p id="customTimeError" class="field-error" aria-live="polite"></p>
+                            </div>
+                        </div>
+
+                        <div id="prepPage" class="panel-page" hidden>
+                            <div class="panel-head">
+                                <h2 class="panel-title" id="prepTimeLabel">Prep time</h2>
+                                <p class="panel-help"><span class="long-label">Thinking time after you click the mic, before recording starts.</span><span class="short-label" aria-hidden="true">Thinking time after you tap the mic, before recording starts.</span></p>
+                            </div>
+                            <div class="choice-group" role="radiogroup" aria-labelledby="prepTimeLabel">
+                                <label class="choice"><input type="radio" name="prepTime" value="0" checked><span>None</span></label>
+                                <label class="choice"><input type="radio" name="prepTime" value="30"><span>30 seconds</span></label>
+                                <label class="choice"><input type="radio" name="prepTime" value="60"><span>1 minute</span></label>
+                                <label class="choice"><input type="radio" name="prepTime" value="120"><span>2 minutes</span></label>
+                            </div>
+                        </div>
+
+                        <div class="panel-foot">
+                            <p class="panel-note"><span class="panel-note-laptop">Picking one closes this.</span> <span id="rememberNote">Remembered on this device for next time.</span></p>
+                            <button type="button" id="settingsDoneBtn" class="panel-done">Done</button>
                         </div>
                     </div>
-
-                    <!-- Prep time before recording (hidden when the browser can't record) -->
-                    <div class="setting setting-prep" id="prepSetting">
-                        <span class="setting-label" id="prepTimeLabel">Prep time</span>
-                        <div class="choice-group" role="radiogroup" aria-labelledby="prepTimeLabel">
-                            <label class="choice"><input type="radio" name="prepTime" value="0" checked><span>Off</span></label>
-                            <label class="choice"><input type="radio" name="prepTime" value="30"><span><span class="long-label">30 sec</span><span class="short-label" aria-hidden="true">30s</span></span></label>
-                            <label class="choice"><input type="radio" name="prepTime" value="60"><span><span class="long-label">1 min</span><span class="short-label" aria-hidden="true">1m</span></span></label>
-                            <label class="choice"><input type="radio" name="prepTime" value="120"><span><span class="long-label">2 min</span><span class="short-label" aria-hidden="true">2m</span></span></label>
-                        </div>
-                    </div>
-
                 </section>
 
                 <!-- While recording, this takes the settings strip's place: the stopwatch and the live sound wave -->

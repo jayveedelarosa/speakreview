@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Backstage with transcript and critic's review</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; position: relative; overflow: hidden; color: #EFE2CF; font-family: Manrope, system-ui, sans-serif; background: radial-gradient(ellipse 70% 30% at 50% 0%, rgba(255,220,150,0.12), rgba(0,0,0,0) 70%), repeating-linear-gradient(90deg, #3A0E14 0 120px, #2A080D 120px 122px), #3A0E14">
+
+<header style="position: absolute; top: 20px; left: 72px; right: 72px; height: 48px; display: flex; align-items: center; justify-content: space-between">
+<div style="display: flex; align-items: center; gap: 8px">
+<svg width="22" height="22" viewBox="0 0 28 28" fill="none" aria-hidden="true"><rect x="3" y="11" width="3" height="6" rx="1.5" fill="#D9AE52"></rect><rect x="9" y="6" width="3" height="16" rx="1.5" fill="#D9AE52"></rect><rect x="15" y="3" width="3" height="22" rx="1.5" fill="#D9AE52"></rect><rect x="21" y="9" width="3" height="10" rx="1.5" fill="#D9AE52"></rect></svg>
+<span style="font-family: Fraunces, Georgia, serif; font-size: 21px; font-weight: 600; color: #FFF6E3">Speak<span style="color: #D9AE52">Review</span></span>
+</div>
+<button type="button" style="display: inline-flex; align-items: center; gap: 5px; height: 32px; border: 0; background: transparent; color: #BCA992; font: 600 12px Manrope, system-ui, sans-serif"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>Privacy</button>
+</header>
+
+<div style="position: absolute; top: 84px; left: 150px; right: 150px; bottom: 36px; padding: 18px; box-sizing: border-box; border-radius: 18px; background: linear-gradient(160deg, #B07A44, #8A5A2E 45%, #6E4522); box-shadow: 0 24px 60px rgba(0,0,0,0.6)">
+<div style="height: 100%; box-sizing: border-box; border-radius: 8px; padding: 26px 30px 22px; display: grid; grid-template-columns: 318px minmax(0, 1fr); column-gap: 28px; background: linear-gradient(155deg, rgba(255,255,255,0.05), rgba(255,255,255,0) 35%), #1E0F0C; box-shadow: inset 0 0 50px rgba(0,0,0,0.5)">
+
+<section aria-label="Tonight's performance" style="display: flex; flex-direction: column; gap: 14px; min-height: 0">
+<span style="font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #BCA992">Tonight's performance</span>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="align-self: flex-start; display: inline-flex; align-items: center; height: 20px; padding: 0 9px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; border: 1px solid rgba(217,174,82,0.6); color: #D9AE52">Persuade</span>
+<h2 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 22px; line-height: 1.2; color: #FFF6E3">Is failure a better teacher than success?</h2>
+</div>
+<div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap">
+<span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 22px; font-weight: 600; color: #FFB066">3:42</span>
+<span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 14px; color: #BCA992">/ 3:00</span>
+<span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 11px; font-weight: 700; background: rgba(255,176,102,0.16); color: #FFB066">0:42 over</span>
+<span style="font-size: 11px; color: #BCA992">Live recording</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px 0; border-top: 1px solid rgba(246,234,211,0.16); border-bottom: 1px solid rgba(246,234,211,0.16); text-align: center">
+<div style="display: flex; flex-direction: column"><span style="font-family: Fraunces, Georgia, serif; font-size: 26px; color: #FFF6E3">132</span><span style="font-size: 11px; color: #D8C6AE">words per min</span></div>
+<div style="display: flex; flex-direction: column"><span style="font-family: Fraunces, Georgia, serif; font-size: 26px; color: #FFF6E3">5</span><span style="font-size: 11px; color: #D8C6AE">fillers (um 3, uh 2)</span></div>
+<div style="display: flex; flex-direction: column"><span style="font-family: Fraunces, Georgia, serif; font-size: 26px; color: #FFF6E3">84%</span><span style="font-size: 11px; color: #D8C6AE">clarity</span></div>
+</div>
+
+<div style="position: relative; margin-top: 4px; transform: rotate(-1.2deg); padding: 14px 16px 12px; background: linear-gradient(180deg, #F7ECD3, #EAD9B6); color: #2A1A0E; box-shadow: 0 10px 22px rgba(0,0,0,0.55); border-radius: 2px">
+<span aria-hidden="true" style="position: absolute; top: -6px; left: 50%; width: 14px; height: 14px; margin-left: -7px; border-radius: 999px; background: radial-gradient(circle at 35% 35%, #F5D891, #8C6224); box-shadow: 0 2px 4px rgba(0,0,0,0.5)"></span>
+<div style="display: flex; flex-direction: column; align-items: center; padding-bottom: 8px; border-bottom: 2px solid #2A1A0E">
+<span style="font-family: Fraunces, Georgia, serif; font-size: 19px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase">The Nightly Review</span>
+<span style="font-size: 11px; color: #5A4330">Your coach's rating. A rough guide, not a grade.</span>
+</div>
+<div style="display: flex; flex-direction: column">
+<sc-for list="{{critic}}" as="c" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 4px; padding: 6px 0; border-bottom: 1px solid rgba(42,26,14,0.18)">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
+<span style="font-size: 13px; font-weight: 800">{{c.name}}</span>
+<span style="font-family: Fraunces, Georgia, serif; font-size: 14px; font-weight: 600; font-style: italic">{{c.level}}</span>
+</div>
+<div aria-hidden="true" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px">
+<sc-for list="{{c.segs}}" as="g" hint-placeholder-count="4">
+<span style="height: 5px; border-radius: 2px; {{g.style}}"></span>
+</sc-for>
+</div>
+<span style="font-size: 12px; line-height: 1.35; color: #4A3423">{{c.reason}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</section>
+
+<section aria-label="Coach's notes and your words" style="display: flex; flex-direction: column; gap: 14px; min-height: 0">
+<div role="tablist" aria-label="Feedback views" style="display: flex; align-items: flex-end; gap: 6px; border-bottom: 1px solid rgba(246,234,211,0.16)">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+<button type="button" role="tab" aria-selected="{{t.sel}}" onClick="{{t.pick}}" style="height: 48px; padding: 0 14px; margin-bottom: -1px; border: 0; background: transparent; cursor: pointer; font-family: Fraunces, Georgia, serif; font-size: 21px; font-weight: 500; border-bottom: 3px solid transparent; {{t.style}}">{{t.label}}</button>
+</sc-for>
+<span style="margin-left: auto; padding-bottom: 12px; font-size: 11px; color: #BCA992">Scroll for more</span>
+</div>
+
+<sc-if value="{{isNotes}}" hint-placeholder-val="{{true}}">
+<div role="tabpanel" style="flex: 1; min-height: 0; overflow: hidden; padding: 4px 18px 0; display: flex; flex-direction: column; gap: 18px; -webkit-mask-image: linear-gradient(180deg, #000 82%, rgba(0,0,0,0)); mask-image: linear-gradient(180deg, #000 82%, rgba(0,0,0,0))">
+<sc-for list="{{notes}}" as="n" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h3 style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; {{n.color}}">{{n.title}}</h3>
+<sc-for list="{{n.items}}" as="it" hint-placeholder-count="3">
+<div style="display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 2px; line-height: 1.5; font-size: 14px; color: #DCCBB3"><span style="font-family: Fraunces, Georgia, serif; font-size: 16px; color: #D9AE52">{{it.n}}</span><span><strong style="color: #FFF6E3">{{it.title}}</strong> {{it.text}}</span></div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{isWords}}" hint-placeholder-val="{{false}}">
+<div role="tabpanel" style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 0 18px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; font-size: 13px; color: #DCCBB3">
+<span style="display: inline-flex; align-items: center; gap: 7px"><mark style="padding: 0 3px; border-radius: 3px; background: rgba(255,176,102,0.24); color: #FFE2C2; border-bottom: 2px solid #FFB066">um</mark> Filler, 5</span>
+<span style="display: inline-flex; align-items: center; gap: 7px"><span style="color: #FFF6E3; border-bottom: 2px dotted #D9AE52">like</span> Used as filler, 6</span>
+<span style="display: inline-flex; align-items: center; gap: 7px"><span style="display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 7px; border-radius: 999px; border: 1px dashed rgba(246,234,211,0.45); color: #D8C6AE; font-size: 11px; font-weight: 700"><svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true"><rect x="1" y="1" width="3" height="8" rx="1" fill="currentColor"></rect><rect x="6" y="1" width="3" height="8" rx="1" fill="currentColor"></rect></svg>3.4s</span> Long pause, 1</span>
+<span style="display: inline-flex; align-items: center; gap: 7px"><span style="color: #A8977F; font-style: italic; border-bottom: 1px dashed rgba(246,234,211,0.35)">word</span> Unclear, 1</span>
+</div>
+<div style="flex: 1; min-height: 0; overflow: hidden; -webkit-mask-image: linear-gradient(180deg, #000 82%, rgba(0,0,0,0)); mask-image: linear-gradient(180deg, #000 82%, rgba(0,0,0,0))">
+<p style="margin: 0; max-width: 64ch; font-size: 16px; line-height: 2; color: #E8D8C0">
+<sc-for list="{{words}}" as="w" hint-placeholder-count="30">
+<sc-if value="{{w.plain}}" hint-placeholder-val="{{true}}"><span>{{w.t}}</span></sc-if>
+<sc-if value="{{w.filler}}" hint-placeholder-val="{{false}}"><mark style="padding: 0 3px; border-radius: 3px; background: rgba(255,176,102,0.24); color: #FFE2C2; border-bottom: 2px solid #FFB066">{{w.t}}</mark></sc-if>
+<sc-if value="{{w.maybe}}" hint-placeholder-val="{{false}}"><span style="color: #FFF6E3; border-bottom: 2px dotted #D9AE52">{{w.t}}</span></sc-if>
+<sc-if value="{{w.unclear}}" hint-placeholder-val="{{false}}"><span title="The transcription was not sure about this word" style="color: #A8977F; font-style: italic; border-bottom: 1px dashed rgba(246,234,211,0.35)">{{w.t}}</span></sc-if>
+<sc-if value="{{w.pause}}" hint-placeholder-val="{{false}}"><span role="img" aria-label="{{w.aria}}" style="display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 7px; margin: 0 2px; border-radius: 999px; border: 1px dashed rgba(246,234,211,0.45); color: #D8C6AE; font-size: 11px; font-weight: 700; vertical-align: 2px"><svg width="9" height="9" viewBox="0 0 10 10" aria-hidden="true"><rect x="1" y="1" width="3" height="8" rx="1" fill="currentColor"></rect><rect x="6" y="1" width="3" height="8" rx="1" fill="currentColor"></rect></svg>{{w.t}}</span></sc-if>
+</sc-for>
+</p>
+</div>
+<span style="font-size: 12px; color: #BCA992">Dotted words are only marked when they were used as filler. Long pauses are 3 seconds or more, and are not a mistake: pausing is often better than saying um.</span>
+</div>
+</sc-if>
+
+<div style="display: flex; gap: 10px; justify-content: flex-end">
+<button type="button" style="height: 44px; padding: 0 22px; border-radius: 999px; background: transparent; border: 1px solid rgba(246,234,211,0.28); color: #EFE2CF; font: 600 14px Manrope, system-ui, sans-serif">Try this topic again</button>
+<button type="button" style="height: 44px; padding: 0 22px; border-radius: 999px; border: 0; background: #D9AE52; color: #1E1006; font: 800 14px Manrope, system-ui, sans-serif">Back to the stage</button>
+</div>
+</section>
+
+</div>
+</div>
+
+<sc-for list="{{bulbs}}" as="b" hint-placeholder-count="40">
+<span aria-hidden="true" style="position: absolute; width: 14px; height: 14px; border-radius: 999px; background: radial-gradient(circle at 40% 35%, #FFFFFF, #FFDFA0 60%); box-shadow: 0 0 12px 4px rgba(255,200,120,0.6); {{b.style}}"></span>
+</sc-for>
+
+<sc-for list="{{signs}}" as="s" hint-placeholder-count="2">
+<a href="{{s.href}}" aria-label="{{s.aria}}" style="position: absolute; z-index: 20; display: block; text-decoration: none; filter: drop-shadow(0 8px 14px rgba(0,0,0,0.6)); {{s.box}}">
+<svg viewBox="{{s.viewBox}}" preserveAspectRatio="none" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%">
+<polygon points="{{s.outer}}" fill="#B8893A"></polygon>
+<polygon points="{{s.inner}}" fill="#1E0806"></polygon>
+</svg>
+<sc-for list="{{s.bulbs}}" as="b" hint-placeholder-count="10">
+<span aria-hidden="true" style="position: absolute; width: 6px; height: 6px; border-radius: 999px; background: radial-gradient(circle at 40% 35%, #FFFFFF, #FFDFA0 60%); box-shadow: 0 0 6px 2px rgba(255,200,120,0.7); {{b.style}}"></span>
+</sc-for>
+<span style="position: absolute; top: 0; bottom: 0; display: flex; flex-direction: column; justify-content: center; gap: 1px; text-align: center; {{s.textBox}}">
+<span style="font-family: Fraunces, Georgia, serif; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.05; color: #FFE7B0; text-shadow: 0 0 10px rgba(255,200,120,0.55); {{s.labelSize}}">{{s.label}}</span>
+<span style="font-size: 11px; color: #D8C6AE">{{s.sub}}</span>
+</span>
+</a>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"tab":{"editor":"enum","options":["notes","words"],"default":"notes"},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+renderVals() {
+const tab = (this.state && this.state.tab) || (this.props.tab === 'words' ? 'words' : 'notes');
+const bulbs = [];
+for (let i = 0; i < 17; i++) bulbs.push({ style: 'left: ' + (176 + i * 57).toFixed(1) + 'px; top: 86px;' });
+for (let i = 0; i < 10; i++) {
+const y = 150 + i * 58;
+bulbs.push({ style: 'left: 152px; top: ' + y + 'px;' });
+bulbs.push({ style: 'left: 1114px; top: ' + y + 'px;' });
+}
+const lv = (name, level, n, reason) => ({ name: name, level: level, reason: reason, segs: [0, 1, 2, 3].map((i) => ({ style: i < n ? 'background: #B8893A;' : 'background: rgba(42,26,14,0.14);' })) });
+const critic = [
+lv('Structure', 'Strong', 3, 'Clear position up front, story in the middle.'),
+lv('Clarity of message', 'Solid', 2, 'Easy to follow, but the point repeated twice.'),
+lv('Staying on topic', 'Outstanding', 4, 'Every sentence answered the question.'),
+lv('Word choice', 'Developing', 1, '"Basically" softened your strongest lines.')
+];
+const notes = [
+{ title: 'Strengths', color: 'color: #8FE0B0;', items: [
+{ n: '1', title: 'Clear position:', text: 'You took a side in your first sentence.' },
+{ n: '2', title: 'Personal example:', text: 'The driving test story made the point relatable.' },
+{ n: '3', title: 'Steady pace:', text: '132 words per minute is easy to follow.' }] },
+{ title: 'Weaknesses', color: 'color: #FFB066;', items: [
+{ n: '1', title: 'Fillers at transitions:', text: 'Most "um" sounds came right before a new point.' },
+{ n: '2', title: 'One side only:', text: 'The speech skipped what success can teach.' },
+{ n: '3', title: 'Abrupt ending:', text: 'The last point stopped without a closing line.' }] },
+{ title: 'Improvement tips', color: 'color: #9CCBFF;', items: [
+{ n: '1', title: 'Pause instead of filling:', text: 'Breathe for a second before each new point.' },
+{ n: '2', title: 'Answer the other side:', text: 'Spend one sentence on the opposing view.' },
+{ n: '3', title: 'Plan your last line:', text: 'Repeat your position in one memorable sentence.' }] },
+{ title: 'Staying on topic', color: 'color: #D9AE52;', items: [{ n: '', title: '', text: 'Every point supported your answer to the question.' }] },
+{ title: 'Time management', color: 'color: #D9AE52;', items: [{ n: '', title: '', text: 'You went 42 seconds over. Trim the second example to finish under 3:00.' }] }
+];
+const raw = [
+['m', 'So'], ['p', ', '], ['f', 'um'], ['p', ', I think failure is a better teacher than success. When I failed my driving test the first time, '], ['f', 'uh'], ['p', ', I was crushed. But, '], ['m', 'like'], ['p', ', it showed me '], ['u', 'exactly'], ['p', ' what I didn’t know. Success '], ['f', 'um'], ['p', ' feels good, but it doesn’t really tell you why things worked. You just, '], ['m', 'you know'], ['p', ', move on. '], ['x', '3.4s'], ['p', ' Failure '], ['m', 'basically'], ['p', ' forces you to stop and look. '], ['f', 'Um'], ['p', ', after that test I practiced parallel parking every day for two weeks, and the second time I passed easily. '], ['m', 'So'], ['p', ' I '], ['m', 'actually'], ['p', ' believe that failure, '], ['f', 'uh'], ['p', ', teaches us more, because it hurts enough to make us change.']
+];
+const words = raw.map((r) => ({ t: r[1], plain: r[0] === 'p', filler: r[0] === 'f', maybe: r[0] === 'm', pause: r[0] === 'x', unclear: r[0] === 'u', aria: 'Long pause, ' + r[1].replace('s', ' seconds') }));
+const tip = 22;
+const sign = (o) => {
+const w = o.w, h = o.h, left = o.dir === 'left';
+const outer = left ? [[tip, 0], [w, 0], [w, h], [tip, h], [0, h / 2]] : [[0, 0], [w - tip, 0], [w, h / 2], [w - tip, h], [0, h]];
+const i = 3;
+const inner = left ? [[tip + 2, i], [w - i, i], [w - i, h - i], [tip + 2, h - i], [i * 1.6, h / 2]] : [[i, i], [w - tip - 2, i], [w - i * 1.6, h / 2], [w - tip - 2, h - i], [i, h - i]];
+const fmt = (pts) => pts.map((p) => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+const bulbs = [];
+const x0 = left ? tip + 6 : 8, x1 = left ? w - 12 : w - tip - 10;
+const n = Math.max(3, Math.floor((x1 - x0) / 13));
+for (let k = 0; k <= n; k++) {
+const x = x0 + (k / n) * (x1 - x0);
+bulbs.push({ style: 'left: ' + (x - 3).toFixed(1) + 'px; top: 5px;' });
+bulbs.push({ style: 'left: ' + (x - 3).toFixed(1) + 'px; top: ' + (h - 11) + 'px;' });
+}
+return {
+href: o.href, aria: 'Go to ' + o.label + ', ' + o.sub,
+box: 'left: ' + o.x + 'px; top: ' + o.y + 'px; width: ' + w + 'px; height: ' + h + 'px;',
+viewBox: '0 0 ' + w + ' ' + h, outer: fmt(outer), inner: fmt(inner), bulbs: bulbs,
+textBox: left ? 'left: ' + (tip + 4) + 'px; right: 8px;' : 'left: 8px; right: ' + (tip + 4) + 'px;',
+labelSize: 'font-size: ' + (w < 125 ? 13 : 15) + 'px;',
+label: o.label, sub: o.sub
+};
+};
+const signs = [sign({ dir: 'right', x: 1280 - 142, y: 360, w: 134, h: 70, label: 'Stage', sub: 'Back to practice', href: 'F2StageLaptop.dc.html' })];
+const tabDefs = [['notes', "Coach's notes"], ['words', 'Your words']];
+return {
+bulbs: bulbs, critic: critic, notes: notes, words: words, signs: signs,
+isNotes: tab === 'notes', isWords: tab === 'words',
+tabs: tabDefs.map((d) => ({ label: d[1], sel: d[0] === tab ? 'true' : 'false', pick: () => this.setState({ tab: d[0] }), style: d[0] === tab ? 'color: #FFF6E3; border-bottom-color: #D9AE52;' : 'color: #BCA992;' }))
+};
+}
+}
+</script>
+</body>
+</html>

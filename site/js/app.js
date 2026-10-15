@@ -143,6 +143,18 @@ const trophyPopover = document.getElementById("trophyPopover");
 const trophyBanner = document.getElementById("trophyBanner");
 const trophyBannerText = document.getElementById("trophyBannerText");
 const clearTrophiesBox = document.getElementById("clearTrophiesBox");
+// Ticket stubs for Speaking time and Prep time, and the panel (laptop) or sheet (phone) they open
+const timeTicket = document.getElementById("timeTicket");
+const prepTicket = prepSetting;
+const timeTicketValue = document.getElementById("timeTicketValue");
+const prepTicketValue = document.getElementById("prepTicketValue");
+const settingsPanel = document.getElementById("settingsPanel");
+const settingsBackdrop = document.getElementById("settingsBackdrop");
+const timePage = document.getElementById("timePage");
+const prepPage = document.getElementById("prepPage");
+const settingsDoneBtn = document.getElementById("settingsDoneBtn");
+const rememberNote = document.getElementById("rememberNote");
+const phoneQuery = window.matchMedia("(max-width: 600px)");
 
 // Playback stops before sending, so the speech isn't still playing behind the curtains
 uploadBtn.addEventListener("click", () => {
@@ -541,6 +553,7 @@ function onTimeChange() {
     if (!isBusy && !isRolling) uploadBtn.disabled = !valid;
     updateTakeButtons();
     renderLengthLine();
+    updateTickets();
 }
 
 timeRadios.forEach(radio => radio.addEventListener("change", onTimeChange));
@@ -611,6 +624,7 @@ function renderLength(line, seconds) {
 // Lock the topic and time controls during analysis
 // ---------------------------
 function setOptionsDisabled(disabled) {
+    if (disabled) closeSettings(false);
     isBusy = disabled;
     optionControls.forEach(control => {
         control.disabled = disabled;
@@ -988,7 +1002,10 @@ function announceScene(text) {
 // Shows one view right away and marks its menu item as the current page
 function showView(name) {
     const isStage = name === "stage";
-    if (!isStage) pausePlayers();      // nothing keeps playing behind the curtains
+    if (!isStage) {
+        pausePlayers();                // nothing keeps playing behind the curtains
+        closeSettings(false);
+    }
     currentView = name;
     dropZone.hidden = !isStage;
     backstageView.hidden = name !== "backstage";
@@ -1673,6 +1690,7 @@ function practiceOpenEntry() {
     }
     updateTopicPlaceholder();
     selectTimeLimit(entry.time_limit_seconds);
+    saveSettings();                     // the remembered choice matches the ticket
 
     closeDialog(false);
     goToView("stage");
@@ -2148,6 +2166,7 @@ function setRecState(name) {
     micBtn.setAttribute("aria-label", name === "recording" ? "Stop recording" : "Start recording");
 
     // Topic, time and prep controls, the menu and the file picker can't change while preparing or recording
+    if (locked) closeSettings(false);
     optionControls.forEach(control => {
         control.disabled = locked || isBusy;
     });
@@ -2206,7 +2225,11 @@ function updateActionText() {
         : "Tap the mic to begin.";
 }
 
-prepRadios.forEach(radio => radio.addEventListener("change", updateActionText));
+prepRadios.forEach(radio => radio.addEventListener("change", () => {
+    updateActionText();
+    updateTickets();
+    saveSettings();
+}));
 
 // ---- Opening the mic ----
 const MIC_ERRORS = {
@@ -3141,6 +3164,276 @@ reRecordBtn.addEventListener("click", () => {
 });
 discardBtn.addEventListener("click", discardTake);
 
+// ---------------------------
+// Ticket stubs: Speaking time and Prep time
+// ---------------------------
+// Each ticket opens only its own setting: a wooden panel under the tickets on laptops, a bottom sheet on
+// phones. The radio buttons inside still hold the values, so everything that reads the settings is unchanged.
+// The last choice is remembered under SETTINGS_KEY, for example {"time":"180","prep":"30"}: time in seconds
+// ("" for no limit), prep in seconds ("0" for none). It is checked strictly when read back.
+const SETTINGS_KEY = "speakreview.settings.v1";
+const PREP_CHOICES = ["0", "30", "60", "120"];
+let openSetting = null;        // "time" or "prep" while its panel or sheet is open
+
+// For example "No limit", "3 minutes", "2 min 30 sec", "4 minutes" or "45 seconds"
+function describeTimeLimit() {
+    const { valid, seconds } = getTimeLimit();
+    if (!valid) return "Custom";
+    if (seconds === null) return "No limit";
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds % 60;
+    if (rest === 0) return minutes === 1 ? "1 minute" : `${minutes} minutes`;
+    if (minutes === 0) return `${rest} seconds`;
+    return `${minutes} min ${rest} sec`;
+}
+
+function describePrepChoice() {
+    const prep = getPrepSeconds();
+    return prep > 0 ? describePrep(prep) : "None";
+}
+
+function ticketFor(which) {
+    return which === "prep" ? prepTicket : timeTicket;
+}
+
+// Shows the current values on the tickets (with textContent) and keeps their names and states in step
+function updateTickets() {
+    const action = phoneQuery.matches ? "Tap to change" : "Click to change";
+    const time = describeTimeLimit();
+    const prep = describePrepChoice();
+    timeTicketValue.textContent = time;
+    prepTicketValue.textContent = prep;
+    timeTicket.setAttribute("aria-label", `Speaking time: ${time}. ${action}`);
+    prepTicket.setAttribute("aria-label", `Prep time: ${prep}. ${action}`);
+    timeTicket.setAttribute("aria-expanded", String(openSetting === "time"));
+    prepTicket.setAttribute("aria-expanded", String(openSetting === "prep"));
+    const isCustom = document.querySelector('input[name="timeLimit"]:checked')?.value === "custom";
+    settingsPanel.classList.toggle("is-custom", openSetting === "time" && isCustom);
+}
+
+// Laptop: the small arrow on the panel points at the middle of the open ticket
+function placePanelArrow() {
+    if (!openSetting || phoneQuery.matches) return;
+    const ticket = ticketFor(openSetting).getBoundingClientRect();
+    const panel = settingsPanel.getBoundingClientRect();
+    settingsPanel.style.setProperty("--arrow-x", `${Math.round(ticket.left + ticket.width / 2 - panel.left)}px`);
+}
+
+function openSettings(which) {
+    const phone = phoneQuery.matches;
+    setPrivacyOpen(false);
+    openSetting = which;
+    const page = which === "prep" ? prepPage : timePage;
+    timePage.hidden = which !== "time";
+    prepPage.hidden = which !== "prep";
+    settingsPanel.setAttribute("aria-labelledby", which === "prep" ? "prepTimeLabel" : "speakingTimeLabel");
+    settingsPanel.hidden = false;
+    stageView.classList.add("settings-open");
+    if (phone) {
+        // A modal sheet: the stage behind is dimmed and doesn't scroll
+        settingsPanel.setAttribute("aria-modal", "true");
+        settingsBackdrop.hidden = false;
+        document.documentElement.classList.add("settings-lock");
+    } else {
+        settingsPanel.removeAttribute("aria-modal");
+        settingsBackdrop.hidden = true;
+        document.documentElement.classList.remove("settings-lock");
+    }
+    updateTickets();
+    placePanelArrow();
+    const checked = page.querySelector("input:checked");
+    if (checked) checked.focus({ preventScroll: true });
+}
+
+// returnFocus: put focus back on the ticket that opened it
+function closeSettings(returnFocus) {
+    if (!openSetting) return;
+    const ticket = ticketFor(openSetting);
+    openSetting = null;
+    settingsPanel.hidden = true;
+    settingsBackdrop.hidden = true;
+    settingsPanel.removeAttribute("aria-modal");
+    stageView.classList.remove("settings-open");
+    document.documentElement.classList.remove("settings-lock");
+    updateTickets();
+    if (returnFocus && !ticket.disabled) ticket.focus({ preventScroll: true });
+}
+
+// After a pick: closes once the radio has been checked, then focus goes back to the ticket
+function closeAfterPick() {
+    setTimeout(() => closeSettings(true), 0);
+}
+
+[timeTicket, prepTicket].forEach(ticket => {
+    ticket.addEventListener("click", () => {
+        const which = ticket === prepTicket ? "prep" : "time";
+        if (openSetting === which) {
+            closeSettings(true);
+        } else {
+            openSettings(which);        // the other ticket switches the panel to its setting
+        }
+    });
+});
+
+// A mouse click or a tap on a choice picks it and closes the panel (Custom stays open for its controls).
+// Arrow keys move through a radio group by checking each choice on the way, so they only change the
+// choice (the ticket follows) and never close the panel. Enter or Space picks the focused choice and closes.
+settingsPanel.querySelectorAll(".choice-group").forEach(group => {
+    group.addEventListener("click", e => {
+        if (e.detail === 0) return;            // a click made by the keyboard, or passed on from a label
+        const input = e.target.closest(".choice")?.querySelector("input");
+        if (!input || input.disabled) return;
+        if (input.value !== "custom") closeAfterPick();
+    });
+
+    group.addEventListener("keydown", e => {
+        if (e.key !== "Enter" || e.target.type !== "radio") return;
+        e.preventDefault();
+        if (!e.target.checked) {
+            e.target.checked = true;
+            e.target.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        if (e.target.value === "custom") {
+            customMinutes.focus();
+        } else {
+            closeAfterPick();
+        }
+    });
+
+    // Space checks the radio when the key comes back up, so close after that
+    group.addEventListener("keyup", e => {
+        if (e.key !== " " || e.target.type !== "radio") return;
+        if (e.target.value === "custom") {
+            setTimeout(() => customMinutes.focus(), 0);
+        } else {
+            closeAfterPick();
+        }
+    });
+});
+
+// Done: closes, unless the custom time isn't valid yet (then the message shows and Minutes gets focus)
+settingsDoneBtn.addEventListener("click", () => {
+    if (!getTimeLimit().valid) {
+        onTimeChange();
+        customMinutes.focus();
+        return;
+    }
+    closeSettings(true);
+});
+
+// The phone backdrop closes the sheet. preventDefault stops the tap's mouse events from moving focus away.
+settingsBackdrop.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    closeSettings(true);
+});
+
+// A click or tap anywhere outside the tickets and the panel closes it. If that click doesn't land on
+// something focusable, focus goes back to the ticket.
+document.addEventListener("pointerdown", e => {
+    if (!openSetting || e.target === settingsBackdrop) return;
+    if (settingsPanel.contains(e.target) || e.target.closest(".ticket")) return;
+    const ticket = ticketFor(openSetting);
+    closeSettings(false);
+    setTimeout(() => {
+        const active = document.activeElement;
+        if ((!active || active === document.body) && !ticket.disabled && !appRoot.inert) ticket.focus({ preventScroll: true });
+    }, 0);
+});
+
+// Laptop: tabbing away from the tickets and the panel closes it
+settingsStrip.addEventListener("focusout", e => {
+    if (!openSetting || phoneQuery.matches) return;
+    if (e.relatedTarget && !settingsStrip.contains(e.relatedTarget)) closeSettings(false);
+});
+
+// Escape closes it. On phones Tab stays inside the sheet.
+document.addEventListener("keydown", e => {
+    if (!openSetting || openOverlay) return;
+    if (e.key === "Escape") {
+        e.preventDefault();
+        closeSettings(true);
+    } else if (e.key === "Tab" && phoneQuery.matches) {
+        // Only the checked radio of a group is a Tab stop
+        const items = dialogFocusables(settingsPanel).filter(element => element.type !== "radio" || element.checked);
+        if (items.length === 0) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        const inside = settingsPanel.contains(document.activeElement);
+        if (e.shiftKey && (!inside || document.activeElement === first)) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && (!inside || document.activeElement === last)) {
+            e.preventDefault();
+            first.focus();
+        }
+    }
+});
+
+// Switching between the laptop and phone layouts closes it; "Click" becomes "Tap" in the tickets' names
+phoneQuery.addEventListener("change", () => {
+    closeSettings(false);
+    updateTickets();
+});
+window.addEventListener("resize", placePanelArrow);
+
+// ---- Remembering the choice on this device ----
+// An unfinished custom time is not saved. If storage is blocked, everything still works but the
+// "Remembered on this device" note is hidden.
+function saveSettings() {
+    const { valid, seconds } = getTimeLimit();
+    if (!valid) return;
+    const data = { time: seconds === null ? "" : String(seconds), prep: String(getPrepSeconds()) };
+    try {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+        rememberNote.hidden = false;
+    } catch (err) {
+        rememberNote.hidden = true;
+    }
+}
+
+timeRadios.forEach(radio => radio.addEventListener("change", saveSettings));
+customMinutes.addEventListener("input", saveSettings);
+customSeconds.addEventListener("input", saveSettings);
+stepperButtons.forEach(button => button.addEventListener("click", saveSettings));
+
+// Reads the saved choice. Stored data is untrusted: each value must be exactly one the page can make,
+// anything else falls back to the default (No limit, None). Returns { time, prep }, null for each bad value.
+function readSavedSettings() {
+    let text = null;
+    try {
+        text = localStorage.getItem(SETTINGS_KEY);
+    } catch (err) {
+        rememberNote.hidden = true;
+        return { time: null, prep: null };
+    }
+    let data = null;
+    try {
+        data = text === null ? null : JSON.parse(text);
+    } catch (err) {
+        data = null;
+    }
+    if (!data || typeof data !== "object" || Array.isArray(data)) return { time: null, prep: null };
+
+    const seconds = Number(data.time);
+    const timeOk = typeof data.time === "string"
+        && (data.time === "" || (/^[1-9]\d{1,2}$/.test(data.time) && seconds >= MIN_TIME_LIMIT_SECONDS && seconds <= MAX_TIME_LIMIT_SECONDS));
+    const prepOk = typeof data.prep === "string" && PREP_CHOICES.includes(data.prep);
+    return { time: timeOk ? data.time : null, prep: prepOk ? data.prep : null };
+}
+
+// 60, 180 and 300 select their own radio; any other valid time selects Custom with the minutes and seconds
+function loadSettings() {
+    const saved = readSavedSettings();
+    if (saved.time !== null) selectTimeLimit(saved.time === "" ? 0 : Number(saved.time));
+    if (saved.prep !== null && micSupported) {
+        prepRadios.forEach(radio => {
+            radio.checked = radio.value === saved.prep;
+        });
+    }
+    updateActionText();
+    updateTickets();
+}
+
 // Browsers that can't record keep the upload-first layout
 if (micSupported) {
     updateActionText();
@@ -3152,3 +3445,4 @@ if (micSupported) {
     uploadLabel.textContent = "Upload an MP3";
 }
 updateTakeButtons();
+loadSettings();

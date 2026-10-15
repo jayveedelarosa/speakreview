@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Phone nav bar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&amp;family=JetBrains+Mono:wght@500;600&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 84px; position: relative; font-family: Manrope, system-ui, sans-serif; color: #EFE2CF">
+<nav aria-label="Main" style="position: absolute; left: 0; right: 0; bottom: 0; height: 64px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 2px solid #D9AE52; box-shadow: 0 -8px 18px rgba(0,0,0,0.5); background: linear-gradient(180deg, #24100C, #120806)">
+<sc-for list="{{sides}}" as="t" hint-placeholder-count="2">
+<button type="button" aria-current="{{t.current}}" onClick="{{t.go}}" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding-top: 6px; border: 0; background: transparent; cursor: pointer; font-family: Manrope, system-ui, sans-serif; {{t.color}} {{t.slot}}">
+<sc-if value="{{t.on}}" hint-placeholder-val="{{false}}">
+<span aria-hidden="true" style="position: absolute; top: 6px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px">
+<span style="margin-top: 4px; width: 5px; height: 5px; border-radius: 999px; background: radial-gradient(circle at 40% 35%, #FFFFFF, #FFDFA0 60%); box-shadow: 0 0 6px 2px rgba(255,200,120,0.7)"></span>
+<span style="width: 5px; height: 5px; border-radius: 999px; background: radial-gradient(circle at 40% 35%, #FFFFFF, #FFDFA0 60%); box-shadow: 0 0 6px 2px rgba(255,200,120,0.7)"></span>
+<span style="margin-top: 4px; width: 5px; height: 5px; border-radius: 999px; background: radial-gradient(circle at 40% 35%, #FFFFFF, #FFDFA0 60%); box-shadow: 0 0 6px 2px rgba(255,200,120,0.7)"></span>
+</span>
+</sc-if>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-top: 6px"><path d="{{t.icon}}"></path></svg>
+<span style="font-size: 11px; height: 17px; display: inline-flex; align-items: center; padding: 0 8px; border-radius: 3px; {{t.plate}}">{{t.label}}</span>
+</button>
+</sc-for>
+</nav>
+<button type="button" aria-current="{{stage.current}}" onClick="{{stage.go}}" style="position: absolute; left: 157px; bottom: 6px; width: 76px; height: 76px; padding: 0; border-radius: 999px; border: 2px solid #D9AE52; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-family: Manrope, system-ui, sans-serif; background: radial-gradient(circle at 50% 35%, #6C131E, #3A0A10 70%); box-shadow: 0 -4px 16px rgba(0,0,0,0.6), inset 0 0 12px rgba(0,0,0,0.5); {{stage.color}}">
+<sc-for list="{{ringBulbs}}" as="b" hint-placeholder-count="12">
+<span aria-hidden="true" style="position: absolute; width: 6px; height: 6px; border-radius: 999px; {{b.style}} {{stage.bulb}}"></span>
+</sc-for>
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6v11a3 3 0 0 1-6 0z M5 11a7 7 0 0 0 14 0 M12 18v3"></path></svg>
+<span style="font-size: 11px; {{stage.weight}}">Stage</span>
+</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"active":{"editor":"enum","options":["backstage","stage","wall"],"default":"stage"},"$preview":{"width":390,"height":84}}'>
+class Component extends DCLogic {
+renderVals() {
+const active = (this.state && this.state.active) || (['backstage', 'stage', 'wall'].indexOf(this.props.active) >= 0 ? this.props.active : 'stage');
+const icons = {
+backstage: 'M6 3h12v18H6z M9 8h6 M9 12h6 M9 16h4',
+wall: 'M7 4h10v5a5 5 0 0 1-10 0z M7 6H4a3 3 0 0 0 4 4 M17 6h3a3 3 0 0 1-4 4 M12 14v4 M8 20h8'
+};
+const side = (id, label, slot) => {
+const on = id === active;
+return {
+on: on, label: label, icon: icons[id], slot: slot,
+current: on ? 'page' : 'false',
+color: on ? 'color: #F0CF86;' : 'color: #C9B79F;',
+plate: on ? 'background: linear-gradient(180deg, #F0CF86, #B8893A); color: #2A1806; font-weight: 800;' : 'font-weight: 600;',
+go: () => this.setState({ active: id })
+};
+};
+const ringBulbs = [];
+for (let i = 0; i < 12; i++) {
+const a = (i / 12) * Math.PI * 2;
+ringBulbs.push({ style: 'left: ' + (33 + Math.cos(a) * 31).toFixed(1) + 'px; top: ' + (33 + Math.sin(a) * 31).toFixed(1) + 'px;' });
+}
+const stageOn = active === 'stage';
+return {
+sides: [side('backstage', 'Backstage', 'grid-column: 1;'), side('wall', 'Wall of Fame', 'grid-column: 3;')],
+stage: {
+current: stageOn ? 'page' : 'false',
+color: stageOn ? 'color: #FFE7B0;' : 'color: #C9B79F;',
+weight: stageOn ? 'font-weight: 800;' : 'font-weight: 600;',
+bulb: stageOn ? 'background: radial-gradient(circle at 40% 35%, #FFFFFF, #FFDFA0 60%); box-shadow: 0 0 6px 2px rgba(255,200,120,0.7);' : 'background: #7A5A3A; opacity: 0.55;',
+go: () => this.setState({ active: 'stage' })
+},
+ringBulbs: ringBulbs
+};
+}
+}
+</script>
+</body>
+</html>
