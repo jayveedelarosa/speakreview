@@ -56,6 +56,9 @@ const randomTopicBtn = document.getElementById("randomTopicBtn");
 const topicBadge = document.getElementById("topicBadge");
 const topicBadgeType = document.getElementById("topicBadgeType");
 const topicBadgeHint = document.getElementById("topicBadgeHint");
+const topicArea = document.getElementById("stepTopic");
+const showLabel = document.getElementById("showLabel");
+const openMicLine = document.getElementById("openMicLine");
 const timeRadios = document.querySelectorAll('input[name="timeLimit"]');
 const customTime = document.getElementById("customTime");
 const customMinutes = document.getElementById("customMinutes");
@@ -341,6 +344,13 @@ function showTopicBadge(type) {
 
 let speakFreely = false;       // true after "Speak freely, no topic"
 
+// The ticket reads "Tonight's show", or "Open mic night" with its line under the topic when there is no topic
+function updateShowState() {
+    showLabel.textContent = speakFreely ? "Open mic night" : "Tonight's show";
+    openMicLine.hidden = !speakFreely;
+    topicArea.classList.toggle("is-open-mic", speakFreely);
+}
+
 // The placeholder doubles as the big heading when there is no topic
 function updateTopicPlaceholder() {
     if (document.activeElement === topicInput) {
@@ -350,18 +360,21 @@ function updateTopicPlaceholder() {
     } else {
         topicInput.placeholder = "Roll a topic, or write your own";
     }
+    updateShowState();
     fitTopicHeight();
 }
 
 let isRolling = false;         // true while the random topic animation is running
 
-// The height of 3 lines at the current font size, including padding and borders
+// The height of the ticket's topic box (--topic-lines lines at the full topic size: 2 on laptops, 3 on
+// phones), including padding and borders
 function threeLineHeight() {
     const style = getComputedStyle(topicInput);
     const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.5;
     const borders = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
     const padding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
-    return lineHeight * 3 + padding + borders;
+    const lines = parseInt(style.getPropertyValue("--topic-lines"), 10) || 3;
+    return lineHeight * lines + padding + borders;
 }
 
 // Sets the topic box height for its text, up to maxHeight. Returns false if the text needs more.
@@ -383,15 +396,18 @@ function sizeTopicBox(maxHeight) {
     return !tooLong;
 }
 
-// Makes the topic fit in the space of 3 full-size lines. Long typed topics get a smaller font
-// (two steps), so a smaller topic may use a 4th line inside that same space instead of being cut off.
+// Makes the topic fit in the ticket's fixed topic box (--topic-lines full-size lines). Long topics get a
+// smaller font (up to three steps; the last one only matters on narrow phones), so a smaller topic may use
+// an extra line inside that same space instead of being cut off.
 function fitTopicHeight() {
-    topicInput.classList.remove("topic-long", "topic-longer");
+    topicInput.classList.remove("topic-long", "topic-longer", "topic-longest");
     const maxHeight = threeLineHeight();
     if (sizeTopicBox(maxHeight)) return;
     topicInput.classList.add("topic-long");
     if (sizeTopicBox(maxHeight)) return;
     topicInput.classList.add("topic-longer");
+    if (sizeTopicBox(maxHeight)) return;
+    topicInput.classList.add("topic-longest");
     sizeTopicBox(maxHeight);
 }
 
@@ -487,11 +503,14 @@ topicInput.addEventListener("input", () => {
     randomTopic = null;
     speakFreely = false;
     topicBadge.hidden = true;
+    updateShowState();
     fitTopicHeight();
 });
 
 // "Write your own": edit the big topic in place. The text is selected, so typing replaces it.
+// Writing a topic also ends Open mic night.
 writeTopicBtn.addEventListener("click", () => {
+    speakFreely = false;
     topicInput.focus();
     topicInput.select();
 });
@@ -3165,10 +3184,10 @@ reRecordBtn.addEventListener("click", () => {
 discardBtn.addEventListener("click", discardTake);
 
 // ---------------------------
-// Ticket stubs: Speaking time and Prep time
+// Speaking time and Prep time, on the topic ticket's stub
 // ---------------------------
-// Each ticket opens only its own setting: a wooden panel under the tickets on laptops, a bottom sheet on
-// phones. The radio buttons inside still hold the values, so everything that reads the settings is unchanged.
+// Each stub button (RUNTIME, CURTAIN IN) opens only its own setting: a wooden panel under the ticket on laptops,
+// a bottom sheet on phones. The radio buttons inside still hold the values, so everything that reads the settings is unchanged.
 // The last choice is remembered under SETTINGS_KEY, for example {"time":"180","prep":"30"}: time in seconds
 // ("" for no limit), prep in seconds ("0" for none). It is checked strictly when read back.
 const SETTINGS_KEY = "speakreview.settings.v1";
@@ -3327,11 +3346,11 @@ settingsBackdrop.addEventListener("pointerdown", e => {
     closeSettings(true);
 });
 
-// A click or tap anywhere outside the tickets and the panel closes it. If that click doesn't land on
+// A click or tap anywhere outside the stub buttons and the panel closes it. If that click doesn't land on
 // something focusable, focus goes back to the ticket.
 document.addEventListener("pointerdown", e => {
     if (!openSetting || e.target === settingsBackdrop) return;
-    if (settingsPanel.contains(e.target) || e.target.closest(".ticket")) return;
+    if (settingsPanel.contains(e.target) || e.target.closest(".stub-btn")) return;
     const ticket = ticketFor(openSetting);
     closeSettings(false);
     setTimeout(() => {
@@ -3340,11 +3359,13 @@ document.addEventListener("pointerdown", e => {
     }, 0);
 });
 
-// Laptop: tabbing away from the tickets and the panel closes it
-settingsStrip.addEventListener("focusout", e => {
-    if (!openSetting || phoneQuery.matches) return;
-    if (e.relatedTarget && !settingsStrip.contains(e.relatedTarget)) closeSettings(false);
-});
+// Laptop: tabbing away from the stub buttons and the panel closes it
+function leftSettings(e) {
+    if (!openSetting || phoneQuery.matches || !e.relatedTarget) return;
+    if (!settingsStrip.contains(e.relatedTarget) && !e.relatedTarget.closest(".stub-btn")) closeSettings(false);
+}
+settingsStrip.addEventListener("focusout", leftSettings);
+[timeTicket, prepTicket].forEach(button => button.addEventListener("focusout", leftSettings));
 
 // Escape closes it. On phones Tab stays inside the sheet.
 document.addEventListener("keydown", e => {
