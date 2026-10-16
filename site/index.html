@@ -136,10 +136,12 @@
                             <span class="sheet-handle" aria-hidden="true"></span>
 
                             <div id="timePage" class="panel-page">
+                                <span class="panel-kicker" aria-hidden="true">Runtime</span>
                                 <div class="panel-head">
                                     <h2 class="panel-title" id="speakingTimeLabel">Speaking time</h2>
-                                    <p class="panel-help">How long you aim to speak. You can still go over: the timer just shows it.</p>
+                                    <p class="panel-help">How long your speech should last. Going over is fine.</p>
                                 </div>
+                                <span class="panel-divider" aria-hidden="true"><span></span><span class="panel-diamond"></span><span></span></span>
                                 <div class="choice-group" role="radiogroup" aria-labelledby="speakingTimeLabel">
                                     <label class="choice"><input type="radio" name="timeLimit" value="0" checked><span>No limit</span></label>
                                     <label class="choice"><input type="radio" name="timeLimit" value="60"><span>1 minute</span></label>
@@ -173,10 +175,12 @@
                             </div>
 
                             <div id="prepPage" class="panel-page" hidden>
+                                <span class="panel-kicker" aria-hidden="true">Curtain in</span>
                                 <div class="panel-head">
                                     <h2 class="panel-title" id="prepTimeLabel">Prep time</h2>
-                                    <p class="panel-help"><span class="long-label">Thinking time after you click the mic, before recording starts.</span><span class="short-label" aria-hidden="true">Thinking time after you tap the mic, before recording starts.</span></p>
+                                    <p class="panel-help">Thinking time before recording starts.</p>
                                 </div>
+                                <span class="panel-divider" aria-hidden="true"><span></span><span class="panel-diamond"></span><span></span></span>
                                 <div class="choice-group" role="radiogroup" aria-labelledby="prepTimeLabel">
                                     <label class="choice"><input type="radio" name="prepTime" value="0" checked><span>None</span></label>
                                     <label class="choice"><input type="radio" name="prepTime" value="30"><span>30 seconds</span></label>
@@ -186,7 +190,6 @@
                             </div>
 
                             <div class="panel-foot">
-                                <p class="panel-note"><span class="panel-note-laptop">Picking one closes this.</span> <span id="rememberNote">Remembered on this device for next time.</span></p>
                                 <button type="button" id="settingsDoneBtn" class="panel-done">Done</button>
                             </div>
                         </div>
@@ -205,6 +208,7 @@
                             </button>
                             <span class="link-dot" aria-hidden="true">·</span>
                             <button type="button" id="clearTopicBtn" class="btn-text btn-text-muted">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0"></path><path d="M12 18v3"></path></svg>
                                 <span class="long-label">Speak freely, no topic</span><span class="short-label" aria-hidden="true">No topic</span>
                             </button>
                         </div>

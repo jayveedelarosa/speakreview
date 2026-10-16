@@ -123,13 +123,14 @@ Privacy</button>
 </sc-if>
 
 <div style="margin-top: 16px; display: flex; align-items: center; gap: 6px">
-<button type="button" onClick="{{rollAct}}" style="display: inline-flex; align-items: center; gap: 10px; height: 46px; padding: 0 20px; border-radius: 999px; border: 1px solid #D9AE52; background: rgba(217,174,82,0.14); color: #F0CF86; font: 600 14px Manrope, system-ui, sans-serif; cursor: pointer">
+<button type="button" onClick="{{rollAct}}" style="display: inline-flex; align-items: center; gap: 10px; height: 46px; padding: 0 20px; {{rollSkin}} color: #F0CF86; font: 600 14px Manrope, system-ui, sans-serif; cursor: pointer">
 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h3.5l9 10H21"></path><path d="M3 17h3.5l3-3.4"></path><path d="M14.5 10.4l2-2.4H21"></path><path d="M18 5l3 3-3 3"></path><path d="M18 14l3 3-3 3"></path></svg>
 {{rollLabel}}</button>
-<button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 16px; border-radius: 999px; border: 0; background: transparent; color: #EFE2CF; font: 600 14px Manrope, system-ui, sans-serif">
+<button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 16px; border-radius: 999px; border: 0; background: transparent; color: #EFE2CF; font: 600 14px Manrope, system-ui, sans-serif; {{linkSkin}}">
 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"></path></svg>
 Write your own</button>
-<button type="button" onClick="{{freelyAct}}" style="height: 46px; padding: 0 16px; border-radius: 999px; border: 0; background: transparent; color: #BCA992; font: 500 14px Manrope, system-ui, sans-serif; cursor: pointer">Speak freely, no topic</button>
+<button type="button" onClick="{{freelyAct}}" style="display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 16px; border-radius: 999px; border: 0; background: transparent; color: #BCA992; font: 500 14px Manrope, system-ui, sans-serif; cursor: pointer; {{linkSkin}}"><sc-if value="{{dressed}}" hint-placeholder-val="{{false}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0"></path><path d="M12 18v3"></path></svg></sc-if>
+Speak freely, no topic</button>
 </div>
 
 <sc-if value="{{isChips}}" hint-placeholder-val="{{false}}">
@@ -168,18 +169,19 @@ Write your own</button>
 </sc-if>
 
 <sc-if value="{{open}}" hint-placeholder-val="{{false}}">
-<div role="dialog" aria-labelledby="srqF3Title" style="position: absolute; z-index: 30; width: 520px; padding: 16px 20px 16px; box-sizing: border-box; border-radius: 12px; border: 1px solid #B8893A; text-align: left; box-shadow: 0 18px 40px rgba(0,0,0,0.7); background: repeating-linear-gradient(90deg, rgba(0,0,0,0) 0 30px, rgba(0,0,0,0.10) 30px 31px), linear-gradient(180deg, #3A2010, #1F110A); display: flex; flex-direction: column; gap: 12px; {{panelBox}}">
-<sc-if value="{{showNotch}}" hint-placeholder-val="{{true}}"><span aria-hidden="true" style="position: absolute; top: -7px; width: 12px; height: 12px; transform: rotate(45deg); background: #3A2010; border-left: 1px solid #B8893A; border-top: 1px solid #B8893A; {{notchPos}}"></span></sc-if>
+<div role="dialog" aria-labelledby="srqF3Title" style="position: absolute; z-index: 30; width: 520px; padding: 16px 20px 16px; box-sizing: border-box; text-align: left; box-shadow: 0 18px 40px rgba(0,0,0,0.7); display: flex; flex-direction: column; gap: 12px; {{panelSkin}} {{panelBox}}">
+<sc-if value="{{showNotch}}" hint-placeholder-val="{{true}}"><span aria-hidden="true" style="position: absolute; transform: rotate(45deg); {{notchSkin}} {{notchPos}}"></span></sc-if>
 <div style="display: flex; flex-direction: column; gap: 3px">
+<sc-if value="{{dressed}}" hint-placeholder-val="{{false}}"><span style="font-size: 11px; font-weight: 800; letter-spacing: 0.24em; text-transform: uppercase; color: #D9AE52">{{sheetKicker}}</span></sc-if>
 <h2 id="srqF3Title" style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 21px; color: #FFF6E3">{{sheetTitle}}</h2>
 <span style="font-size: 13px; line-height: 1.4; color: #D8C6AE">{{sheetHelp}}</span>
 </div>
+<sc-if value="{{dressed}}" hint-placeholder-val="{{false}}"><span aria-hidden="true" style="display: flex; align-items: center; gap: 8px"><span style="flex: 1; height: 1px; background: linear-gradient(90deg, rgba(217,174,82,0), rgba(217,174,82,0.6))"></span><span style="width: 6px; height: 6px; transform: rotate(45deg); background: #D9AE52"></span><span style="flex: 1; height: 1px; background: linear-gradient(90deg, rgba(217,174,82,0.6), rgba(217,174,82,0))"></span></span></sc-if>
 <div role="radiogroup" aria-label="{{sheetTitle}}" style="display: flex; flex-wrap: wrap; gap: 8px">
 <sc-for list="{{sheetChips}}" as="c" hint-placeholder-count="5">
-<button type="button" role="radio" aria-checked="{{c.on}}" onClick="{{c.pick}}" style="height: 40px; padding: 0 14px; border-radius: 999px; cursor: pointer; font-family: Manrope, system-ui, sans-serif; font-size: 13px; {{c.style}}">{{c.label}}</button>
+<button type="button" role="radio" aria-checked="{{c.on}}" onClick="{{c.pick}}" style="height: 40px; padding: 0 14px; cursor: pointer; font-family: Manrope, system-ui, sans-serif; font-size: 13px; {{c.style}}">{{c.label}}</button>
 </sc-for>
 </div>
-<span style="font-size: 12px; color: #BCA992">Picking one closes this. Remembered on this device for next time.</span>
 </div>
 </sc-if>
 
@@ -200,9 +202,18 @@ Write your own</button>
 </sc-for>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"variant":{"editor":"enum","options":["ticket","props","chips"],"default":"ticket"},"color":{"editor":"enum","options":["ivory","orange"],"default":"ivory"},"wording":{"editor":"enum","options":["theatre","plain"],"default":"theatre"},"startOpen":{"editor":"enum","options":["none","time","prep"],"default":"none"},"freely":{"editor":"boolean","default":false},"$preview":{"width":1280,"height":800}}'>
+<script type="text/x-dc" data-dc-script data-props='{"variant":{"editor":"enum","options":["ticket","props","chips"],"default":"ticket"},"color":{"editor":"enum","options":["ivory","orange"],"default":"ivory"},"wording":{"editor":"enum","options":["theatre","plain"],"default":"theatre"},"startOpen":{"editor":"enum","options":["none","time","prep"],"default":"none"},"freely":{"editor":"boolean","default":false},"panel":{"editor":"enum","options":["plain","dressed"],"default":"plain"},"$preview":{"width":1280,"height":800}}'>
 class Component extends DCLogic {
 renderVals() {
+const dressed = this.props.panel === 'dressed';
+const rollSkin = dressed ? 'border-radius: 6px; border: 3px double #C9A24E; background: radial-gradient(ellipse 80% 90% at 50% 0%, rgba(255,205,130,0.16), rgba(0,0,0,0) 70%), rgba(217,174,82,0.12);' : 'border-radius: 999px; border: 1px solid #D9AE52; background: rgba(217,174,82,0.14);';
+const linkSkin = dressed ? 'text-decoration: underline dashed; text-decoration-thickness: 1px; text-underline-offset: 5px; text-decoration-color: rgba(217,174,82,0.65);' : '';
+const panelSkinP = 'border-radius: 12px; border: 1px solid #B8893A; background: repeating-linear-gradient(90deg, rgba(0,0,0,0) 0 30px, rgba(0,0,0,0.10) 30px 31px), linear-gradient(180deg, #3A2010, #1F110A);';
+const panelSkinD = 'border-radius: 10px; border: 3px double #C9A24E; background: radial-gradient(ellipse 80% 70% at 50% 0%, rgba(255,205,130,0.16), rgba(0,0,0,0) 70%), repeating-linear-gradient(90deg, rgba(0,0,0,0) 0 30px, rgba(0,0,0,0.12) 30px 31px), linear-gradient(180deg, #4A2914, #26130A);';
+const notchSkinP = 'top: -7px; width: 12px; height: 12px; background: #3A2010; border-left: 1px solid #B8893A; border-top: 1px solid #B8893A;';
+const notchSkinD = 'top: -9px; width: 13px; height: 13px; background: #4A2914; border-left: 3px double #C9A24E; border-top: 3px double #C9A24E;';
+const chipOn = 'border: 1px solid #D9AE52; background: #D9AE52; color: #1E1006; font-weight: 800;';
+const chipOffD = 'border: 1px dashed rgba(217,174,82,0.6); background: rgba(0,0,0,0.18); color: #F3E6D0; font-weight: 600;';
 const W = 1280, H = 800;
 const s = this.state || {};
 const variant = ['ticket', 'props', 'chips'].indexOf(this.props.variant) >= 0 ? this.props.variant : 'ticket';
@@ -220,7 +231,7 @@ const timeOpts = [['none', 'No limit'], ['1m', '1 minute'], ['3m', '3 minutes'],
 const prepOpts = [['off', 'None'], ['30s', '30 seconds'], ['1m', '1 minute'], ['2m', '2 minutes']];
 const timeVal = { none: 'No limit', '1m': '1 minute', '3m': '3 minutes', '5m': '5 minutes', custom: '2 min 30 sec' };
 const prepVal = { off: 'None', '30s': '30 seconds', '1m': '1 minute', '2m': '2 minutes' };
-const chip = (label, on, pick) => ({ label: label, on: on ? 'true' : 'false', pick: pick, style: on ? 'border: 1px solid #D9AE52; background: #D9AE52; color: #1E1006; font-weight: 800;' : 'border: 1px solid rgba(246,234,211,0.24); background: rgba(0,0,0,0.2); color: #EFE2CF; font-weight: 600;' });
+const chip = (label, on, pick) => ({ label: label, on: on ? 'true' : 'false', pick: pick, style: (on ? chipOn : (dressed ? chipOffD : 'border: 1px solid rgba(246,234,211,0.24); background: rgba(0,0,0,0.2); color: #EFE2CF; font-weight: 600;')) + (dressed ? ' border-radius: 6px;' : ' border-radius: 999px;') });
 const themes = {
 ivory: {
 paper: 'background: radial-gradient(ellipse 70% 90% at 42% 30%, rgba(255,244,214,0.45), rgba(0,0,0,0) 70%), repeating-linear-gradient(90deg, rgba(110,80,40,0.035) 0 1px, rgba(0,0,0,0) 1px 3px), repeating-linear-gradient(0deg, rgba(110,80,40,0.025) 0 1px, rgba(0,0,0,0) 1px 4px), linear-gradient(180deg, #E2CFA6, #C9B086);',
@@ -331,7 +342,12 @@ segs: [
 open: (variant === 'ticket' || variant === 'props') && (which === 'time' || which === 'prep'),
 panelBox: panelBox, notchPos: notchPos, showNotch: showNotch,
 sheetTitle: which === 'prep' ? 'Prep time' : 'Speaking time',
-sheetHelp: which === 'prep' ? 'Thinking time after you click the mic, before recording starts.' : 'How long you aim to speak. You can still go over: the timer just shows it.',
+sheetHelp: which === 'prep' ? 'Thinking time before recording starts.' : 'How long your speech should last. Going over is fine.',
+sheetKicker: which === 'prep' ? 'Curtain in' : 'Runtime',
+dressed: dressed,
+rollSkin: rollSkin, linkSkin: linkSkin,
+panelSkin: dressed ? panelSkinD : panelSkinP,
+notchSkin: dressed ? notchSkinD : notchSkinP,
 sheetChips: sheetChips,
 tapLine: prep === 'off' ? 'Click the mic to begin.' : 'Click the mic. You get ' + prepVal[prep] + ' to prepare, then recording starts.',
 signs: [

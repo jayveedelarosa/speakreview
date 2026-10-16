@@ -156,7 +156,6 @@ const settingsBackdrop = document.getElementById("settingsBackdrop");
 const timePage = document.getElementById("timePage");
 const prepPage = document.getElementById("prepPage");
 const settingsDoneBtn = document.getElementById("settingsDoneBtn");
-const rememberNote = document.getElementById("rememberNote");
 const phoneQuery = window.matchMedia("(max-width: 600px)");
 
 // Playback stops before sending, so the speech isn't still playing behind the curtains
@@ -3235,7 +3234,8 @@ function placePanelArrow() {
     if (!openSetting || phoneQuery.matches) return;
     const ticket = ticketFor(openSetting).getBoundingClientRect();
     const panel = settingsPanel.getBoundingClientRect();
-    settingsPanel.style.setProperty("--arrow-x", `${Math.round(ticket.left + ticket.width / 2 - panel.left)}px`);
+    // The arrow is placed from inside the panel's border, so the border width (clientLeft) is taken off
+    settingsPanel.style.setProperty("--arrow-x", `${Math.round(ticket.left + ticket.width / 2 - panel.left - settingsPanel.clientLeft)}px`);
 }
 
 function openSettings(which) {
@@ -3398,17 +3398,16 @@ phoneQuery.addEventListener("change", () => {
 window.addEventListener("resize", placePanelArrow);
 
 // ---- Remembering the choice on this device ----
-// An unfinished custom time is not saved. If storage is blocked, everything still works but the
-// "Remembered on this device" note is hidden.
+// An unfinished custom time is not saved. If storage is blocked, everything still works; the choice just
+// isn't remembered.
 function saveSettings() {
     const { valid, seconds } = getTimeLimit();
     if (!valid) return;
     const data = { time: seconds === null ? "" : String(seconds), prep: String(getPrepSeconds()) };
     try {
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
-        rememberNote.hidden = false;
     } catch (err) {
-        rememberNote.hidden = true;
+        // Storage is blocked or full: the choice still applies, it just isn't remembered
     }
 }
 
@@ -3424,7 +3423,6 @@ function readSavedSettings() {
     try {
         text = localStorage.getItem(SETTINGS_KEY);
     } catch (err) {
-        rememberNote.hidden = true;
         return { time: null, prep: null };
     }
     let data = null;
