@@ -160,52 +160,159 @@ textarea {
     color: var(--gold);
 }
 
+/* ---------- Navigation (feature set 2) ---------- */
+/* Laptops: marquee arrow signs in each room (Stage: on the curtains; Backstage: right of the mirror;
+   Wall of Fame: on the left wall). Phones and laptop windows too narrow for the signs use the bottom
+   bar (.main-nav) instead, see the bar section below. Signs and bar items are all .nav-item buttons,
+   so app.js switches rooms, marks the current one and locks them the same way. */
 .main-nav {
-    display: flex;
-    gap: 4px;
-    margin-left: auto;
-}
-
-.nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    min-height: 48px;
-    padding: 4px 14px;
-    border: 0;
-    border-radius: 12px;
-    background: transparent;
-    color: var(--text-sec);
-    cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.nav-item:hover {
-    background: rgba(217, 174, 82, 0.08);
-}
-
-.nav-item[aria-current="page"] {
-    background: rgba(217, 174, 82, 0.16);
-    color: var(--gold-light);
-}
-
-.nav-icon {
     display: none;
 }
 
-.nav-label {
-    font-size: 15px;
-    font-weight: 700;
-    line-height: 1.3;
+.sign {
+    position: absolute;
+    z-index: 5;
+    height: 70px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-family: var(--sans);
+    text-align: center;
+    cursor: pointer;
+    filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.6));
+    container-type: inline-size;
 }
 
-.nav-sub {
-    font-size: 11px;
-    font-weight: 500;
-    line-height: 1.3;
-    color: var(--muted);
+/* The arrow: a gold shape with a near-black face 3px inside it, pointing with a 22px tip */
+.sign-gold,
+.sign-face,
+.sign-bulbs {
+    position: absolute;
+    inset: 0;
 }
+
+.sign-gold {
+    background: #B8893A;
+}
+
+.sign-face {
+    background: #1E0806;
+}
+
+.sign-left .sign-gold {
+    clip-path: polygon(22px 0, 100% 0, 100% 100%, 22px 100%, 0 50%);
+}
+
+.sign-left .sign-face {
+    clip-path: polygon(24px 3px, calc(100% - 3px) 3px, calc(100% - 3px) calc(100% - 3px), 24px calc(100% - 3px), 4.8px 50%);
+}
+
+.sign-right .sign-gold {
+    clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%);
+}
+
+.sign-right .sign-face {
+    clip-path: polygon(3px 3px, calc(100% - 24px) 3px, calc(100% - 4.8px) 50%, calc(100% - 24px) calc(100% - 3px), 3px calc(100% - 3px));
+}
+
+/* Small lit bulbs along the top and bottom edges (app.js places them for the sign's width). Still: no animation. */
+.sign-bulb {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: radial-gradient(circle at 40% 35%, #FFFFFF, #FFDFA0 60%);
+    box-shadow: 0 0 6px 2px rgba(255, 200, 120, 0.7);
+}
+
+.sign-text {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1px;
+}
+
+.sign-left .sign-text {
+    left: 26px;
+    right: 8px;
+}
+
+.sign-right .sign-text {
+    left: 8px;
+    right: 26px;
+}
+
+.sign-name {
+    font-family: var(--serif);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    line-height: 1.05;
+    text-transform: uppercase;
+    color: #FFE7B0;
+    text-shadow: 0 0 10px rgba(255, 200, 120, 0.55);
+}
+
+/* Signs narrower than 125px use a smaller name, as in the design */
+@container (max-width: 124.98px) {
+    .sign-name {
+        font-size: 13px;
+    }
+}
+
+.sign-sub {
+    font-size: 11px;
+    line-height: 1.3;
+    color: #D8C6AE;
+}
+
+.sign:hover .sign-name {
+    color: #FFF3D6;
+}
+
+.sign:focus-visible {
+    outline: 2px solid var(--gold-light);
+    outline-offset: 3px;
+}
+
+.sign:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Stage: on the curtains, 42% of the way down, as wide as the curtain minus 14px */
+#signBackstage,
+#signWall {
+    grid-row: auto / floor;
+    top: 42%;
+    width: calc(var(--curtain-w) - 14px);
+}
+
+#signBackstage {
+    left: 6px;
+}
+
+#signWall {
+    right: 6px;
+}
+
+/* Backstage: on the wall right of the mirror */
+#signStageFromBackstage {
+    top: 45%;
+    right: 8px;
+    width: 134px;
+}
+
+/* Wall of Fame: on the left wall */
+#signStageFromWall {
+    top: 42.5%;
+    left: 10px;
+    width: 128px;
+}
+
 
 /* Privacy: a quiet link at the top right (smaller and dimmer than the menu items, so it doesn't
    look like another screen) that opens a small panel right under it */
@@ -530,6 +637,7 @@ textarea {
     width: min(860px, 100%);
     filter: drop-shadow(0 16px 22px rgba(0, 0, 0, 0.6));
     transform: rotate(-0.8deg);
+    container: ticket / inline-size;
 }
 
 .ticket {
@@ -937,6 +1045,103 @@ textarea {
 .btn-text:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* ---------- Narrow tickets on laptop windows (below about 1018px): the phone ticket layout ---------- */
+/* At 700px and narrower the laptop ticket has no room for its top row or a 2-line 40px topic (most topics
+   were cut off), so it uses the phone arrangement: label and serial, then the badge, a 3-line 22px topic and
+   the hint, with the 116px stub. Every row keeps a fixed height, so the ticket still never changes height.
+   On laptop windows the stub still opens the wooden panel below, so its chevron keeps pointing down. */
+@container ticket (max-width: 700px) {
+    .ticket {
+        --corner: 9px;
+    }
+
+    .ticket-border {
+        inset: 7px;
+    }
+
+    .ticket-main {
+        --topic-size: 22px;
+        --topic-lines: 3;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-rows: auto 26px calc(7px + var(--topic-size) * 1.15 * var(--topic-lines) + 4px) 19px;
+        padding: 16px 12px 15px 18px;
+    }
+
+    .topic-meta,
+    .topic-badge-group,
+    .topic-stage {
+        display: contents;
+    }
+
+    .topic-label {
+        grid-column: 1;
+        grid-row: 1;
+        align-self: center;
+        letter-spacing: 0.14em;
+    }
+
+    .ticket-serial {
+        grid-column: 2;
+        grid-row: 1;
+        align-self: center;
+        margin-left: 6px;
+        font-size: 11px;
+        letter-spacing: 0;
+    }
+
+    .topic-badge {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        justify-self: start;
+        align-self: end;
+        height: 20px;
+        padding: 0 8px;
+        letter-spacing: 0.06em;
+    }
+
+    .topic-input {
+        grid-column: 1 / -1;
+        grid-row: 3;
+        align-self: start;
+        margin: 5px -6px 0;
+        line-height: 1.15;
+        letter-spacing: 0;
+    }
+
+    .topic-hint,
+    .open-mic-line {
+        grid-column: 1 / -1;
+        grid-row: 4;
+        align-self: end;
+        margin: 0;
+        font-size: 11px;
+        line-height: 15px;
+    }
+
+    .ticket-stub {
+        flex-basis: 116px;
+        padding: 13px 10px 13px 8px;
+    }
+
+    .stub-btn {
+        padding: 6px 7px;
+    }
+
+    .stub-label {
+        gap: 3px;
+        letter-spacing: 0.04em;
+    }
+
+    .stub-value {
+        font-size: 15px;
+    }
+
+    .ticket-admit {
+        display: none;
+    }
 }
 
 /* ---------- Settings panel and sheet (opened from the ticket's stub) ---------- */
@@ -3414,6 +3619,257 @@ body.curtains-closed .drape {
     }
 }
 
+/* ---------- Bottom bar: phones, and laptop windows too narrow for the signs ---------- */
+/* Below 1280px the curtain signs (12vw minus 14px) get too narrow for "BACKSTAGE" (measured: it first fits
+   at 1280), so the bottom bar (F2PhoneNav) is the navigation instead, on laptop-style layouts too. The phone
+   layout itself still starts at 600px. */
+@media (max-width: 1279px) {
+    :root {
+        --tabbar-h: 64px;
+        /* How far the bar reaches up the page: its height plus the 18px the round Stage sign stands up */
+        --bar-reach: calc(var(--tabbar-h) + 18px);
+    }
+
+    /* Room for the bar at the bottom of every room */
+    body {
+        padding-bottom: var(--tabbar-h);
+    }
+
+    .stage {
+        min-height: calc(100vh - var(--tabbar-h));
+        min-height: calc(100dvh - var(--tabbar-h));
+    }
+
+    .backstage {
+        --backstage-space: calc(var(--backstage-top) + var(--backstage-bottom) + var(--bar-reach));
+        padding-bottom: calc(var(--backstage-bottom) + 18px);
+        min-height: calc(100vh - var(--tabbar-h));
+        min-height: calc(100dvh - var(--tabbar-h));
+    }
+
+    .wall {
+        height: max(calc(100vh - var(--tabbar-h)), 480px);
+        height: max(calc(100dvh - var(--tabbar-h)), 480px);
+    }
+
+    /* When the laptop settings panel opens it is scrolled into view above the bar (see openSettings) */
+    .settings-panel {
+        scroll-margin-bottom: calc(var(--tabbar-h) + 8px);
+    }
+
+    /* The Wall's scrolling area (and the Backstage mirror, through --backstage-space) stop above the raised Stage sign */
+    .wall-scroll {
+        margin-bottom: 18px;
+    }
+
+    .sign {
+        display: none;
+    }
+
+    /* The round Stage sign stands 18px up out of the bar, so the Stage floor keeps that much more room */
+    .stage-floor {
+        margin-bottom: 18px;
+    }
+
+    /* Dark bar with a gold top edge: Backstage, the round Stage sign, Wall of Fame */
+    .main-nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 30;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        height: var(--tabbar-h);
+        border-top: 2px solid #D9AE52;
+        background: linear-gradient(180deg, #24100C, #120806);
+        box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.5);
+    }
+
+    .main-nav .nav-item {
+        position: relative;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        font-family: var(--sans);
+        cursor: pointer;
+    }
+
+    .main-nav .nav-item:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Backstage and Wall of Fame: icon and label. The current one gets a brass name plate and a small
+       arc of three lit bulbs. */
+    .nav-side {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding-top: 6px;
+        color: #C9B79F;
+    }
+
+    .nav-side:hover {
+        color: #EFE2CF;
+    }
+
+    .nav-side[aria-current="page"] {
+        color: #F0CF86;
+    }
+
+    .nav-side .nav-icon {
+        margin-top: 6px;
+    }
+
+    .nav-side .nav-label {
+        display: inline-flex;
+        align-items: center;
+        height: 17px;
+        padding: 0 8px;
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1;
+    }
+
+    .nav-side[aria-current="page"] .nav-label {
+        background: linear-gradient(180deg, #F0CF86, #B8893A);
+        color: #2A1806;
+        font-weight: 800;
+    }
+
+    .nav-arc {
+        position: absolute;
+        top: 6px;
+        left: 0;
+        right: 0;
+        display: none;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .nav-side[aria-current="page"] .nav-arc {
+        display: flex;
+    }
+
+    .nav-bulb {
+        width: 5px;
+        height: 5px;
+        border-radius: 999px;
+        background: radial-gradient(circle at 40% 35%, #FFFFFF, #FFDFA0 60%);
+        box-shadow: 0 0 6px 2px rgba(255, 200, 120, 0.7);
+    }
+
+    .nav-bulb:first-child,
+    .nav-bulb:last-child {
+        margin-top: 4px;
+    }
+
+    /* Stage: the button fills the middle third of the bar (the tap area); the round red velvet sign
+       stands 18px up out of the bar, ringed by 12 bulbs (lit on the Stage, dim elsewhere). */
+    .nav-stage {
+        color: #C9B79F;
+    }
+
+    .nav-stage[aria-current="page"] {
+        color: #FFE7B0;
+    }
+
+    .stage-disc {
+        position: absolute;
+        bottom: 6px;
+        left: 50%;
+        width: 76px;
+        height: 76px;
+        margin-left: -38px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1px;
+        border: 2px solid #D9AE52;
+        border-radius: 999px;
+        background: radial-gradient(circle at 50% 35%, #6C131E, #3A0A10 70%);
+        box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.6), inset 0 0 12px rgba(0, 0, 0, 0.5);
+    }
+
+    .nav-stage .nav-label {
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1.3;
+    }
+
+    .nav-stage[aria-current="page"] .nav-label {
+        font-weight: 800;
+    }
+
+    /* The focus ring goes round the disc, not the whole third of the bar */
+    .nav-stage:focus-visible {
+        outline: none;
+    }
+
+    .nav-stage:focus-visible .stage-disc {
+        outline: 2px solid var(--gold-light);
+        outline-offset: 3px;
+    }
+
+    .ring-bulbs {
+        position: absolute;
+        inset: 0;
+    }
+
+    .ring-bulb {
+        position: absolute;
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: #7A5A3A;
+        opacity: 0.55;
+    }
+
+    .nav-stage[aria-current="page"] .ring-bulb {
+        background: radial-gradient(circle at 40% 35%, #FFFFFF, #FFDFA0 60%);
+        box-shadow: 0 0 6px 2px rgba(255, 200, 120, 0.7);
+        opacity: 1;
+    }
+
+    /* Placed around the ring: 33 + 31 x cos and sin of each twelfth of a turn */
+    .ring-bulb-1 { left: 64px; top: 33px; }
+    .ring-bulb-2 { left: 59.8px; top: 48.5px; }
+    .ring-bulb-3 { left: 48.5px; top: 59.8px; }
+    .ring-bulb-4 { left: 33px; top: 64px; }
+    .ring-bulb-5 { left: 17.5px; top: 59.8px; }
+    .ring-bulb-6 { left: 6.2px; top: 48.5px; }
+    .ring-bulb-7 { left: 2px; top: 33px; }
+    .ring-bulb-8 { left: 6.2px; top: 17.5px; }
+    .ring-bulb-9 { left: 17.5px; top: 6.2px; }
+    .ring-bulb-10 { left: 33px; top: 2px; }
+    .ring-bulb-11 { left: 48.5px; top: 6.2px; }
+    .ring-bulb-12 { left: 59.8px; top: 17.5px; }
+}
+
+/* Laptop windows wide enough for the signs: the Backstage mirror and the Wall leave room on the sides */
+@media (min-width: 1280px) {
+    .backstage {
+        padding-left: max(150px, 11.72vw);
+        padding-right: max(150px, 11.72vw);
+    }
+
+    .wall-scroll {
+        padding-left: max(150px, 7vw);
+        padding-right: max(150px, 7vw);
+    }
+
+    /* All 8 trophies stay on one row: the gaps shrink from 22px (to about 12px at 1280) only when needed */
+    .shelf-list {
+        column-gap: clamp(11px, calc((100% - 897px) / 7), 22px);
+    }
+}
+
 /* ---------- Phones (about 360 to 412 px wide), following theatre-phone.dc.html ---------- */
 @media (max-width: 600px) {
     :root {
@@ -3427,14 +3883,8 @@ body.curtains-closed .drape {
         --topic-lines: 3;
         --control-h: 34px;
         --roll-h: 40px;
-        --tabbar-h: 64px;
         --mic-w: 96px;
         --mic-h: 125px;
-    }
-
-    /* Room for the tab bar at the bottom */
-    body {
-        padding-bottom: var(--tabbar-h);
     }
 
     .short-label {
@@ -3478,52 +3928,6 @@ body.curtains-closed .drape {
     .privacy-btn {
         height: 34px;
         font-size: 11px;
-    }
-
-    /* Bottom tab bar */
-    .main-nav {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 30;
-        display: grid;
-        grid-auto-flow: column;
-        grid-auto-columns: minmax(0, 1fr);
-        gap: 0;
-        height: var(--tabbar-h);
-        background: #12070A;
-        border-top: 2px solid var(--gold);
-    }
-
-    .nav-item {
-        align-items: center;
-        gap: 3px;
-        min-height: 0;
-        padding: 0;
-        border-radius: 0;
-        color: var(--muted);
-    }
-
-    .nav-item:hover,
-    .nav-item[aria-current="page"] {
-        background: transparent;
-    }
-
-    .nav-item[aria-current="page"] {
-        color: var(--gold-light);
-    }
-
-    .nav-icon {
-        display: block;
-    }
-
-    .nav-label {
-        font-size: 11px;
-    }
-
-    .nav-sub {
-        display: none;
     }
 
     /* Stage */
@@ -4121,10 +4525,10 @@ body.curtains-closed .drape {
     .backstage {
         --backstage-top: 54px;
         --backstage-bottom: 10px;
-        --backstage-space: calc(var(--backstage-top) + var(--backstage-bottom) + var(--tabbar-h));
+        --backstage-space: calc(var(--backstage-top) + var(--backstage-bottom) + var(--bar-reach));
         min-height: calc(100vh - var(--tabbar-h));
         min-height: calc(100dvh - var(--tabbar-h));
-        padding: var(--backstage-top) 10px var(--backstage-bottom);
+        padding: var(--backstage-top) 10px calc(var(--backstage-bottom) + 18px);
         background:
             radial-gradient(ellipse 80% 30% at 50% 0%, rgba(255, 220, 150, 0.10), rgba(0, 0, 0, 0) 70%),
             repeating-linear-gradient(90deg, var(--backstage-wall) 0 96px, var(--backstage-stripe) 96px 98px),

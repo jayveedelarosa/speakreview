@@ -72,7 +72,11 @@ const fileInfo = document.getElementById("fileInfo");
 const uploadLabel = document.getElementById("uploadLabel");
 const privacyBtn = document.getElementById("privacyBtn");
 const privacyNote = document.getElementById("privacyNote");
+// The room switchers: the bottom bar buttons and the marquee signs (all .nav-item)
 const navButtons = document.querySelectorAll(".nav-item");
+const signs = document.querySelectorAll(".sign");
+const signBackstage = document.getElementById("signBackstage");
+const signWall = document.getElementById("signWall");
 const backstageView = document.getElementById("backstageView");
 const backToStageBtn = document.getElementById("backToStageBtn");
 const tryAgainBtn = document.getElementById("tryAgainBtn");
@@ -1049,6 +1053,7 @@ function showView(name) {
         closeTrophyPopover(false);
     }
     if (isStage) fitTopicHeight();      // the topic may have changed while the stage was hidden
+    layoutSignBulbs();                  // the new room's sign was hidden until now
     window.scrollTo(0, 0);
 }
 
@@ -1068,6 +1073,7 @@ function focusBackstageHeading() {
 function goToView(name) {
     return queueScene(async () => {
         if (intermissionOn) return;          // during Intermission, its end decides where the curtains open
+        const from = currentView;
         if (name !== currentView) {
             if (prefersReducedMotion()) {
                 showView(name);
@@ -1082,6 +1088,43 @@ function goToView(name) {
         }
         if (name === "backstage") focusBackstageHeading();
         if (name === "wall") wallTitle.focus({ preventScroll: true });
+        if (name === "stage" && from !== "stage") focusSignBack(from);
+    });
+}
+
+// Laptop signs vanish with their room. If the one just used took focus with it, focus goes to the
+// Stage sign that leads back to the room just left (phones keep focus on the bottom bar, as before).
+function focusSignBack(from) {
+    const active = document.activeElement;
+    if (active && active !== document.body && active.getClientRects().length > 0) return;
+    const sign = from === "wall" ? signWall : signBackstage;
+    if (sign.getClientRects().length > 0 && !sign.disabled) sign.focus({ preventScroll: true });
+}
+
+// Each sign's bulbs, spaced along its top and bottom edges for its current width (as in the design:
+// about every 13px between the tip and the far end)
+const SIGN_TIP = 22;
+function layoutSignBulbs() {
+    signs.forEach(sign => {
+        const w = sign.offsetWidth;
+        const h = sign.offsetHeight;
+        if (!w) return;                       // hidden: laid out again when it shows
+        const left = sign.classList.contains("sign-left");
+        const x0 = left ? SIGN_TIP + 6 : 8;
+        const x1 = left ? w - 12 : w - SIGN_TIP - 10;
+        const n = Math.max(3, Math.floor((x1 - x0) / 13));
+        const row = sign.querySelector(".sign-bulbs");
+        row.textContent = "";
+        for (let k = 0; k <= n; k++) {
+            const x = x0 + (k / n) * (x1 - x0) - 3;
+            [5, h - 11].forEach(y => {
+                const bulb = document.createElement("span");
+                bulb.className = "sign-bulb";
+                bulb.style.setProperty("left", `${x.toFixed(1)}px`);
+                bulb.style.setProperty("top", `${y}px`);
+                row.append(bulb);
+            });
+        }
     });
 }
 
@@ -1153,6 +1196,8 @@ function revealNotes() {
 navButtons.forEach(button => {
     button.addEventListener("click", () => goToView(button.dataset.view));
 });
+window.addEventListener("resize", layoutSignBulbs);
+layoutSignBulbs();
 backToStageBtn.addEventListener("click", () => goToView("stage"));
 goToStageBtn.addEventListener("click", () => goToView("stage"));
 
@@ -3260,6 +3305,9 @@ function openSettings(which) {
     }
     updateTickets();
     placePanelArrow();
+    // On short laptop windows the panel can open below the fold or under the bottom bar: bring it into view
+    // (only as far as needed; its scroll-margin keeps it clear of the bar)
+    if (!phone) settingsPanel.scrollIntoView({ block: "nearest" });
     const checked = page.querySelector("input:checked");
     if (checked) checked.focus({ preventScroll: true });
 }

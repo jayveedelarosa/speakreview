@@ -26,21 +26,26 @@
             <span>Speak<span class="logo-accent">Review</span></span>
         </h1>
 
+        <!-- The bottom bar: on phones, and on laptop windows too narrow for the marquee signs (see styles.css).
+             Wider laptop windows use the signs on the stage, mirror wall and Wall of Fame instead. -->
         <nav class="main-nav" aria-label="Main">
-            <button type="button" class="nav-item" id="navStage" data-view="stage" aria-current="page">
-                <svg class="nav-icon" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 3h6v11a3 3 0 0 1-6 0z M5 11a7 7 0 0 0 14 0 M12 18v3"></path></svg>
-                <span class="nav-label">Stage</span>
-                <span class="nav-sub">Practice</span>
-            </button>
-            <button type="button" class="nav-item" id="navBackstage" data-view="backstage">
-                <svg class="nav-icon" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 3h12v18H6z M9 8h6 M9 12h6 M9 16h4"></path></svg>
+            <button type="button" class="nav-item nav-side" id="navBackstage" data-view="backstage">
+                <span class="nav-arc" aria-hidden="true"><span class="nav-bulb"></span><span class="nav-bulb"></span><span class="nav-bulb"></span></span>
+                <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 3h12v18H6z M9 8h6 M9 12h6 M9 16h4"></path></svg>
                 <span class="nav-label">Backstage</span>
-                <span class="nav-sub">Your feedback</span>
             </button>
-            <button type="button" class="nav-item" id="navWall" data-view="wall">
-                <svg class="nav-icon" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 4h10v5a5 5 0 0 1-10 0z M7 6H4a3 3 0 0 0 4 4 M17 6h3a3 3 0 0 1-4 4 M12 14v4 M8 20h8"></path></svg>
+            <button type="button" class="nav-item nav-stage" id="navStage" data-view="stage" aria-current="page">
+                <!-- The button fills its third of the bar (as before); the round sign stands up out of it -->
+                <span class="stage-disc">
+                    <span class="ring-bulbs" aria-hidden="true"><span class="ring-bulb ring-bulb-1"></span><span class="ring-bulb ring-bulb-2"></span><span class="ring-bulb ring-bulb-3"></span><span class="ring-bulb ring-bulb-4"></span><span class="ring-bulb ring-bulb-5"></span><span class="ring-bulb ring-bulb-6"></span><span class="ring-bulb ring-bulb-7"></span><span class="ring-bulb ring-bulb-8"></span><span class="ring-bulb ring-bulb-9"></span><span class="ring-bulb ring-bulb-10"></span><span class="ring-bulb ring-bulb-11"></span><span class="ring-bulb ring-bulb-12"></span></span>
+                    <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 3h6v11a3 3 0 0 1-6 0z M5 11a7 7 0 0 0 14 0 M12 18v3"></path></svg>
+                    <span class="nav-label">Stage</span>
+                </span>
+            </button>
+            <button type="button" class="nav-item nav-side" id="navWall" data-view="wall">
+                <span class="nav-arc" aria-hidden="true"><span class="nav-bulb"></span><span class="nav-bulb"></span><span class="nav-bulb"></span></span>
+                <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 4h10v5a5 5 0 0 1-10 0z M7 6H4a3 3 0 0 0 4 4 M17 6h3a3 3 0 0 1-4 4 M12 14v4 M8 20h8"></path></svg>
                 <span class="nav-label">Wall of Fame</span>
-                <span class="nav-sub">Past performances</span>
             </button>
         </nav>
 
@@ -72,6 +77,18 @@
                 <div class="scallops" aria-hidden="true"></div>
                 <!-- Lights up red while recording (state changes are announced through #sceneAnnounce) -->
                 <div id="onAir" class="on-air" aria-hidden="true">ON AIR</div>
+
+                <!-- Marquee arrow signs on the curtains: the navigation on laptops (hidden on narrow windows, which use the bottom bar) -->
+                <button type="button" id="signBackstage" class="nav-item sign sign-left" data-view="backstage" aria-label="Go to Backstage, your feedback">
+                    <span class="sign-gold" aria-hidden="true"></span><span class="sign-face" aria-hidden="true"></span>
+                    <span class="sign-bulbs" aria-hidden="true"></span>
+                    <span class="sign-text" aria-hidden="true"><span class="sign-name">Backstage</span><span class="sign-sub">Your feedback</span></span>
+                </button>
+                <button type="button" id="signWall" class="nav-item sign sign-right" data-view="wall" aria-label="Go to Wall of Fame, past shows">
+                    <span class="sign-gold" aria-hidden="true"></span><span class="sign-face" aria-hidden="true"></span>
+                    <span class="sign-bulbs" aria-hidden="true"></span>
+                    <span class="sign-text" aria-hidden="true"><span class="sign-name">Wall of Fame</span><span class="sign-sub">Past shows</span></span>
+                </button>
 
                 <!-- The topic is printed on a paper theatre ticket. Speaking time and Prep time are on its stub
                      (RUNTIME and CURTAIN IN); each opens its setting in a wooden panel under the ticket on laptops,
@@ -381,6 +398,13 @@
 
         <!-- Backstage: a dressing room mirror with the speech summary on the left and Coach's notes on the right -->
         <section id="backstageView" class="backstage" aria-label="Backstage" hidden>
+            <!-- Laptops: the way back, on the wall right of the mirror -->
+            <button type="button" id="signStageFromBackstage" class="nav-item sign sign-right" data-view="stage" aria-label="Go to Stage, back to practice">
+                <span class="sign-gold" aria-hidden="true"></span><span class="sign-face" aria-hidden="true"></span>
+                <span class="sign-bulbs" aria-hidden="true"></span>
+                <span class="sign-text" aria-hidden="true"><span class="sign-name">Stage</span><span class="sign-sub">Back to practice</span></span>
+            </button>
+
             <div class="mirror" id="mirror">
                 <!-- Bulbs around the frame: decorative only -->
                 <div class="bulbs" aria-hidden="true">
@@ -433,6 +457,12 @@
 
         <!-- Wall of Fame: past performances as framed playbills on a red wall (saved only in this browser) -->
         <section id="wallView" class="wall" aria-labelledby="wallTitle" hidden>
+            <!-- Laptops: the way back, on the left wall -->
+            <button type="button" id="signStageFromWall" class="nav-item sign sign-left" data-view="stage" aria-label="Go to Stage, back to practice">
+                <span class="sign-gold" aria-hidden="true"></span><span class="sign-face" aria-hidden="true"></span>
+                <span class="sign-bulbs" aria-hidden="true"></span>
+                <span class="sign-text" aria-hidden="true"><span class="sign-name">Stage</span><span class="sign-sub">Back to practice</span></span>
+            </button>
             <!-- On laptops this whole area scrolls. On phones only #wallFrames scrolls. -->
             <div class="wall-scroll">
                 <div class="wall-head">
