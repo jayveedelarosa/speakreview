@@ -102,6 +102,16 @@ textarea {
     font: inherit;
 }
 
+/* No blue tap flash on phones (Android Chrome). Keyboard focus rings (:focus-visible) are unaffected. */
+a,
+button,
+label,
+input,
+textarea,
+.nav-item {
+    -webkit-tap-highlight-color: transparent;
+}
+
 /* Visible keyboard focus for everything that can be focused */
 :focus-visible {
     outline: 2px solid var(--gold-light);
