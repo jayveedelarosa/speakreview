@@ -17,6 +17,24 @@ const MIN_TAKE_SECONDS = 15;
 const REC_WARNING_SECONDS = MAX_DURATION_MINUTES * 60 - 30;           // 9:30
 const COUNTDOWN_FROM = 3;
 
+// Uploads: any audio or video file is converted on this device to the same WAV as a live recording.
+// The original file's size is checked before it is read (phones have less memory to decode it in).
+const MAX_SOURCE_MB_LAPTOP = 200;
+const MAX_SOURCE_MB_PHONE = 100;
+const UPLOAD_LENGTH_GRACE_SECONDS = 0.5;    // encoders add a few ms of padding, so a file shown as 10:00 still fits
+const UPLOAD_EXTENSIONS = ["mp3", "m4a", "aac", "wav", "ogg", "oga", "opus", "webm", "flac", "mp4", "mov", "m4v", "3gp", "wma", "amr", "aif", "aiff", "caf", "mkv"];
+const UNREADABLE_TEXT = "The sound in this file couldn't be read. Try another file or format.";
+const TOO_LONG_TEXT = `This recording is longer than ${MAX_DURATION_MINUTES} minutes. Please upload a shorter speech.`;
+
+// Silence checks, all on this device. A 50 ms stretch is "near-silence" when its loudness (RMS) is below
+// -50 dB: room noise after the mic's noise suppression is about -60 to -70 dB, quiet speech about -40 to -30.
+// A take or file is "almost silent" when 95% or more of it is near-silence (normal speech is 20-40% pauses).
+const SILENCE_DB = -50;
+const SILENCE_LEVEL = Math.pow(10, SILENCE_DB / 20) * 32768;      // the same in 16-bit sample units (about 104)
+const SILENCE_FRAME_SECONDS = 0.05;
+const ALMOST_SILENT_SHARE = 0.95;
+const MIC_CHECK_SECONDS = 5;               // while recording: nothing heard for this long shows the mic hint
+
 // Label and hint shown for each type of random topic
 const TOPIC_TYPE_INFO = {
     persuade: { label: "Persuade", hint: "Take a side and back it up" },
@@ -161,18 +179,33 @@ const timePage = document.getElementById("timePage");
 const prepPage = document.getElementById("prepPage");
 const settingsDoneBtn = document.getElementById("settingsDoneBtn");
 const phoneQuery = window.matchMedia("(max-width: 600px)");
+const fileSilence = document.getElementById("fileSilence");
+const fileSilenceChooseBtn = document.getElementById("fileSilenceChooseBtn");
+const micCheck = document.getElementById("micCheck");
+const takeSilence = document.getElementById("takeSilence");
+const notesHint = document.getElementById("notesHint");
 
 // Playback stops before sending, so the speech isn't still playing behind the curtains
 uploadBtn.addEventListener("click", () => {
     pausePlayers();
-    upload();
+    if (preparedUpload) upload(preparedUpload);
 });
 
 // ---------------------------
-// Show the chosen file name
+// Show the chosen file name, then convert it
 // ---------------------------
+let preparedUpload = null;     // { blob, seconds, source: "upload" } once the picked file is converted
+let prepareRequest = 0;        // counts picks, so a slow old conversion can't replace a newer one
+
 function showFileName() {
     const file = fileInput.files[0];
+    const request = ++prepareRequest;
+    preparedUpload = null;
+    fileLengthSeconds = null;
+    setFileSilence(false);
+    // A conversion that was still running is dropped, so its "Preparing" line goes too
+    if (statusText.textContent === "Preparing your file...") statusText.textContent = "";
+    fileInfo.removeAttribute("aria-busy");
     if (file) {
         fileNameText.textContent = file.name;
         fileNameText.title = file.name;
@@ -182,27 +215,153 @@ function showFileName() {
         fileNameText.title = "";
         fileNameText.classList.remove("has-file");
     }
-    // The Send button and file details only appear once a file is picked
+    // The name shows right away. The player and the Send button wait until the file is converted.
     fileInfo.hidden = !file;
-    uploadBtn.hidden = !file;
+    uploadBtn.hidden = true;
+    filePlayer.clear();
+    filePlayerBox.hidden = true;
     // With the mic as the main action, upload is the second choice
-    uploadLabel.textContent = file ? "Choose another MP3" : (micSupported ? "or upload an MP3" : "Upload an MP3");
-    // The player above the Send button: a new file replaces (and frees) the old one
-    if (file) {
-        filePlayer.load(URL.createObjectURL(file));
-    } else {
-        filePlayer.clear();
-    }
-    filePlayerBox.hidden = !file;
-    const lengthRead = updateLengthFromFile();
-    if (file) {
-        loadFileWaveform(file, lengthRead);
-    } else {
-        waveRequest++;            // a waveform still being worked out for the old file is ignored
-    }
+    uploadLabel.textContent = file ? "Choose another file" : (micSupported ? "or upload a recording" : "Upload a recording");
+    renderLengthLine();
+    if (file) prepareUpload(file, request);
 }
 
 fileInput.addEventListener("change", showFileName);
+
+// Clears the picked file and shows why (nothing is sent)
+function rejectFile(message, request) {
+    if (request !== prepareRequest) return;
+    fileInput.value = "";
+    showFileName();
+    statusText.textContent = message;
+}
+
+// Audio or video, by its type or (when the browser doesn't say) its name
+function isMediaFile(file) {
+    if (/^(audio|video)\//.test(file.type)) return true;
+    const match = file.name.toLowerCase().match(/\.([a-z0-9]+)$/);
+    return Boolean(match) && UPLOAD_EXTENSIONS.includes(match[1]);
+}
+
+function maxSourceMb() {
+    return isLowMemoryDevice() ? MAX_SOURCE_MB_PHONE : MAX_SOURCE_MB_LAPTOP;
+}
+
+// Decodes the sound of a file at 16 kHz (the browser resamples it). Returns an AudioBuffer, or null if the
+// sound can't be read. If the browser refuses a 16 kHz context, it decodes at its own rate instead.
+async function decodeAtRecRate(bytes) {
+    const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!Offline) return null;
+    let context = null;
+    try {
+        context = new Offline(1, 1, REC_SAMPLE_RATE);
+    } catch (err) {
+        try {
+            context = new Offline(1, 1, 44100);
+        } catch (err2) {
+            return null;
+        }
+    }
+    try {
+        return await context.decodeAudioData(bytes);
+    } catch (err) {
+        return null;
+    }
+}
+
+// Mixes every channel down to one, converts to 16 kHz if needed, and returns 16-bit chunks
+function bufferToPcmChunks(buffer) {
+    const length = buffer.length;
+    const mono = new Float32Array(length);
+    for (let c = 0; c < buffer.numberOfChannels; c++) {
+        const data = buffer.getChannelData(c);
+        for (let i = 0; i < length; i++) mono[i] += data[i];
+    }
+    if (buffer.numberOfChannels > 1) {
+        for (let i = 0; i < length; i++) mono[i] /= buffer.numberOfChannels;
+    }
+    let samples = mono;
+    if (buffer.sampleRate !== REC_SAMPLE_RATE) {
+        // The same converter the live recorder uses, with silence at the end to flush its last samples
+        const resampler = createResampler(buffer.sampleRate);
+        const head = resampler(mono);
+        const tail = resampler(new Float32Array(64));
+        const wanted = Math.round(length * REC_SAMPLE_RATE / buffer.sampleRate);
+        samples = new Float32Array(wanted);
+        samples.set(head.subarray(0, wanted));
+        if (head.length < wanted) samples.set(tail.subarray(0, wanted - head.length), head.length);
+    }
+    return [toPcm16(samples, samples.length)];
+}
+
+// Checks and converts a picked file on this device: type, size (before reading it), length, then a
+// mono, 16-bit, 16 kHz WAV. Only that WAV is ever sent; the original file never leaves the device.
+async function prepareUpload(file, request) {
+    if (!isMediaFile(file)) {
+        rejectFile("This file type can't be used. Choose an audio or video file.", request);
+        return;
+    }
+    const maxMb = maxSourceMb();
+    if (file.size > maxMb * 1024 * 1024) {
+        rejectFile(`This file is too large. Choose a file under ${maxMb} MB.`, request);
+        return;
+    }
+
+    statusText.textContent = "Preparing your file...";
+    fileInfo.setAttribute("aria-busy", "true");
+    try {
+        // A quick look at the file's own length first, so a very long video is never decoded into memory
+        const listed = await getAudioDurationSeconds(file);
+        if (request !== prepareRequest) return;
+        if (listed !== null && listed > MAX_DURATION_MINUTES * 60 + UPLOAD_LENGTH_GRACE_SECONDS) {
+            rejectFile(TOO_LONG_TEXT, request);
+            return;
+        }
+
+        const buffer = file.size > 0 ? await decodeAtRecRate(await file.arrayBuffer()) : null;
+        if (request !== prepareRequest) return;
+        if (!buffer || buffer.length === 0) {
+            rejectFile(UNREADABLE_TEXT, request);
+            return;
+        }
+        if (buffer.duration > MAX_DURATION_MINUTES * 60 + UPLOAD_LENGTH_GRACE_SECONDS) {
+            rejectFile(TOO_LONG_TEXT, request);
+            return;
+        }
+
+        const chunks = bufferToPcmChunks(buffer);
+        const count = chunks[0].length;
+        const blob = buildWav(chunks, count);
+        if (blob.size > MAX_FILE_MB * 1024 * 1024) {
+            rejectFile("This file is too large to send. Choose a shorter one.", request);
+            return;
+        }
+
+        preparedUpload = { blob, seconds: count / REC_SAMPLE_RATE, source: "upload" };
+        fileLengthSeconds = preparedUpload.seconds;
+        statusText.textContent = "";
+        filePlayer.load(URL.createObjectURL(blob));
+        filePlayer.setPeaks(peaksFromChunks(chunks));
+        filePlayerBox.hidden = false;
+        uploadBtn.hidden = false;
+        uploadBtn.disabled = isBusy || isRolling || !getTimeLimit().valid;
+        setFileSilence(isAlmostSilent(chunks));
+        renderLengthLine();
+    } catch (err) {
+        console.error(err);
+        rejectFile(UNREADABLE_TEXT, request);
+    } finally {
+        if (request === prepareRequest) fileInfo.removeAttribute("aria-busy");
+    }
+}
+
+// The "almost silent" warning under a converted file: "Send anyway" or "Choose another file"
+function setFileSilence(on) {
+    fileSilence.hidden = !on;
+    uploadBtn.textContent = on ? "Send anyway" : "Send to the coach";
+}
+
+fileSilenceChooseBtn.addEventListener("click", () => fileInput.click());
 
 // ---------------------------
 // Drag and drop
@@ -266,8 +425,8 @@ document.addEventListener("drop", e => {
     const file = e.dataTransfer.files[0];
     if (!file) return;
 
-    if (!file.name.toLowerCase().endsWith(".mp3")) {
-        statusText.innerText = "Please drop an MP3 file.";
+    if (!isMediaFile(file)) {
+        statusText.textContent = "This file type can't be used. Choose an audio or video file.";
         return;
     }
 
@@ -598,23 +757,9 @@ stepperButtons.forEach(button => {
 // ---------------------------
 // Length line under the file name
 // ---------------------------
-let fileLengthSeconds = null;
-let lengthRequest = 0;         // counts reads, so a slow old read can't replace a newer one
+let fileLengthSeconds = null;    // the converted file's exact length (set by prepareUpload)
 
-async function updateLengthFromFile() {
-    const file = fileInput.files[0];
-    const request = ++lengthRequest;
-    fileLengthSeconds = null;
-    renderLengthLine();
-    if (!file) return;
-
-    const seconds = await getAudioDurationSeconds(file);
-    if (request !== lengthRequest) return;
-    fileLengthSeconds = seconds;
-    renderLengthLine();
-}
-
-// Updates both length lines: the chosen MP3's and the recorded take's
+// Updates both length lines: the converted file's and the recorded take's
 function renderLengthLine() {
     renderLength(lengthLine, fileLengthSeconds);
     renderLength(takeLengthLine, currentTake ? currentTake.seconds : null);
@@ -666,19 +811,20 @@ function failUpload(message) {
     uploadBtn.disabled = !getTimeLimit().valid;
 }
 
-// Sends the chosen MP3, or a recorded take when one is given ({ blob, seconds }, sent as WAV)
+// Sends a WAV: a recorded take or a converted file ({ blob, seconds, source: "recording" or "upload" })
 async function upload(take) {
-    const sendButton = take ? takeSendBtn : uploadBtn;
+    const isRecording = take && take.source === "recording";
+    const sendButton = isRecording ? takeSendBtn : uploadBtn;
     // Locked before anything else, so a double click can't send the speech twice
     sendButton.disabled = true;
-    const file = take ? take.blob : fileInput.files[0];
+    const file = take ? take.blob : null;
 
     if(!file) {
         sendButton.disabled = false;
         alert("Please select an audio file.");
         return;
     }
-    if(take) takeAudio.pause();
+    if(isRecording) takeAudio.pause();
 
     const timeLimit = getTimeLimit();
     if(!timeLimit.valid) {
@@ -697,17 +843,17 @@ async function upload(take) {
     waitNote.hidden = true;
 
     if(file.size > MAX_FILE_MB * 1024 * 1024) {
-        failUpload(take
+        failUpload(isRecording
             ? `This recording is too large to send. Recordings can be up to ${MAX_FILE_MB} MB.`
-            : `This file is too large. Please upload an MP3 under ${MAX_FILE_MB} MB.`);
+            : "This file is too large to send. Choose a shorter one.");
         return;
     }
 
     statusText.innerText = "Checking your recording...";
-    // A take's exact length is already known from its samples
-    const durationSeconds = take ? take.seconds : await getAudioDurationSeconds(file);
-    if(durationSeconds !== null && durationSeconds > MAX_DURATION_MINUTES * 60) {
-        failUpload(`This recording is longer than ${MAX_DURATION_MINUTES} minutes. Please upload a shorter speech.`);
+    // The exact length is already known from the samples (a converted file gets a little encoder padding)
+    const maxSeconds = MAX_DURATION_MINUTES * 60 + (isRecording ? 0 : UPLOAD_LENGTH_GRACE_SECONDS);
+    if(take.seconds > maxSeconds) {
+        failUpload(TOO_LONG_TEXT);
         return;
     }
 
@@ -722,7 +868,9 @@ async function upload(take) {
         if(topic) params.set("topic", topic);
         if(topic && randomTopic && topic === randomTopic.text) params.set("topicType", randomTopic.type);
         if(timeLimit.seconds !== null) params.set("timeLimit", String(timeLimit.seconds));
-        if(take) params.set("format", "wav");
+        // Both are 16 kHz mono WAV made on this device; source says which way it was made
+        params.set("format", "wav");
+        params.set("source", isRecording ? "recording" : "upload");
         const query = params.toString();
 
         const response = await fetch(`${API_BASE}/upload-url${query ? "?" + query : ""}`);
@@ -748,11 +896,7 @@ async function upload(take) {
         Object.entries(data.upload.fields).forEach(([key, value]) => {
             formData.append(key, value);
         });
-        if(take) {
-            formData.append("file", file, "speech.wav");
-        } else {
-            formData.append("file", file);
-        }
+        formData.append("file", file, "speech.wav");
 
         const uploadResponse = await fetch(data.upload.url, {
             method: "POST",
@@ -761,14 +905,12 @@ async function upload(take) {
 
         if(!uploadResponse.ok) {
             console.error("S3 upload failed:", uploadResponse.status);
-            failUpload(take
-                ? "Upload failed. Please try again."
-                : `Upload failed. Please make sure your MP3 is under ${MAX_FILE_MB} MB and try again.`);
+            failUpload("Upload failed. Please try again.");
             return;
         }
 
         // The take reached the server, so leaving the page no longer loses it
-        if(take) markTakeSent(take);
+        if(isRecording) markTakeSent(take);
 
         // Uploaded: Intermission now says the coach is reviewing the speech
         setIntermissionPhase("review");
@@ -808,7 +950,8 @@ async function pollResult(speechId) {
 
             if(stopped) return;
 
-            if(result && result.wpm) {
+            // A too-short speech is finished too, even with no words per minute
+            if(result && (result.wpm || result.too_short === true)) {
                 stopped = true;
                 showingResult = true;
                 clearInterval(interval);
@@ -819,7 +962,8 @@ async function pollResult(speechId) {
                 // Never throw; only real results get here, not console tests. A performance already
                 // on the wall is never counted toward trophies twice.
                 const isNew = saveToWall(speechId, result);
-                const unlocked = isNew ? recordTrophies(result) : [];
+                // Too-short speeches go on the wall but never count toward trophies
+                const unlocked = isNew && result.too_short !== true ? recordTrophies(result) : [];
                 displayResult(result);      // fills Backstage and opens the curtains on it
                 showTrophyBanner(unlocked);
                 return;
@@ -888,7 +1032,7 @@ function displayResult(data) {
     }
 
     // Where the speech came from, shown beside the time line (older results don't say)
-    const SOURCE_LABELS = { recording: "Live recording", upload: "Uploaded MP3" };
+    const SOURCE_LABELS = { recording: "Live recording", upload: "Uploaded file" };
     const sourceLabel = Object.hasOwn(SOURCE_LABELS, data.source) ? SOURCE_LABELS[data.source] : null;
     const sourceHtml = sourceLabel ? `<span class="source-tag">${escapeHtml(sourceLabel)}</span>` : "";
 
@@ -935,7 +1079,14 @@ function displayResult(data) {
         </div>`;
 
     perfSummary.innerHTML = summaryHtml;
-    coachNotesBody.innerHTML = cleanFeedback;
+    // A too-short speech gets one plain sentence instead of coaching sections (set as text, never as HTML)
+    const tooShort = data.too_short === true;
+    if (tooShort) {
+        coachNotesBody.replaceChildren(tooShortNote(data.ai_feedback));
+    } else {
+        coachNotesBody.innerHTML = cleanFeedback;
+    }
+    notesHint.hidden = tooShort;
     coachNotesBody.scrollTop = 0;
 
     setTimeout(() => {
@@ -945,6 +1096,16 @@ function displayResult(data) {
 
     // Open Backstage on the notes (through Intermission if it is showing)
     revealNotes();
+}
+
+const TOO_SHORT_FALLBACK = "This speech was too short for full notes. Try speaking for a little longer next time.";
+
+// The friendly message for a too-short speech, as a paragraph made with textContent
+function tooShortNote(feedback) {
+    const note = document.createElement("p");
+    note.className = "note-text note-short";
+    note.textContent = typeof feedback === "string" && feedback.trim() !== "" ? feedback.trim() : TOO_SHORT_FALLBACK;
+    return note;
 }
 
 // Section names the coach uses, so a plain "Strengths:" line also counts as a heading
@@ -1246,7 +1407,7 @@ document.addEventListener("keydown", e => {
 // cleanWallEntry() and every value is shown with textContent. The Coach's notes go through
 // escapeHtml() first and then the same formatter as Backstage.
 const WALL_TILTS = [-1.2, 0.8, -0.6, 1.1, -0.9];       // degrees, as in the design
-const WALL_SOURCES = { recording: "Live recording", upload: "Uploaded MP3" };
+const WALL_SOURCES = { recording: "Live recording", upload: "Uploaded file" };
 const WALL_BAD = Symbol("bad");                        // marks a value with the wrong type or size
 let wallEntries = [];
 let wallSavingWorks = true;    // false once reading or writing storage fails (blocked or full)
@@ -1305,6 +1466,11 @@ function cleanWallEntry(raw) {
         if (typeof raw.cut_off !== "boolean") return null;
         cutOff = raw.cut_off;
     }
+    let tooShort = null;
+    if (raw.too_short !== undefined && raw.too_short !== null) {
+        if (typeof raw.too_short !== "boolean") return null;
+        tooShort = raw.too_short;
+    }
 
     const entry = {
         id: raw.id,
@@ -1315,6 +1481,7 @@ function cleanWallEntry(raw) {
         speaking_seconds: wallNumber(raw.speaking_seconds, 0, WALL_MAX_SECONDS),
         source,
         cut_off: cutOff,
+        too_short: tooShort,
         wpm,
         filler_word_total: wallNumber(raw.filler_word_total, 0, 100000),
         filler_word_breakdown: wallBreakdown(raw.filler_word_breakdown),
@@ -1389,7 +1556,9 @@ function saveToWall(fileId, result) {
             speaking_seconds: result.speaking_seconds,
             source: result.source,
             cut_off: result.cut_off,
-            wpm: result.wpm,
+            too_short: result.too_short,
+            // A too-short speech may come without a pace; it still goes on the wall
+            wpm: result.too_short === true ? (result.wpm ?? 0) : result.wpm,
             filler_word_total: result.filler_word_total,
             filler_word_breakdown: result.filler_word_breakdown,
             avg_confidence: result.avg_confidence,
@@ -1651,8 +1820,11 @@ function openPlaybill(entry, button) {
     const clarity = entry.avg_confidence !== null ? Math.round(entry.avg_confidence * 100) : 0;
     document.getElementById("pbClarity").textContent = `${clarity}%`;
 
-    // Coach's notes: escaped FIRST, then formatted line by line by the Backstage formatter
-    if (entry.ai_feedback) {
+    // Coach's notes: escaped FIRST, then formatted line by line by the Backstage formatter.
+    // A too-short speech's single sentence is shown as plain text.
+    if (entry.too_short === true) {
+        pbNotes.replaceChildren(tooShortNote(entry.ai_feedback));
+    } else if (entry.ai_feedback) {
         pbNotes.innerHTML = escapeHtml(entry.ai_feedback)
             .trim()
             .split(/\r?\n/)
@@ -1692,12 +1864,12 @@ document.getElementById("pbConfirmRemoveBtn").addEventListener("click", () => {
     announceScene("Removed from your wall.");
 });
 
-// "Practice this topic again": never throws away an unsent take or a picked MP3 without asking
+// "Practice this topic again": never throws away an unsent take or a picked file without asking
 pbPracticeBtn.addEventListener("click", () => {
     const takeUnsent = currentTake !== null && !currentTake.sent;
     const filePicked = Boolean(fileInput.files[0]);
     if (takeUnsent || filePicked) {
-        pbReplaceText.textContent = takeUnsent ? "This replaces your unsent take." : "This replaces your picked MP3.";
+        pbReplaceText.textContent = takeUnsent ? "This replaces your unsent take." : "This replaces your picked file.";
         showPlaybillRow("replace", pbReplaceKeepBtn);
         return;
     }
@@ -2002,6 +2174,7 @@ function initTrophies() {
         if (wallEntries.length === 0) return;   // the record is written with the first performance
         const progress = emptyProgress();
         wallEntries.slice().reverse().forEach(entry => {
+            if (entry.too_short === true) return;          // too-short speeches earn no trophies
             applyPerformance(progress, trophyPerformance(entry), new Date(entry.savedAt));
         });
         trophyProgress = progress;
@@ -2208,6 +2381,7 @@ let micSession = 0;            // counts mic starts, so a slow start that was ca
 let recChunks = [];            // the take so far, as 16-bit sample chunks
 let recCount = 0;              // number of samples recorded so far (16000 per second)
 let recWarned = false;
+let micHeard = false;          // true once anything louder than near-silence was recorded in this take
 let resample = null;
 let prepTimer = null;
 let countTimer = null;
@@ -2483,6 +2657,8 @@ function startRecording() {
     recChunks = [];
     recCount = 0;
     recWarned = false;
+    micHeard = false;
+    micCheck.hidden = true;
     resample = createResampler(mic.context.sampleRate);
     statusText.textContent = "";
     setRecState("recording");
@@ -2495,14 +2671,18 @@ function addSamples(input) {
     const samples = resample(input);
     const count = Math.min(samples.length, MAX_REC_SAMPLES - recCount);   // never past exactly 10:00
     if (count > 0) {
-        const pcm = new Int16Array(count);
-        for (let i = 0; i < count; i++) {
-            // Clip to the allowed range, then scale to whole numbers from -32768 to 32767
-            const s = Math.max(-1, Math.min(1, samples[i]));
-            pcm[i] = s < 0 ? Math.round(s * 0x8000) : Math.round(s * 0x7FFF);
-        }
+        const pcm = toPcm16(samples, count);
         recChunks.push(pcm);
         recCount += count;
+        if (!micHeard && frameIsLoud(pcm, 0, pcm.length)) {
+            micHeard = true;
+            micCheck.hidden = true;          // sound is coming through
+        }
+    }
+    // Nothing heard in the first seconds of the take: a small hint near the timer, until sound comes through
+    if (!micHeard && micCheck.hidden && recCount >= MIC_CHECK_SECONDS * REC_SAMPLE_RATE) {
+        micCheck.hidden = false;
+        announceScene(micCheck.textContent);
     }
 
     if (!recWarned && recCount >= REC_WARNING_SECONDS * REC_SAMPLE_RATE) {
@@ -2520,8 +2700,11 @@ function stopRecording(reason) {
     recChunks = [];
     recCount = 0;
     releaseMic();
+    micCheck.hidden = true;
 
     setTake(buildWav(chunks, count), count / REC_SAMPLE_RATE, chunks);
+    // Almost all silence: a warning, with both choices kept (send anyway, or record again)
+    setTakeSilence(currentTake.seconds >= MIN_TAKE_SECONDS && isAlmostSilent(chunks));
 
     const notes = [];
     if (reason === "max") notes.push(`Recording stopped at the ${formatTime(MAX_REC_SAMPLES / REC_SAMPLE_RATE)} maximum.`);
@@ -2542,6 +2725,7 @@ function restartRecording() {
     if (recState !== "recording") return;
     recChunks = [];
     recCount = 0;
+    micCheck.hidden = true;
     if (statusText.textContent === WARNING_TEXT) statusText.textContent = "";
     startCountdown();
 }
@@ -2675,6 +2859,49 @@ function createResampler(inRate) {
     };
 }
 
+// Turns float samples (-1 to 1) into 16-bit whole numbers: clipped to the allowed range, then scaled
+// to -32768 to 32767. Used by the live recorder and by converted uploads.
+function toPcm16(samples, count) {
+    const pcm = new Int16Array(count);
+    for (let i = 0; i < count; i++) {
+        const s = Math.max(-1, Math.min(1, samples[i]));
+        pcm[i] = s < 0 ? Math.round(s * 0x8000) : Math.round(s * 0x7FFF);
+    }
+    return pcm;
+}
+
+// ---- Silence ----
+// True when the 16-bit samples from..to are louder (RMS) than near-silence
+function frameIsLoud(pcm, from, to) {
+    if (to <= from) return false;
+    let sum = 0;
+    for (let i = from; i < to; i++) sum += pcm[i] * pcm[i];
+    return Math.sqrt(sum / (to - from)) >= SILENCE_LEVEL;
+}
+
+// True when ALMOST_SILENT_SHARE or more of the 50 ms stretches are near-silence
+function isAlmostSilent(chunks) {
+    const frame = Math.round(SILENCE_FRAME_SECONDS * REC_SAMPLE_RATE);
+    let frames = 0;
+    let quiet = 0;
+    let sum = 0;
+    let filled = 0;
+    const endFrame = () => {
+        frames++;
+        if (Math.sqrt(sum / filled) < SILENCE_LEVEL) quiet++;
+        sum = 0;
+        filled = 0;
+    };
+    for (const chunk of chunks) {
+        for (let i = 0; i < chunk.length; i++) {
+            sum += chunk[i] * chunk[i];
+            if (++filled === frame) endFrame();
+        }
+    }
+    if (filled > 0) endFrame();
+    return frames > 0 && quiet / frames >= ALMOST_SILENT_SHARE;
+}
+
 // ---- WAV file ----
 // WAV stores numbers with the smallest byte first ("little-endian"). Every current phone and laptop does too.
 const LITTLE_ENDIAN = new Uint8Array(new Uint16Array([1]).buffer)[0] === 1;
@@ -2713,7 +2940,7 @@ function toLittleEndian(pcm) {
 // ---- The take: listen back, send, re-record or discard ----
 function setTake(blob, seconds, chunks) {
     clearTake();
-    currentTake = { blob, seconds, url: URL.createObjectURL(blob), sent: false };
+    currentTake = { blob, seconds, url: URL.createObjectURL(blob), sent: false, source: "recording" };
     takePlayer.load(currentTake.url);
     takePlayer.setPeaks(chunks ? peaksFromChunks(chunks) : null);    // the waveform, from the recorded samples
     renderLengthLine();
@@ -2726,7 +2953,14 @@ function clearTake() {
     currentTake = null;
     takeNote.hidden = true;
     takeNote.textContent = "";
+    setTakeSilence(false);
     renderLengthLine();
+}
+
+// The "almost silent" warning in Review: the Send button then reads "Send anyway", Re-record stays
+function setTakeSilence(on) {
+    takeSilence.hidden = !on;
+    takeSendBtn.textContent = on ? "Send anyway" : "Send to the coach";
 }
 
 function discardTake() {
@@ -2739,7 +2973,7 @@ function markTakeSent(take) {
     updateLeaveWarning();
 }
 
-// ---- Players: listen to a take or a picked MP3, and move through it ----
+// ---- Players: listen to a take or a converted file, and move through it ----
 // One player setup used twice. The position is shown as the recording's waveform (like a voice note):
 // click, tap or drag anywhere on it to move there. An invisible slider lies on top of it for keyboards and
 // screen readers: its arrow keys jump 5 seconds (Home and End go to the start and end). Back and Forward
@@ -2779,64 +3013,10 @@ function peaksFromChunks(chunks) {
     return normalizePeaks(peaks);
 }
 
-// The same from decoded audio (every channel, the loudest wins)
-function peaksFromBuffer(buffer) {
-    const peaks = new Float32Array(PEAK_BINS);
-    const total = buffer.length;
-    if (total === 0) return peaks;
-    for (let c = 0; c < buffer.numberOfChannels; c++) {
-        const data = buffer.getChannelData(c);
-        for (let i = 0; i < total; i++) {
-            const bin = Math.floor(i * PEAK_BINS / total);
-            const level = Math.abs(data[i]);
-            if (level > peaks[bin]) peaks[bin] = level;
-        }
-    }
-    return normalizePeaks(peaks);
-}
-
-// Decodes a picked MP3 once at 8000 samples per second (small and quick) just to get its waveform.
-// The decoded audio is dropped afterwards. Returns null if the browser can't decode it.
-async function decodeMp3Peaks(file) {
-    const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-    if (!Offline || file.size > MAX_FILE_MB * 1024 * 1024) return null;
-    try {
-        const context = new Offline(1, 1, 8000);
-        const buffer = await context.decodeAudioData(await file.arrayBuffer());
-        return peaksFromBuffer(buffer);
-    } catch (err) {
-        return null;
-    }
-}
-
-// Phones and low-memory devices only decode MP3s up to 5 minutes long. Longer ones use the plain slider.
-const LOW_MEMORY_WAVE_SECONDS = 5 * 60;
-
+// Phones and low-memory devices: smaller upload files (decoding needs memory)
 function isLowMemoryDevice() {
     return window.matchMedia("(pointer: coarse)").matches
         || (typeof navigator.deviceMemory === "number" && navigator.deviceMemory < 4);
-}
-
-let waveRequest = 0;           // counts waveform requests, so a slow old one can't replace a newer one
-
-async function loadFileWaveform(file, lengthRead) {
-    const request = ++waveRequest;
-    filePlayer.setPeaks(null);                 // a flat line while it works
-    if (isLowMemoryDevice()) {
-        await lengthRead;                      // the length the page reads anyway (fileLengthSeconds)
-        if (request !== waveRequest) return;
-        if (fileLengthSeconds === null || fileLengthSeconds > LOW_MEMORY_WAVE_SECONDS) {
-            filePlayer.setPlain(true);
-            return;
-        }
-    }
-    const peaks = await decodeMp3Peaks(file);
-    if (request !== waveRequest) return;
-    if (peaks) {
-        filePlayer.setPeaks(peaks);
-    } else {
-        filePlayer.setPlain(true);
-    }
 }
 
 function setupPlayer({ audio, playBtn, backBtn, fwdBtn, seek, time, name, getDuration, ownsUrl }) {
@@ -3080,8 +3260,8 @@ const filePlayer = setupPlayer({
     fwdBtn: document.getElementById("fileFwdBtn"),
     seek: document.getElementById("fileSeek"),
     time: document.getElementById("fileTime"),
-    name: "your MP3",
-    getDuration: () => (Number.isFinite(fileAudio.duration) ? fileAudio.duration : (fileLengthSeconds ?? 0)),
+    name: "your file",
+    getDuration: () => (preparedUpload ? preparedUpload.seconds : 0),
     ownsUrl: true           // freed when the picked file changes or is cleared
 });
 
@@ -3508,8 +3688,8 @@ if (micSupported) {
     stageView.classList.add("no-mic");
     prepSetting.hidden = true;
     stepSpeakTitle.textContent = "Your turn on stage";
-    actionText.textContent = `Upload an MP3 of your speech. Up to ${MAX_DURATION_MINUTES} minutes and ${MAX_FILE_MB} MB.`;
-    uploadLabel.textContent = "Upload an MP3";
+    actionText.textContent = `Upload a recording of your speech (audio or video). Up to ${MAX_DURATION_MINUTES} minutes.`;
+    uploadLabel.textContent = "Upload a recording";
 }
 updateTakeButtons();
 loadSettings();

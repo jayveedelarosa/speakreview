@@ -606,7 +606,7 @@ textarea,
 
 /* Highlight while a file is dragged over the stage */
 #dropZone.dragging .stage::after {
-    content: "Drop your MP3 on the stage";
+    content: "Drop your file on the stage";
     position: absolute;
     inset: 0;
     z-index: 10;
@@ -2020,7 +2020,7 @@ html.settings-lock {
     outline-offset: 2px;
 }
 
-/* No waveform (the MP3 can't be decoded, or is too long on a phone): the plain slider instead */
+/* No waveform available: the plain slider instead */
 .wave-seek.plain {
     cursor: default;
 }
@@ -2102,6 +2102,64 @@ html.settings-lock {
     font-size: 13px;
     font-weight: 600;
     color: var(--over);
+}
+
+/* "Almost silent" warnings: under a converted file (with "Choose another file") and in Review.
+   Orange like the other take notes, with a "!" mark so the color is never the only signal. */
+.silence-warn {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 14px;
+    max-width: 460px;
+}
+
+.silence-warn[hidden] {
+    display: none;
+}
+
+.silence-text {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--over);
+    text-align: left;
+}
+
+.silence-text::before {
+    content: "!";
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.silence-warn .btn-outline {
+    height: 36px;
+    padding: 0 16px;
+    font-size: 13px;
+}
+
+/* While recording: shown when nothing is heard in the first seconds (its own line under the wave) */
+.mic-check {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--over);
+    text-align: center;
 }
 
 /* Upload as the second choice under the mic: smaller, with the limits beside it */
@@ -2435,7 +2493,7 @@ html.settings-lock {
     color: var(--muted);
 }
 
-/* "Live recording" or "Uploaded MP3", beside the time line */
+/* "Live recording" or "Uploaded file", beside the time line */
 .source-tag {
     display: inline-flex;
     align-items: center;
@@ -2663,6 +2721,12 @@ html.settings-lock {
     line-height: 1.55;
     color: #DCCBB3;
     overflow-wrap: anywhere;
+}
+
+/* A too-short speech: one friendly sentence instead of coaching sections */
+.note-short {
+    font-size: 17px;
+    color: var(--heading);
 }
 
 .note-item strong,
@@ -4529,6 +4593,14 @@ body.curtains-closed .drape {
 
     .take-note {
         font-size: 12px;
+    }
+
+    .silence-text {
+        font-size: 12px;
+    }
+
+    .mic-check {
+        font-size: 13px;
     }
 
     /* Backstage on phones, following the "backstage" screen of theatre-phone.dc.html */
