@@ -2377,13 +2377,16 @@ html.settings-lock {
     height: 100%;
 }
 
-/* Left: the speech summary and the buttons */
+/* Left: the speech summary and the buttons. The content is 290px wide; the 6px on each side (taken back
+   by the negative margin, so nothing moves) leaves room for focus outlines when the column scrolls. */
 .perf {
     display: flex;
     flex-direction: column;
     gap: 20px;
     flex-shrink: 0;
-    width: 290px;
+    width: 302px;
+    margin: 0 -6px;
+    padding: 0 6px;
 }
 
 .perf-summary {
@@ -2543,6 +2546,24 @@ html.settings-lock {
 
 .perf-buttons .btn-gold {
     height: 48px;
+}
+
+/* When the summary and buttons are taller than the mirror (short windows, or more content), the column
+   scrolls inside the mirror like Coach's notes: no visible scrollbar, and a fade at the bottom while there
+   is more below. app.js adds these classes only then, so roomy windows look exactly as before. */
+.perf.is-scrollable {
+    min-height: 0;
+    overflow-y: auto;
+    padding-bottom: 6px;
+}
+
+.perf.is-scrollable.has-more {
+    -webkit-mask-image: linear-gradient(180deg, #000 82%, rgba(0, 0, 0, 0));
+    mask-image: linear-gradient(180deg, #000 82%, rgba(0, 0, 0, 0));
+}
+
+.perf.is-scrollable:focus-visible {
+    outline-offset: -2px;
 }
 
 .btn-outline {

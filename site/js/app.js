@@ -1088,6 +1088,7 @@ function displayResult(data) {
     }
     notesHint.hidden = tooShort;
     coachNotesBody.scrollTop = 0;
+    perfColumn.scrollTop = 0;
 
     setTimeout(() => {
         const fill = document.getElementById('clarityFill');
@@ -1224,6 +1225,35 @@ function restartBulbs() {
     void mirror.offsetWidth;   // makes the browser notice the class was removed, so the animation starts over
     mirror.classList.add("bulbs-on");
 }
+
+// ---- Backstage left column: scrolls inside the mirror only when it doesn't fit ----
+// The summary and buttons can be taller than the mirror on short windows. Then the column becomes a
+// scroller like Coach's notes (focusable, so arrow keys scroll it too) with a fade while there is more
+// below. On phones the column is display: contents and nothing here applies.
+const perfColumn = document.querySelector(".perf");
+const perfButtons = perfColumn.querySelector(".perf-buttons");
+const PERF_FOCUS_ROOM = 6;     // the bottom padding added while scrolling (room for the last focus ring)
+
+function updatePerfScroll() {
+    const style = getComputedStyle(perfColumn);
+    const box = style.display !== "contents" && perfColumn.clientHeight > 0;
+    // What the content needs, measured the same way with or without the classes, so it never flips back and forth
+    const needed = perfSummary.offsetHeight + (parseFloat(style.rowGap) || 0) + perfButtons.offsetHeight + PERF_FOCUS_ROOM;
+    const scrollable = box && needed > perfColumn.clientHeight;
+    perfColumn.classList.toggle("is-scrollable", scrollable);
+    if (scrollable) {
+        perfColumn.setAttribute("tabindex", "0");
+    } else {
+        perfColumn.removeAttribute("tabindex");
+        perfColumn.scrollTop = 0;
+    }
+    perfColumn.classList.toggle("has-more", scrollable && perfColumn.scrollTop + perfColumn.clientHeight < perfColumn.scrollHeight - 1);
+}
+
+// Window size, zoom, Backstage opening and new content (now or added later) all change one of these sizes
+const perfObserver = new ResizeObserver(updatePerfScroll);
+[perfColumn, perfSummary, perfButtons].forEach(element => perfObserver.observe(element));
+perfColumn.addEventListener("scroll", updatePerfScroll, { passive: true });
 
 function focusBackstageHeading() {
     const heading = resultBox.hidden ? backstageEmptyTitle : coachNotesTitle;
