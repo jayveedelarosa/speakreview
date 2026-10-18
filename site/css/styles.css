@@ -2652,9 +2652,54 @@ html.settings-lock {
 
 .notes-head {
     display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Coach's notes | Your words, as in F2Backstage.dc.html: serif tabs on a line, the open one underlined in gold */
+.tab-row {
+    display: flex;
     align-items: flex-end;
-    justify-content: space-between;
     gap: 12px;
+    border-bottom: 1px solid var(--line);
+}
+
+.tab-row .notes-hint {
+    margin-left: auto;
+    padding-bottom: 12px;
+}
+
+.feedback-tabs {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.feedback-tab {
+    height: 48px;
+    margin-bottom: -1px;
+    padding: 0 14px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    color: #BCA992;
+    font-family: var(--serif);
+    font-size: 21px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.feedback-tab:hover {
+    color: var(--heading);
+}
+
+.feedback-tab[aria-selected="true"] {
+    border-bottom-color: var(--gold);
+    color: var(--heading);
+}
+
+.feedback-tab:focus-visible {
+    outline-offset: -3px;
 }
 
 .notes-head h2 {
@@ -2687,6 +2732,110 @@ html.settings-lock {
 
 .notes-body:focus-visible {
     outline-offset: -2px;
+}
+
+/* Your words: legend, the words (the part that scrolls, with the same fade), and a note under them */
+.words-panel {
+    flex: 1 1 0;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 4px 18px 0;
+}
+
+.words-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    margin: 0;
+    font-size: 13px;
+    color: #DCCBB3;
+}
+
+.words-key {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+/* The fade is exactly as tall as the bottom padding, so the last line always ends above it */
+.words-body {
+    flex: 1 1 0;
+    min-height: 60px;
+    overflow-y: auto;
+    padding-bottom: 40px;
+    -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 40px), rgba(0, 0, 0, 0));
+    mask-image: linear-gradient(180deg, #000 calc(100% - 40px), rgba(0, 0, 0, 0));
+}
+
+.words-body:focus-visible {
+    outline-offset: -2px;
+}
+
+.words-text {
+    max-width: 64ch;
+    margin: 0;
+    font-size: 16px;
+    line-height: 2;
+    color: #E8D8C0;
+    overflow-wrap: anywhere;
+}
+
+/* Filler: highlight and a solid underline */
+.w-filler {
+    padding: 0 3px;
+    border-bottom: 2px solid #FFB066;
+    border-radius: 3px;
+    background: rgba(255, 176, 102, 0.24);
+    color: #FFE2C2;
+}
+
+/* Unclear: faint italic with a thin dashed underline */
+.w-unclear {
+    border-bottom: 1px dashed rgba(246, 234, 211, 0.35);
+    color: #A8977F;
+    font-style: italic;
+}
+
+/* Long pause: a neutral pill with a pause icon (not styled as a mistake) */
+.w-pause {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    height: 20px;
+    margin: 0 2px;
+    padding: 0 7px;
+    border: 1px dashed rgba(246, 234, 211, 0.45);
+    border-radius: 999px;
+    color: #D8C6AE;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    vertical-align: 2px;
+}
+
+.w-pause-icon {
+    flex-shrink: 0;
+}
+
+.words-note {
+    margin: 0;
+    font-size: 12px;
+    color: #BCA992;
+}
+
+/* The copy at the end of the words is for phones */
+.words-note-inline {
+    display: none;
+}
+
+.words-empty {
+    margin: 0;
+    padding: 6px 0;
+    font-size: 15px;
+    color: #DCCBB3;
 }
 
 .note-heading {
@@ -3190,6 +3339,77 @@ html.settings-lock {
 
 .pb-notes:focus-visible {
     outline-offset: -2px;
+}
+
+/* The playbill's tabs and words, in dark ink on the paper */
+.pb-tabs {
+    flex-shrink: 0;
+    padding: 0 36px;
+    border-bottom: 1px solid rgba(90, 60, 20, 0.3);
+}
+
+.pb-tabs .feedback-tab {
+    height: 44px;
+    padding: 0 10px;
+    color: #6B5A48;
+    font-size: 18px;
+}
+
+.pb-tabs .feedback-tab:first-child {
+    padding-left: 0;
+}
+
+.pb-tabs .feedback-tab:hover,
+.pb-tabs .feedback-tab[aria-selected="true"] {
+    color: #2A1A0E;
+}
+
+.pb-tabs .feedback-tab[aria-selected="true"] {
+    border-bottom-color: #9C7232;
+}
+
+.pb-words {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 16px 36px 0;
+}
+
+.pb-words .words-body {
+    flex: 1 1 auto;
+}
+
+.pb-words .words-legend {
+    color: #3A2A1C;
+}
+
+.pb-words .words-text {
+    color: #2A1A0E;
+}
+
+.pb-words .w-filler {
+    border-bottom-color: #B85A10;
+    background: rgba(230, 140, 50, 0.28);
+    color: #5A2A06;
+}
+
+.pb-words .w-unclear {
+    border-bottom-color: rgba(42, 26, 14, 0.45);
+    color: #6B5A48;
+}
+
+.pb-words .w-pause {
+    border-color: rgba(42, 26, 14, 0.45);
+    color: #4A3423;
+}
+
+.pb-words .words-note {
+    padding-bottom: 14px;
+    color: #5A4330;
+}
+
+.pb-words .words-empty {
+    padding-bottom: 20px;
+    color: #3A2A1C;
 }
 
 .pb-notes .note-heading {
@@ -4816,6 +5036,93 @@ body.curtains-closed .drape {
         mask-image: linear-gradient(180deg, #000 80%, rgba(0, 0, 0, 0));
     }
 
+    /* Phones: Notes | Your words as a pill group (F2BackstagePhone.dc.html). Each tab takes an equal share,
+       so the Review tab fits later. */
+    .notes .tab-row {
+        align-self: stretch;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 0;
+    }
+
+    /* As in the phone design, the pill takes the whole row (the fade at the bottom still shows there is more) */
+    .notes .tab-row .notes-hint {
+        display: none;
+    }
+
+    .notes .feedback-tabs {
+        flex: 1;
+        min-width: 0;
+        gap: 4px;
+        padding: 3px;
+        border: 1px solid rgba(246, 234, 211, 0.14);
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.35);
+    }
+
+    .notes .feedback-tab {
+        flex: 1 1 0;
+        min-width: 0;
+        height: 34px;
+        margin: 0;
+        padding: 0 8px;
+        border: 0;
+        border-radius: 999px;
+        color: #D8C6AE;
+        font-family: var(--sans);
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .notes .feedback-tab[aria-selected="true"] {
+        background: var(--gold);
+        color: #1E1006;
+    }
+
+    .words-panel {
+        min-height: 120px;
+        gap: 8px;
+        padding: 2px 6px 0;
+    }
+
+    .words-legend {
+        gap: 6px 12px;
+        font-size: 11px;
+    }
+
+    .words-body {
+        padding-bottom: 26px;
+        -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 26px), rgba(0, 0, 0, 0));
+        mask-image: linear-gradient(180deg, #000 calc(100% - 26px), rgba(0, 0, 0, 0));
+    }
+
+    .words-text {
+        font-size: 14px;
+        line-height: 1.85;
+    }
+
+    .w-pause {
+        height: 18px;
+        padding: 0 6px;
+        vertical-align: 1px;
+    }
+
+    /* On phones the note comes at the end of the words, so it never takes space from them */
+    .words-panel > .words-note {
+        display: none;
+    }
+
+    .words-note-inline {
+        display: block;
+        margin-top: 10px;
+        font-size: 11px;
+    }
+
+    .words-empty {
+        font-size: 13px;
+    }
+
     .note-heading {
         margin: 14px 0 6px;
         font-size: 10px;
@@ -5110,6 +5417,23 @@ body.curtains-closed .drape {
     .pb-notes {
         min-height: 80px;
         padding: 12px 16px 30px;
+    }
+
+    .pb-tabs {
+        padding: 0 16px;
+    }
+
+    .pb-tabs .feedback-tab {
+        height: 40px;
+        font-size: 15px;
+    }
+
+    .pb-words {
+        padding: 12px 16px 0;
+    }
+
+    .pb-words .words-body .words-note-inline {
+        padding-bottom: 4px;
     }
 
     .pb-actions {

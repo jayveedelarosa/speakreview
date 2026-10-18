@@ -55,7 +55,7 @@
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
                 Privacy
             </button>
-            <p id="privacyNote" class="privacy-note" hidden>Recordings are used only to create your feedback. Uploaded files are converted on this device, and only the sound is sent. Recordings are deleted automatically after 7 days, and results after 30 days. Your Wall of Fame and trophies are saved only in this browser on this device.</p>
+            <p id="privacyNote" class="privacy-note" hidden>Recordings are used only to create your feedback. Uploaded files are converted on this device, and only the sound is sent. Recordings are deleted automatically after 7 days, and results after 30 days. Your Wall of Fame and trophies are saved only in this browser on this device. The words of your speech are shown and saved on this device for your latest 30 performances.</p>
         </div>
     </header>
 
@@ -449,14 +449,22 @@
                                     <button type="button" id="trophyBannerBtn" class="trophy-banner-link">See your wall</button>
                                 </div>
                                 <div class="notes-head">
-                                    <div>
-                                        <p class="eyebrow">Backstage</p>
-                                        <h2 id="coachNotesTitle" tabindex="-1">Coach's notes</h2>
+                                    <p class="eyebrow">Backstage</p>
+                                    <!-- The heading focus moves to when the notes open; the tabs below are what shows -->
+                                    <h2 id="coachNotesTitle" class="visually-hidden" tabindex="-1">Your feedback</h2>
+                                    <div class="tab-row">
+                                        <!-- Tabs: Coach's notes (the default) and Your words. Stage 5 adds Review. -->
+                                        <div id="backstageTabs" class="feedback-tabs" role="tablist" aria-label="Feedback views">
+                                            <button type="button" id="tabNotes" class="feedback-tab" role="tab" aria-selected="true" aria-controls="coachNotesBody"><span class="long-label">Coach's notes</span><span class="short-label" aria-hidden="true">Notes</span></button>
+                                            <button type="button" id="tabWords" class="feedback-tab" role="tab" aria-selected="false" aria-controls="wordsPanel" tabindex="-1">Your words</button>
+                                        </div>
+                                        <span id="notesHint" class="notes-hint"><span class="long-label">Scroll for all notes</span><span class="short-label" aria-hidden="true">Scroll for more</span></span>
                                     </div>
-                                    <span id="notesHint" class="notes-hint"><span class="long-label">Scroll for all notes</span><span class="short-label" aria-hidden="true">Scroll for more</span></span>
                                 </div>
-                                <!-- The only part of Backstage that scrolls -->
-                                <div id="coachNotesBody" class="notes-body" tabindex="0" aria-label="Coach's notes, scrollable"></div>
+                                <!-- The parts of Backstage that scroll: Coach's notes, or the words in the Your words tab -->
+                                <div id="coachNotesBody" class="notes-body" role="tabpanel" aria-labelledby="tabNotes" tabindex="0"></div>
+                                <!-- Filled by buildWordsView() -->
+                                <div id="wordsPanel" class="words-panel" role="tabpanel" aria-labelledby="tabWords" hidden></div>
                             </section>
                         </div>
                     </div>
@@ -556,8 +564,14 @@
                     </div>
                 </div>
             </div>
-            <!-- The only part of the open playbill that scrolls -->
-            <div id="pbNotes" class="pb-notes" tabindex="0" aria-label="Coach's notes, scrollable"></div>
+            <!-- The same two views as Backstage -->
+            <div id="pbTabs" class="feedback-tabs pb-tabs" role="tablist" aria-label="Feedback views">
+                <button type="button" id="pbTabNotes" class="feedback-tab" role="tab" aria-selected="true" aria-controls="pbNotes">Coach's notes</button>
+                <button type="button" id="pbTabWords" class="feedback-tab" role="tab" aria-selected="false" aria-controls="pbWords" tabindex="-1">Your words</button>
+            </div>
+            <!-- The parts of the open playbill that scroll -->
+            <div id="pbNotes" class="pb-notes" role="tabpanel" aria-labelledby="pbTabNotes" tabindex="0"></div>
+            <div id="pbWords" class="words-panel pb-words" role="tabpanel" aria-labelledby="pbTabWords" hidden></div>
             <div class="pb-actions">
                 <div id="pbButtons" class="pb-row">
                     <button type="button" id="pbPracticeBtn" class="pb-btn pb-btn-dark">Practice this topic again</button>

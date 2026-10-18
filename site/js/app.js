@@ -35,6 +35,18 @@ const SILENCE_FRAME_SECONDS = 0.05;
 const ALMOST_SILENT_SHARE = 0.95;
 const MIC_CHECK_SECONDS = 5;               // while recording: nothing heard for this long shows the mic hint
 
+// Your words: the transcript with its marks. Each word from the server is [word, start, end, confidence],
+// with times in hundredths of a second and confidence from 0 to 100.
+const LONG_PAUSE_HUNDREDTHS = 300;         // a gap of 3 seconds or more between two words is a long pause
+const UNCLEAR_CONFIDENCE = 50;             // below this, the transcription was unsure about the word
+// Filler sounds, matched after lowercasing and removing punctuation ("Um," counts). "Ah" is left out on
+// purpose: it is often a real word ("Ah, I see").
+const FILLER_SOUNDS = ["um", "umm", "ummm", "uhm", "uh", "uhh", "uhhh", "er", "err", "erm"];
+const WORDS_MAX = 5000;                    // most words kept (10 minutes at a fast 250 per minute is 2,500)
+const WORD_MAX_LENGTH = 100;
+const WORD_MAX_TIME = 360000;              // one hour, in hundredths of a second
+const WALL_WORDS_ENTRIES = 30;             // only the newest playbills keep their words
+
 // Label and hint shown for each type of random topic
 const TOPIC_TYPE_INFO = {
     persuade: { label: "Persuade", hint: "Take a side and back it up" },
@@ -1086,9 +1098,12 @@ function displayResult(data) {
     } else {
         coachNotesBody.innerHTML = cleanFeedback;
     }
-    notesHint.hidden = tooShort;
+    notesHintOnNotes = !tooShort;
     coachNotesBody.scrollTop = 0;
     perfColumn.scrollTop = 0;
+    // Your words (too-short speeches show theirs too). Every new result opens on Coach's notes.
+    wordsPanel.replaceChildren(buildWordsView(cleanWords(data.words)));
+    backstageTabs.select("tabNotes");
 
     setTimeout(() => {
         const fill = document.getElementById('clarityFill');
@@ -1108,6 +1123,209 @@ function tooShortNote(feedback) {
     note.textContent = typeof feedback === "string" && feedback.trim() !== "" ? feedback.trim() : TOO_SHORT_FALLBACK;
     return note;
 }
+
+// ---------------------------
+// Your words: the transcript with fillers, long pauses and unclear words marked
+// ---------------------------
+// Words come from the server or from storage, so both are untrusted: cleanWords() keeps only well-formed
+// [word, start, end, confidence] items, and every word is put on the page with textContent.
+// Returns null when there are no words at all (older results), or a list (possibly empty).
+function cleanWords(raw) {
+    if (!Array.isArray(raw)) return null;
+    const time = value => typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= WORD_MAX_TIME;
+    const words = [];
+    for (const item of raw) {
+        if (words.length >= WORDS_MAX) break;
+        if (!Array.isArray(item) || item.length < 4) continue;
+        const [word, start, end, confidence] = item;
+        if (typeof word !== "string" || word.trim() === "" || word.length > WORD_MAX_LENGTH) continue;
+        if (!time(start) || !time(end) || end < start) continue;
+        if (typeof confidence !== "number" || !Number.isFinite(confidence) || confidence < 0 || confidence > 100) continue;
+        words.push([word.trim(), Math.round(start), Math.round(end), Math.round(confidence)]);
+    }
+    return words;
+}
+
+function isFillerSound(word) {
+    return FILLER_SOUNDS.includes(word.toLowerCase().replace(/[^a-z]/g, ""));
+}
+
+// The small pause icon from the design (two bars)
+function pauseIcon() {
+    const svg = svgPart("svg", { class: "w-pause-icon", width: "9", height: "9", viewBox: "0 0 10 10", "aria-hidden": "true", focusable: "false" });
+    svg.append(
+        svgPart("rect", { x: "1", y: "1", width: "3", height: "8", rx: "1", fill: "currentColor" }),
+        svgPart("rect", { x: "6", y: "1", width: "3", height: "8", rx: "1", fill: "currentColor" })
+    );
+    return svg;
+}
+
+// A pause pill, for example "3.4s" (read out as "Long pause, 3.4 seconds")
+function pausePill(seconds) {
+    const text = `${seconds.toFixed(1)}s`;
+    const pill = document.createElement("span");
+    pill.className = "w-pause";
+    pill.setAttribute("role", "img");
+    pill.setAttribute("aria-label", `Long pause, ${seconds.toFixed(1)} seconds`);
+    pill.append(pauseIcon(), document.createTextNode(text));
+    return pill;
+}
+
+// A marked word: the mark's look plus words for screen readers, so color is never the only signal
+function markedWord(kind, word) {
+    const element = document.createElement(kind === "filler" ? "mark" : "span");
+    element.className = kind === "filler" ? "w-filler" : "w-unclear";
+    if (kind === "unclear") element.title = "The transcription was unsure about this word";
+    element.append(document.createTextNode(word), makeSpan("visually-hidden", kind === "filler" ? " (filler)" : " (unclear)"));
+    return element;
+}
+
+// One legend item: a sample mark, then its name and count
+function legendItem(sample, long, short, count) {
+    const item = document.createElement("span");
+    item.className = "words-key";
+    const label = document.createElement("span");
+    label.append(makeSpan("long-label", `${long}, ${count}`));
+    const shortLabel = makeSpan("short-label", `${short} ${count}`);
+    shortLabel.setAttribute("aria-hidden", "true");
+    label.append(shortLabel);
+    item.append(sample, label);
+    return item;
+}
+
+// Builds the Your words view for a list of words (or null). Returns a fragment for a panel.
+function buildWordsView(words) {
+    const view = document.createDocumentFragment();
+    if (!words || words.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "words-empty";
+        empty.textContent = words ? "No words were picked up in this take." : "The word-by-word view isn't available for this performance.";
+        view.append(empty);
+        return view;
+    }
+
+    const text = document.createElement("p");
+    text.className = "words-text";
+    let plain = "";                 // plain words are joined into one text node until the next mark
+    const flush = () => {
+        if (plain) text.append(document.createTextNode(plain));
+        plain = "";
+    };
+    let fillers = 0, pauses = 0, unclear = 0;
+    words.forEach(([word, start, , confidence], i) => {
+        const gap = i > 0 ? start - words[i - 1][2] : 0;
+        if (gap >= LONG_PAUSE_HUNDREDTHS) {
+            flush();
+            text.append(document.createTextNode(" "), pausePill(gap / 100));
+            pauses++;
+        }
+        const space = i > 0 ? " " : "";
+        if (isFillerSound(word)) {             // a filler wins over unclear (the transcription is often unsure about "um")
+            plain += space;
+            flush();
+            text.append(markedWord("filler", word));
+            fillers++;
+        } else if (confidence < UNCLEAR_CONFIDENCE) {
+            plain += space;
+            flush();
+            text.append(markedWord("unclear", word));
+            unclear++;
+        } else {
+            plain += space + word;
+        }
+    });
+    flush();
+
+    const sampleFiller = makeSpan("w-filler", "um");
+    const samplePause = document.createElement("span");
+    samplePause.className = "w-pause";
+    samplePause.append(pauseIcon(), document.createTextNode("3s+"));
+    const sampleUnclear = makeSpan("w-unclear", "word");
+    [sampleFiller, samplePause, sampleUnclear].forEach(sample => sample.setAttribute("aria-hidden", "true"));
+
+    const legend = document.createElement("p");
+    legend.className = "words-legend";
+    legend.append(
+        legendItem(sampleFiller, "Filler", "Filler", fillers),
+        legendItem(samplePause, "Long pause", "Pause", pauses),
+        legendItem(sampleUnclear, "Unclear", "Unclear", unclear)
+    );
+
+    // The only part of the view that scrolls (no visible scrollbar, a fade at the bottom)
+    const body = document.createElement("div");
+    body.className = "words-body";
+    body.tabIndex = 0;
+    body.setAttribute("aria-label", "Your words, scrollable");
+    body.append(text);
+
+    // The note sits under the words on laptops, and at the end of the words on phones (CSS shows one of the two)
+    const NOTE = "Long pauses are 3 seconds or more, and are not a mistake: pausing is often better than saying um. Unclear words are ones the transcription was unsure about.";
+    const note = document.createElement("p");
+    note.className = "words-note";
+    note.textContent = NOTE;
+    const inlineNote = document.createElement("p");
+    inlineNote.className = "words-note words-note-inline";
+    inlineNote.textContent = NOTE;
+    body.append(inlineNote);
+
+    view.append(legend, body, note);
+    return view;
+}
+
+// ---------------------------
+// Tabs (Backstage and the open playbill)
+// ---------------------------
+// Accessible tabs: a click picks one; Left and Right move and pick (wrapping), Home and End go to the
+// first and last. Only the picked tab is a Tab stop. Each tab shows the panel named by its aria-controls.
+// Works for any number of tabs. Returns { select(id), selected() }.
+function setupTabs(tablist, onChange) {
+    const tabs = () => Array.from(tablist.querySelectorAll('[role="tab"]'));
+    function select(id, focus = false) {
+        tabs().forEach(tab => {
+            const on = tab.id === id;
+            tab.setAttribute("aria-selected", String(on));
+            tab.tabIndex = on ? 0 : -1;
+            document.getElementById(tab.getAttribute("aria-controls")).hidden = !on;
+            if (on && focus) tab.focus();
+        });
+        if (onChange) onChange(id);
+    }
+    tablist.addEventListener("click", e => {
+        const tab = e.target.closest('[role="tab"]');
+        if (tab) select(tab.id);
+    });
+    tablist.addEventListener("keydown", e => {
+        const list = tabs();
+        const at = list.indexOf(document.activeElement);
+        if (at < 0) return;
+        let next = null;
+        if (e.key === "ArrowRight") next = list[(at + 1) % list.length];
+        else if (e.key === "ArrowLeft") next = list[(at - 1 + list.length) % list.length];
+        else if (e.key === "Home") next = list[0];
+        else if (e.key === "End") next = list[list.length - 1];
+        if (!next) return;
+        e.preventDefault();
+        select(next.id, true);
+    });
+    return {
+        select,
+        selected: () => tabs().find(tab => tab.getAttribute("aria-selected") === "true")?.id || null
+    };
+}
+
+// "Scroll for all notes" follows the open tab: Coach's notes as before, Your words only when it scrolls
+let notesHintOnNotes = true;
+function updateNotesHint(id) {
+    if (id === "tabWords") {
+        const body = wordsPanel.querySelector(".words-body");
+        notesHint.hidden = !body || body.scrollHeight <= body.clientHeight + 1;
+    } else {
+        notesHint.hidden = !notesHintOnNotes;
+    }
+}
+
+const wordsPanel = document.getElementById("wordsPanel");
+const backstageTabs = setupTabs(document.getElementById("backstageTabs"), updateNotesHint);
 
 // Section names the coach uses, so a plain "Strengths:" line also counts as a heading
 const NOTE_SECTIONS = /^(strengths?|weaknesses?|improvement tips?|areas? (for|to) improve(ment)?|staying on topic|time management|tips?|summary|overall)$/i;
@@ -1516,15 +1734,18 @@ function cleanWallEntry(raw) {
         filler_word_total: wallNumber(raw.filler_word_total, 0, 100000),
         filler_word_breakdown: wallBreakdown(raw.filler_word_breakdown),
         avg_confidence: wallNumber(raw.avg_confidence, 0, 1),
-        ai_feedback: wallString(raw.ai_feedback, WALL_MAX_FEEDBACK)
+        ai_feedback: wallString(raw.ai_feedback, WALL_MAX_FEEDBACK),
+        // Your words: badly formed words are dropped, but the rest of the entry is kept
+        words: cleanWords(raw.words)
     };
     return Object.values(entry).includes(WALL_BAD) ? null : entry;
 }
 
-// Cleans a list: drops bad entries, keeps the newest of any repeated id, newest first, at most 100
+// Cleans a list: drops bad entries, keeps the newest of any repeated id, newest first, at most 100.
+// Only the newest WALL_WORDS_ENTRIES keep their words.
 function tidyWall(list) {
     const seen = new Set();
-    return list
+    const tidy = list
         .map(cleanWallEntry)
         .filter(Boolean)
         .sort((a, b) => Date.parse(b.savedAt) - Date.parse(a.savedAt))
@@ -1534,6 +1755,12 @@ function tidyWall(list) {
             return true;
         })
         .slice(0, WALL_MAX_ENTRIES);
+    return wallWordsFor(tidy, WALL_WORDS_ENTRIES);
+}
+
+// The same list with words kept only on the newest "keep" entries (the others keep everything else)
+function wallWordsFor(list, keep) {
+    return list.map((entry, i) => (i < keep || entry.words === null ? entry : { ...entry, words: null }));
 }
 
 // Reads the wall from storage. Once saving has failed (storage blocked or full), storage no longer
@@ -1558,12 +1785,27 @@ function loadWall() {
     wallEntries = tidyWall(Array.isArray(list) ? list : []);
 }
 
+// When storage is nearly full, words are kept on fewer playbills (20, then 10, then none) before giving up.
+// What is kept in memory then matches what was saved.
+const WALL_WORDS_FALLBACK = [20, 10, 0];
+
 function writeWall() {
     try {
         if (wallEntries.length === 0) {
             localStorage.removeItem(WALL_KEY);
         } else {
-            localStorage.setItem(WALL_KEY, JSON.stringify(wallEntries));
+            let list = wallEntries;
+            const steps = [...WALL_WORDS_FALLBACK];
+            for (;;) {
+                try {
+                    localStorage.setItem(WALL_KEY, JSON.stringify(list));
+                    break;
+                } catch (err) {
+                    if (steps.length === 0) throw err;
+                    list = wallWordsFor(wallEntries, steps.shift());
+                }
+            }
+            wallEntries = list;
         }
         wallSavingWorks = true;
     } catch (err) {
@@ -1592,7 +1834,8 @@ function saveToWall(fileId, result) {
             filler_word_total: result.filler_word_total,
             filler_word_breakdown: result.filler_word_breakdown,
             avg_confidence: result.avg_confidence,
-            ai_feedback: result.ai_feedback
+            ai_feedback: result.ai_feedback,
+            words: result.words
         });
         if (!entry) return false;
         const isNew = !wallEntries.some(saved => saved.id === entry.id);
@@ -1795,6 +2038,8 @@ const pbConfirm = document.getElementById("pbConfirm");
 const pbReplace = document.getElementById("pbReplace");
 const pbReplaceText = document.getElementById("pbReplaceText");
 const pbNotes = document.getElementById("pbNotes");
+const pbWords = document.getElementById("pbWords");
+const playbillTabs = setupTabs(document.getElementById("pbTabs"));
 const pbPracticeBtn = document.getElementById("pbPracticeBtn");
 const pbRemoveBtn = document.getElementById("pbRemoveBtn");
 const pbKeepBtn = document.getElementById("pbKeepBtn");
@@ -1867,6 +2112,9 @@ function openPlaybill(entry, button) {
         pbNotes.replaceChildren(none);
     }
     pbNotes.scrollTop = 0;
+    // Your words (only the newest playbills keep them); the playbill always opens on Coach's notes
+    pbWords.replaceChildren(buildWordsView(entry.words));
+    playbillTabs.select("pbTabNotes");
 
     showPlaybillRow("buttons");
     openDialog(playbillDialog, pbTitle, button);
