@@ -2799,6 +2799,12 @@ html.settings-lock {
     font-style: italic;
 }
 
+/* Used as filler (the coach's judgement): a dotted gold underline, no highlight */
+.w-maybe {
+    border-bottom: 2px dotted #D9AE52;
+    color: #FFF6E3;
+}
+
 /* Long pause: a neutral pill with a pause icon (not styled as a mistake) */
 .w-pause {
     display: inline-flex;
@@ -2836,6 +2842,123 @@ html.settings-lock {
     padding: 6px 0;
     font-size: 15px;
     color: #DCCBB3;
+}
+
+/* The Nightly Review: a cream newspaper clipping, pinned with a brass pin and slightly tilted
+   (F2Backstage.dc.html). In the left column on laptops, in the Review tab on phones and in the playbill. */
+.perf-review {
+    flex-shrink: 0;
+    margin-top: 6px;
+}
+
+.review {
+    position: relative;
+    margin-top: 6px;
+    padding: 14px 16px 12px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #F7ECD3, #EAD9B6);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.55);
+    color: #2A1A0E;
+    transform: rotate(-1.2deg);
+}
+
+.review-pin {
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    margin-left: -7px;
+    border-radius: 999px;
+    background: radial-gradient(circle at 35% 35%, #F5D891, #8C6224);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.review-head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #2A1A0E;
+    text-align: center;
+}
+
+.review-title {
+    margin: 0;
+    font-family: var(--serif);
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    line-height: 1.25;
+    text-transform: uppercase;
+    color: #2A1A0E;
+}
+
+.review-sub {
+    font-size: 11px;
+    color: #5A4330;
+}
+
+.review-rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.review-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(42, 26, 14, 0.18);
+}
+
+.review-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.review-name {
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.review-level {
+    font-family: var(--serif);
+    font-size: 14px;
+    font-weight: 600;
+    font-style: italic;
+}
+
+.review-meter {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 3px;
+}
+
+.review-seg {
+    height: 5px;
+    border-radius: 2px;
+    background: rgba(42, 26, 14, 0.14);
+}
+
+.review-seg.is-on {
+    background: #B8893A;
+}
+
+.review-reason {
+    font-size: 12px;
+    line-height: 1.35;
+    color: #4A3423;
+    overflow-wrap: anywhere;
+}
+
+/* The Review tab and its panel are for phones only (laptops show the review in the left column) */
+.tab-phone-only,
+.review-panel {
+    display: none;
 }
 
 .note-heading {
@@ -3397,6 +3520,11 @@ html.settings-lock {
     color: #6B5A48;
 }
 
+.pb-words .w-maybe {
+    border-bottom-color: #9C7232;
+    color: #2A1A0E;
+}
+
 .pb-words .w-pause {
     border-color: rgba(42, 26, 14, 0.45);
     color: #4A3423;
@@ -3410,6 +3538,26 @@ html.settings-lock {
 .pb-words .words-empty {
     padding-bottom: 20px;
     color: #3A2A1C;
+}
+
+/* The playbill's Review tab: the same clipping on the paper, scrolling like the notes */
+.pb-review {
+    display: block;
+    flex: 1 1 auto;
+    min-height: 90px;
+    padding: 22px 36px 40px;
+    overflow-y: auto;
+    -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 40px), rgba(0, 0, 0, 0));
+    mask-image: linear-gradient(180deg, #000 calc(100% - 40px), rgba(0, 0, 0, 0));
+}
+
+.pb-review:focus-visible {
+    outline-offset: -2px;
+}
+
+.pb-review .review {
+    max-width: 440px;
+    margin: 6px auto 0;
 }
 
 .pb-notes .note-heading {
@@ -5108,6 +5256,41 @@ body.curtains-closed .drape {
         vertical-align: 1px;
     }
 
+    /* The review: a Review tab instead of the left column */
+    .perf-review {
+        display: none;
+    }
+
+    .notes .tab-phone-only {
+        display: block;
+    }
+
+    .review-panel {
+        display: block;
+        flex: 1 1 0;
+        min-height: 120px;
+        padding: 12px 6px 26px;
+        overflow-y: auto;
+        -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 26px), rgba(0, 0, 0, 0));
+        mask-image: linear-gradient(180deg, #000 calc(100% - 26px), rgba(0, 0, 0, 0));
+    }
+
+    .review-panel:focus-visible {
+        outline-offset: -2px;
+    }
+
+    .review {
+        transform: rotate(-0.8deg);
+    }
+
+    .review-title {
+        font-size: 17px;
+    }
+
+    .review-row {
+        padding: 7px 0;
+    }
+
     /* On phones the note comes at the end of the words, so it never takes space from them */
     .words-panel > .words-note {
         display: none;
@@ -5432,6 +5615,10 @@ body.curtains-closed .drape {
         padding: 12px 16px 0;
     }
 
+    .pb-review {
+        padding: 18px 16px 30px;
+    }
+
     .pb-words .words-body .words-note-inline {
         padding-bottom: 4px;
     }
@@ -5513,9 +5700,10 @@ body.curtains-closed .drape {
         display: block;
     }
 
-    /* Playbills hang straight, and so does the topic ticket */
+    /* Playbills hang straight, and so do the topic ticket and The Nightly Review */
     .playbill,
-    .ticket-wrap {
+    .ticket-wrap,
+    .review {
         transform: none !important;
     }
 }

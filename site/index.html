@@ -435,6 +435,8 @@
                         <div class="backstage-grid">
                             <aside class="perf" aria-label="Your speech">
                                 <div id="perfSummary" class="perf-summary"></div>
+                                <!-- Laptops: The Nightly Review clipping under the numbers (phones show it in the Review tab). Filled by buildReview(). -->
+                                <div id="perfReview" class="perf-review" hidden></div>
                                 <div class="perf-buttons">
                                     <button type="button" id="backToStageBtn" class="btn-gold">Back to the stage</button>
                                     <button type="button" id="tryAgainBtn" class="btn-outline">Try this topic again</button>
@@ -457,6 +459,8 @@
                                         <div id="backstageTabs" class="feedback-tabs" role="tablist" aria-label="Feedback views">
                                             <button type="button" id="tabNotes" class="feedback-tab" role="tab" aria-selected="true" aria-controls="coachNotesBody"><span class="long-label">Coach's notes</span><span class="short-label" aria-hidden="true">Notes</span></button>
                                             <button type="button" id="tabWords" class="feedback-tab" role="tab" aria-selected="false" aria-controls="wordsPanel" tabindex="-1">Your words</button>
+                                            <!-- Phones only, and only when there is a review -->
+                                            <button type="button" id="tabReview" class="feedback-tab tab-phone-only" role="tab" aria-selected="false" aria-controls="reviewPanel" tabindex="-1" hidden>Review</button>
                                         </div>
                                         <span id="notesHint" class="notes-hint"><span class="long-label">Scroll for all notes</span><span class="short-label" aria-hidden="true">Scroll for more</span></span>
                                     </div>
@@ -465,6 +469,8 @@
                                 <div id="coachNotesBody" class="notes-body" role="tabpanel" aria-labelledby="tabNotes" tabindex="0"></div>
                                 <!-- Filled by buildWordsView() -->
                                 <div id="wordsPanel" class="words-panel" role="tabpanel" aria-labelledby="tabWords" hidden></div>
+                                <!-- Phones: The Nightly Review (filled by buildReview()) -->
+                                <div id="reviewPanel" class="review-panel" role="tabpanel" aria-labelledby="tabReview" tabindex="0" hidden></div>
                             </section>
                         </div>
                     </div>
@@ -568,10 +574,13 @@
             <div id="pbTabs" class="feedback-tabs pb-tabs" role="tablist" aria-label="Feedback views">
                 <button type="button" id="pbTabNotes" class="feedback-tab" role="tab" aria-selected="true" aria-controls="pbNotes">Coach's notes</button>
                 <button type="button" id="pbTabWords" class="feedback-tab" role="tab" aria-selected="false" aria-controls="pbWords" tabindex="-1">Your words</button>
+                <!-- Only when this performance has a review -->
+                <button type="button" id="pbTabReview" class="feedback-tab" role="tab" aria-selected="false" aria-controls="pbReview" tabindex="-1" hidden>Review</button>
             </div>
             <!-- The parts of the open playbill that scroll -->
             <div id="pbNotes" class="pb-notes" role="tabpanel" aria-labelledby="pbTabNotes" tabindex="0"></div>
             <div id="pbWords" class="words-panel pb-words" role="tabpanel" aria-labelledby="pbTabWords" hidden></div>
+            <div id="pbReview" class="review-panel pb-review" role="tabpanel" aria-labelledby="pbTabReview" tabindex="0" hidden></div>
             <div class="pb-actions">
                 <div id="pbButtons" class="pb-row">
                     <button type="button" id="pbPracticeBtn" class="pb-btn pb-btn-dark">Practice this topic again</button>

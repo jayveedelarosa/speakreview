@@ -47,6 +47,12 @@ const WORD_MAX_LENGTH = 100;
 const WORD_MAX_TIME = 360000;              // one hour, in hundredths of a second
 const WALL_WORDS_ENTRIES = 30;             // only the newest playbills keep their words
 
+// The coach's extras. "filler_flags" are positions in "words" of words the coach judged as used as filler
+// (like, so, actually, basically, you know). "review" rates four things from 1 to 4, each with one reason.
+const REVIEW_KEYS = ["structure", "clarity", "on_topic", "word_choice"];
+const REVIEW_LEVELS = ["Developing", "Solid", "Strong", "Outstanding"];      // levels 1 to 4
+const REVIEW_REASON_MAX = 160;
+
 // Label and hint shown for each type of random topic
 const TOPIC_TYPE_INFO = {
     persuade: { label: "Persuade", hint: "Take a side and back it up" },
@@ -1101,8 +1107,18 @@ function displayResult(data) {
     notesHintOnNotes = !tooShort;
     coachNotesBody.scrollTop = 0;
     perfColumn.scrollTop = 0;
-    // Your words (too-short speeches show theirs too). Every new result opens on Coach's notes.
-    wordsPanel.replaceChildren(buildWordsView(cleanWords(data.words)));
+    // Your words (too-short speeches show theirs too), with the coach's dotted fillers when it judged them
+    const transcript = cleanTranscript(data.words, data.filler_flags, data.fillers_judged);
+    wordsPanel.replaceChildren(buildWordsView(transcript.words, transcript.flags));
+    // The Nightly Review: in the left column on laptops, in the Review tab on phones. Hidden without a valid review.
+    const review = cleanReview(data.review);
+    const hasTopic = typeof data.topic === "string" && data.topic.trim() !== "";
+    perfReview.replaceChildren(...(review ? [buildReview(review, hasTopic)] : []));
+    reviewPanel.replaceChildren(...(review ? [buildReview(review, hasTopic)] : []));
+    perfReview.hidden = !review;
+    tabReview.hidden = !review;
+    reviewPanel.scrollTop = 0;
+    // Every new result opens on Coach's notes
     backstageTabs.select("tabNotes");
 
     setTimeout(() => {
@@ -1131,19 +1147,58 @@ function tooShortNote(feedback) {
 // [word, start, end, confidence] items, and every word is put on the page with textContent.
 // Returns null when there are no words at all (older results), or a list (possibly empty).
 function cleanWords(raw) {
+    const clean = cleanWordsKeepingPlaces(raw);
+    return clean ? clean.words : null;
+}
+
+// The same, plus where each kept word was in the original list (so filler_flags can follow it)
+function cleanWordsKeepingPlaces(raw) {
     if (!Array.isArray(raw)) return null;
     const time = value => typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= WORD_MAX_TIME;
     const words = [];
-    for (const item of raw) {
-        if (words.length >= WORDS_MAX) break;
-        if (!Array.isArray(item) || item.length < 4) continue;
+    const places = new Map();      // position in the original list -> position in the clean list
+    raw.forEach((item, at) => {
+        if (words.length >= WORDS_MAX) return;
+        if (!Array.isArray(item) || item.length < 4) return;
         const [word, start, end, confidence] = item;
-        if (typeof word !== "string" || word.trim() === "" || word.length > WORD_MAX_LENGTH) continue;
-        if (!time(start) || !time(end) || end < start) continue;
-        if (typeof confidence !== "number" || !Number.isFinite(confidence) || confidence < 0 || confidence > 100) continue;
+        if (typeof word !== "string" || word.trim() === "" || word.length > WORD_MAX_LENGTH) return;
+        if (!time(start) || !time(end) || end < start) return;
+        if (typeof confidence !== "number" || !Number.isFinite(confidence) || confidence < 0 || confidence > 100) return;
+        places.set(at, words.length);
         words.push([word.trim(), Math.round(start), Math.round(end), Math.round(confidence)]);
+    });
+    return { words, places };
+}
+
+// Words plus the coach's judged fillers. Returns { words, flags }: words as cleanWords() gives them, and flags
+// as a Set of positions in those clean words, or null when the coach didn't judge (no dotted marks then).
+// A flag only counts when it is a whole number pointing at a word that was kept; it then follows that word
+// to its place in the clean list. Used for results from the server and for what storage gives back.
+function cleanTranscript(rawWords, rawFlags, judged) {
+    const clean = cleanWordsKeepingPlaces(rawWords);
+    if (!clean) return { words: null, flags: null };
+    if (judged !== true || !Array.isArray(rawFlags)) return { words: clean.words, flags: null };
+    const flags = new Set();
+    rawFlags.forEach(at => {
+        if (Number.isInteger(at) && clean.places.has(at)) flags.add(clean.places.get(at));
+    });
+    return { words: clean.words, flags };
+}
+
+// The coach's review, or null. All four parts must be there, each with a whole-number level from 1 to 4
+// and a reason (a sentence of up to REVIEW_REASON_MAX characters). Anything else hides the review.
+function cleanReview(raw) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+    const review = {};
+    for (const key of REVIEW_KEYS) {
+        const part = Object.hasOwn(raw, key) ? raw[key] : null;
+        if (!part || typeof part !== "object" || Array.isArray(part)) return null;
+        const { level, reason } = part;
+        if (typeof level !== "number" || !Number.isInteger(level) || level < 1 || level > 4) return null;
+        if (typeof reason !== "string" || reason.trim() === "" || reason.length > REVIEW_REASON_MAX) return null;
+        review[key] = { level, reason: reason.trim() };
     }
-    return words;
+    return review;
 }
 
 function isFillerSound(word) {
@@ -1172,13 +1227,22 @@ function pausePill(seconds) {
 }
 
 // A marked word: the mark's look plus words for screen readers, so color is never the only signal
+const WORD_MARKS = {
+    filler: { tag: "mark", className: "w-filler", sr: " (filler)" },
+    maybe: { tag: "span", className: "w-maybe", sr: " (used as filler)" },
+    unclear: { tag: "span", className: "w-unclear", sr: " (unclear)" }
+};
+
 function markedWord(kind, word) {
-    const element = document.createElement(kind === "filler" ? "mark" : "span");
-    element.className = kind === "filler" ? "w-filler" : "w-unclear";
+    const mark = WORD_MARKS[kind];
+    const element = document.createElement(mark.tag);
+    element.className = mark.className;
     if (kind === "unclear") element.title = "The transcription was unsure about this word";
-    element.append(document.createTextNode(word), makeSpan("visually-hidden", kind === "filler" ? " (filler)" : " (unclear)"));
+    element.append(document.createTextNode(word), makeSpan("visually-hidden", mark.sr));
     return element;
 }
+
+const bareWord = word => word.toLowerCase().replace(/[^a-z]/g, "");
 
 // One legend item: a sample mark, then its name and count
 function legendItem(sample, long, short, count) {
@@ -1193,8 +1257,9 @@ function legendItem(sample, long, short, count) {
     return item;
 }
 
-// Builds the Your words view for a list of words (or null). Returns a fragment for a panel.
-function buildWordsView(words) {
+// Builds the Your words view for a list of words (or null). flags: the positions the coach judged as used
+// as filler (a Set), or null when the coach didn't judge. Returns a fragment for a panel.
+function buildWordsView(words, flags = null) {
     const view = document.createDocumentFragment();
     if (!words || words.length === 0) {
         const empty = document.createElement("p");
@@ -1211,8 +1276,14 @@ function buildWordsView(words) {
         if (plain) text.append(document.createTextNode(plain));
         plain = "";
     };
-    let fillers = 0, pauses = 0, unclear = 0;
+    let fillers = 0, pauses = 0, unclear = 0, judged = 0;
+    const flagged = i => flags !== null && flags.has(i);
+    let skipNext = false;              // the "know" of a "you know" already shown with its "you"
     words.forEach(([word, start, , confidence], i) => {
+        if (skipNext) {
+            skipNext = false;
+            return;
+        }
         const gap = i > 0 ? start - words[i - 1][2] : 0;
         if (gap >= LONG_PAUSE_HUNDREDTHS) {
             flush();
@@ -1220,11 +1291,24 @@ function buildWordsView(words) {
             pauses++;
         }
         const space = i > 0 ? " " : "";
+        // One mark per word: um/uh first (as before), then the coach's "used as filler", then unclear
         if (isFillerSound(word)) {             // a filler wins over unclear (the transcription is often unsure about "um")
             plain += space;
             flush();
             text.append(markedWord("filler", word));
             fillers++;
+        } else if (flagged(i)) {
+            // "you know" is one filler: both words go in one dotted mark (unless a long pause splits them)
+            let shown = word;
+            const next = words[i + 1];
+            if (bareWord(word) === "you" && next && flagged(i + 1) && bareWord(next[0]) === "know" && next[1] - words[i][2] < LONG_PAUSE_HUNDREDTHS) {
+                shown = `${word} ${next[0]}`;
+                skipNext = true;
+            }
+            plain += space;
+            flush();
+            text.append(markedWord("maybe", shown));
+            judged++;
         } else if (confidence < UNCLEAR_CONFIDENCE) {
             plain += space;
             flush();
@@ -1241,12 +1325,15 @@ function buildWordsView(words) {
     samplePause.className = "w-pause";
     samplePause.append(pauseIcon(), document.createTextNode("3s+"));
     const sampleUnclear = makeSpan("w-unclear", "word");
-    [sampleFiller, samplePause, sampleUnclear].forEach(sample => sample.setAttribute("aria-hidden", "true"));
+    const sampleMaybe = makeSpan("w-maybe", "like");
+    [sampleFiller, samplePause, sampleUnclear, sampleMaybe].forEach(sample => sample.setAttribute("aria-hidden", "true"));
 
+    // The design's order: Filler, Used as filler (only when the coach judged), Long pause, Unclear
     const legend = document.createElement("p");
     legend.className = "words-legend";
+    legend.append(legendItem(sampleFiller, "Filler", "Filler", fillers));
+    if (flags !== null) legend.append(legendItem(sampleMaybe, "Used as filler", "As filler", judged));
     legend.append(
-        legendItem(sampleFiller, "Filler", "Filler", fillers),
         legendItem(samplePause, "Long pause", "Pause", pauses),
         legendItem(sampleUnclear, "Unclear", "Unclear", unclear)
     );
@@ -1259,7 +1346,8 @@ function buildWordsView(words) {
     body.append(text);
 
     // The note sits under the words on laptops, and at the end of the words on phones (CSS shows one of the two)
-    const NOTE = "Long pauses are 3 seconds or more, and are not a mistake: pausing is often better than saying um. Unclear words are ones the transcription was unsure about.";
+    const NOTE = (flags !== null ? "Dotted words are only marked when used as filler. " : "")
+        + "Long pauses are 3 seconds or more, and are not a mistake: pausing is often better than saying um. Unclear words are ones the transcription was unsure about.";
     const note = document.createElement("p");
     note.className = "words-note";
     note.textContent = NOTE;
@@ -1270,6 +1358,53 @@ function buildWordsView(words) {
 
     view.append(legend, body, note);
     return view;
+}
+
+// ---------------------------
+// The Nightly Review: the coach's rating as a newspaper clipping
+// ---------------------------
+// review: from cleanReview() (never null here). hasTopic: without a topic, "Staying on topic" reads
+// "Staying on point". Built with textContent only. The meter is decorative: the level word always shows,
+// and screen readers also hear "(3 of 4)".
+function buildReview(review, hasTopic) {
+    const rows = [
+        ["structure", "Structure"],
+        ["clarity", "Clarity of message"],
+        ["on_topic", hasTopic ? "Staying on topic" : "Staying on point"],
+        ["word_choice", "Word choice"]
+    ];
+    const clipping = document.createElement("section");
+    clipping.className = "review";
+    clipping.setAttribute("aria-label", "The Nightly Review");
+
+    const pin = makeSpan("review-pin", "");
+    pin.setAttribute("aria-hidden", "true");
+    const head = document.createElement("div");
+    head.className = "review-head";
+    const title = document.createElement("h3");
+    title.className = "review-title";
+    title.textContent = "The Nightly Review";
+    head.append(title, makeSpan("review-sub", "Your coach's rating. A rough guide, not a grade."));
+
+    const list = document.createElement("ul");
+    list.className = "review-rows";
+    rows.forEach(([key, name]) => {
+        const { level, reason } = review[key];
+        const row = document.createElement("li");
+        row.className = "review-row";
+        const top = makeSpan("review-top", "");
+        const levelWord = makeSpan("review-level", REVIEW_LEVELS[level - 1]);
+        levelWord.append(makeSpan("visually-hidden", ` (${level} of 4)`));
+        top.append(makeSpan("review-name", name), levelWord);
+        const meter = makeSpan("review-meter", "");
+        meter.setAttribute("aria-hidden", "true");
+        for (let n = 1; n <= 4; n++) meter.append(makeSpan(n <= level ? "review-seg is-on" : "review-seg", ""));
+        row.append(top, meter, makeSpan("review-reason", reason));
+        list.append(row);
+    });
+
+    clipping.append(pin, head, list);
+    return clipping;
 }
 
 // ---------------------------
@@ -1295,7 +1430,8 @@ function setupTabs(tablist, onChange) {
         if (tab) select(tab.id);
     });
     tablist.addEventListener("keydown", e => {
-        const list = tabs();
+        // Only tabs that are shown (the Review tab is hidden without a review, and on laptops)
+        const list = tabs().filter(tab => !tab.hidden && tab.getClientRects().length > 0);
         const at = list.indexOf(document.activeElement);
         if (at < 0) return;
         let next = null;
@@ -1313,19 +1449,26 @@ function setupTabs(tablist, onChange) {
     };
 }
 
-// "Scroll for all notes" follows the open tab: Coach's notes as before, Your words only when it scrolls
+// "Scroll for all notes" shows only when the open tab's content can really scroll (never for a too-short
+// speech's single sentence). The panels have no size while Backstage is hidden, so a ResizeObserver
+// measures again whenever they get one (Backstage opening, window size, new content).
 let notesHintOnNotes = true;
-function updateNotesHint(id) {
-    if (id === "tabWords") {
-        const body = wordsPanel.querySelector(".words-body");
-        notesHint.hidden = !body || body.scrollHeight <= body.clientHeight + 1;
-    } else {
-        notesHint.hidden = !notesHintOnNotes;
-    }
+function updateNotesHint() {
+    const id = backstageTabs.selected();
+    let scroller = coachNotesBody;
+    if (id === "tabWords") scroller = wordsPanel.querySelector(".words-body");
+    if (id === "tabReview") scroller = reviewPanel;
+    const canScroll = Boolean(scroller) && scroller.clientHeight > 0 && scroller.scrollHeight > scroller.clientHeight + 1;
+    notesHint.hidden = !canScroll || (id === "tabNotes" && !notesHintOnNotes);
 }
 
 const wordsPanel = document.getElementById("wordsPanel");
-const backstageTabs = setupTabs(document.getElementById("backstageTabs"), updateNotesHint);
+const reviewPanel = document.getElementById("reviewPanel");
+const tabReview = document.getElementById("tabReview");
+const perfReview = document.getElementById("perfReview");
+const backstageTabs = setupTabs(document.getElementById("backstageTabs"), () => updateNotesHint());
+const hintObserver = new ResizeObserver(() => updateNotesHint());
+[coachNotesBody, wordsPanel, reviewPanel].forEach(panel => hintObserver.observe(panel));
 
 // Section names the coach uses, so a plain "Strengths:" line also counts as a heading
 const NOTE_SECTIONS = /^(strengths?|weaknesses?|improvement tips?|areas? (for|to) improve(ment)?|staying on topic|time management|tips?|summary|overall)$/i;
@@ -1456,7 +1599,10 @@ function updatePerfScroll() {
     const style = getComputedStyle(perfColumn);
     const box = style.display !== "contents" && perfColumn.clientHeight > 0;
     // What the content needs, measured the same way with or without the classes, so it never flips back and forth
-    const needed = perfSummary.offsetHeight + (parseFloat(style.rowGap) || 0) + perfButtons.offsetHeight + PERF_FOCUS_ROOM;
+    const gap = parseFloat(style.rowGap) || 0;
+    const reviewShown = !perfReview.hidden && perfReview.offsetHeight > 0;
+    const reviewNeeds = reviewShown ? perfReview.offsetHeight + gap + (parseFloat(getComputedStyle(perfReview).marginTop) || 0) : 0;
+    const needed = perfSummary.offsetHeight + gap + reviewNeeds + perfButtons.offsetHeight + PERF_FOCUS_ROOM;
     const scrollable = box && needed > perfColumn.clientHeight;
     perfColumn.classList.toggle("is-scrollable", scrollable);
     if (scrollable) {
@@ -1470,7 +1616,7 @@ function updatePerfScroll() {
 
 // Window size, zoom, Backstage opening and new content (now or added later) all change one of these sizes
 const perfObserver = new ResizeObserver(updatePerfScroll);
-[perfColumn, perfSummary, perfButtons].forEach(element => perfObserver.observe(element));
+[perfColumn, perfSummary, perfButtons, document.getElementById("perfReview")].forEach(element => perfObserver.observe(element));
 perfColumn.addEventListener("scroll", updatePerfScroll, { passive: true });
 
 function focusBackstageHeading() {
@@ -1720,6 +1866,8 @@ function cleanWallEntry(raw) {
         tooShort = raw.too_short;
     }
 
+    // Your words and the coach's dotted fillers travel together; a bad review is dropped, the entry kept
+    const transcript = cleanTranscript(raw.words, raw.filler_flags, raw.fillers_judged);
     const entry = {
         id: raw.id,
         savedAt: new Date(savedAt).toISOString(),
@@ -1736,7 +1884,10 @@ function cleanWallEntry(raw) {
         avg_confidence: wallNumber(raw.avg_confidence, 0, 1),
         ai_feedback: wallString(raw.ai_feedback, WALL_MAX_FEEDBACK),
         // Your words: badly formed words are dropped, but the rest of the entry is kept
-        words: cleanWords(raw.words)
+        words: transcript.words,
+        filler_flags: transcript.flags ? [...transcript.flags].sort((a, b) => a - b) : null,
+        fillers_judged: transcript.flags ? true : null,
+        review: cleanReview(raw.review)
     };
     return Object.values(entry).includes(WALL_BAD) ? null : entry;
 }
@@ -1760,7 +1911,7 @@ function tidyWall(list) {
 
 // The same list with words kept only on the newest "keep" entries (the others keep everything else)
 function wallWordsFor(list, keep) {
-    return list.map((entry, i) => (i < keep || entry.words === null ? entry : { ...entry, words: null }));
+    return list.map((entry, i) => (i < keep || entry.words === null ? entry : { ...entry, words: null, filler_flags: null, fillers_judged: null }));
 }
 
 // Reads the wall from storage. Once saving has failed (storage blocked or full), storage no longer
@@ -1835,7 +1986,10 @@ function saveToWall(fileId, result) {
             filler_word_breakdown: result.filler_word_breakdown,
             avg_confidence: result.avg_confidence,
             ai_feedback: result.ai_feedback,
-            words: result.words
+            words: result.words,
+            filler_flags: result.filler_flags,
+            fillers_judged: result.fillers_judged,
+            review: result.review
         });
         if (!entry) return false;
         const isNew = !wallEntries.some(saved => saved.id === entry.id);
@@ -2039,6 +2193,8 @@ const pbReplace = document.getElementById("pbReplace");
 const pbReplaceText = document.getElementById("pbReplaceText");
 const pbNotes = document.getElementById("pbNotes");
 const pbWords = document.getElementById("pbWords");
+const pbReview = document.getElementById("pbReview");
+const pbTabReview = document.getElementById("pbTabReview");
 const playbillTabs = setupTabs(document.getElementById("pbTabs"));
 const pbPracticeBtn = document.getElementById("pbPracticeBtn");
 const pbRemoveBtn = document.getElementById("pbRemoveBtn");
@@ -2113,7 +2269,11 @@ function openPlaybill(entry, button) {
     }
     pbNotes.scrollTop = 0;
     // Your words (only the newest playbills keep them); the playbill always opens on Coach's notes
-    pbWords.replaceChildren(buildWordsView(entry.words));
+    pbWords.replaceChildren(buildWordsView(entry.words, entry.filler_flags ? new Set(entry.filler_flags) : null));
+    // The Nightly Review, as a third tab when this performance has one
+    pbReview.replaceChildren(...(entry.review ? [buildReview(entry.review, Boolean(entry.topic))] : []));
+    pbTabReview.hidden = !entry.review;
+    pbReview.scrollTop = 0;
     playbillTabs.select("pbTabNotes");
 
     showPlaybillRow("buttons");
@@ -3900,6 +4060,8 @@ document.addEventListener("keydown", e => {
 phoneQuery.addEventListener("change", () => {
     closeSettings(false);
     updateTickets();
+    // The Review tab is for phones only (laptops show the review in the left column)
+    if (!phoneQuery.matches && backstageTabs.selected() === "tabReview") backstageTabs.select("tabNotes");
 });
 window.addEventListener("resize", placePanelArrow);
 
