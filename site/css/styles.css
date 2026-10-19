@@ -2551,19 +2551,42 @@ html.settings-lock {
 /* When the summary and buttons are taller than the mirror (short windows, or more content), the column
    scrolls inside the mirror like Coach's notes: no visible scrollbar, and a fade at the bottom while there
    is more below. app.js adds these classes only then, so roomy windows look exactly as before. */
-.perf.is-scrollable {
+/* The part above the buttons: the summary, the numbers and The Nightly Review. The 16px on each side
+   (taken back by the negative margin, so nothing moves) holds the tilted clipping and its shadow. */
+.perf-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: inherit;
+    flex: 0 1 auto;
     min-height: 0;
+    margin: 0 -16px;
+    padding: 0 16px;
+}
+
+/* When it doesn't fit, only this part scrolls: the buttons below stay in view. The top room is for the
+   pin and the tilt; the bottom room is a little taller than the 40px fade, so the tilted clipping's lower
+   corner ends above it. */
+.perf-scroll.is-scrollable {
+    padding-top: 10px;
+    padding-bottom: 44px;
     overflow-y: auto;
-    padding-bottom: 6px;
 }
 
-.perf.is-scrollable.has-more {
-    -webkit-mask-image: linear-gradient(180deg, #000 82%, rgba(0, 0, 0, 0));
-    mask-image: linear-gradient(180deg, #000 82%, rgba(0, 0, 0, 0));
+.perf-scroll.is-scrollable.has-more {
+    -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 40px), rgba(0, 0, 0, 0));
+    mask-image: linear-gradient(180deg, #000 calc(100% - 40px), rgba(0, 0, 0, 0));
 }
 
-.perf.is-scrollable:focus-visible {
+.perf-scroll.is-scrollable:focus-visible {
     outline-offset: -2px;
+}
+
+/* "Scroll for the review", while the review is still below the fold */
+.perf-hint {
+    margin: 0;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
 }
 
 .btn-outline {
@@ -2700,6 +2723,12 @@ html.settings-lock {
 
 .feedback-tab:focus-visible {
     outline-offset: -3px;
+}
+
+/* No focus box after a click or tap on a tab (the browser keeps one when the tab already had keyboard
+   focus). app.js sets data-pointer on a press and removes it on the next key, so keyboard focus shows as before. */
+.feedback-tabs[data-pointer] .feedback-tab:focus-visible {
+    outline: none;
 }
 
 .notes-head h2 {
@@ -5061,6 +5090,15 @@ body.curtains-closed .drape {
 
     .perf {
         display: contents;
+    }
+
+    /* Phones: the summary and buttons go in the one column directly, as before */
+    .perf-scroll {
+        display: contents;
+    }
+
+    .perf-hint {
+        display: none;
     }
 
     .perf-summary {

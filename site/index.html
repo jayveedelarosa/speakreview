@@ -434,9 +434,13 @@
                     <div id="result" class="backstage-content" hidden>
                         <div class="backstage-grid">
                             <aside class="perf" aria-label="Your speech">
-                                <div id="perfSummary" class="perf-summary"></div>
-                                <!-- Laptops: The Nightly Review clipping under the numbers (phones show it in the Review tab). Filled by buildReview(). -->
-                                <div id="perfReview" class="perf-review" hidden></div>
+                                <!-- Laptops: the part above the buttons scrolls when it doesn't fit, so the buttons always show -->
+                                <div id="perfScroll" class="perf-scroll">
+                                    <div id="perfSummary" class="perf-summary"></div>
+                                    <!-- Laptops: The Nightly Review clipping under the numbers (phones show it in the Review tab). Filled by buildReview(). -->
+                                    <div id="perfReview" class="perf-review" hidden></div>
+                                </div>
+                                <p id="perfHint" class="perf-hint" aria-hidden="true" hidden>Scroll for the review</p>
                                 <div class="perf-buttons">
                                     <button type="button" id="backToStageBtn" class="btn-gold">Back to the stage</button>
                                     <button type="button" id="tryAgainBtn" class="btn-outline">Try this topic again</button>

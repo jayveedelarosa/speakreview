@@ -1106,7 +1106,7 @@ function displayResult(data) {
     }
     notesHintOnNotes = !tooShort;
     coachNotesBody.scrollTop = 0;
-    perfColumn.scrollTop = 0;
+    perfScroll.scrollTop = 0;
     // Your words (too-short speeches show theirs too), with the coach's dotted fillers when it judged them
     const transcript = cleanTranscript(data.words, data.filler_flags, data.fillers_judged);
     wordsPanel.replaceChildren(buildWordsView(transcript.words, transcript.flags));
@@ -1429,6 +1429,13 @@ function setupTabs(tablist, onChange) {
         const tab = e.target.closest('[role="tab"]');
         if (tab) select(tab.id);
     });
+    // No focus box after a click or tap: a press marks the tabs, the next key (or leaving them) clears it,
+    // so keyboard focus shows exactly as before
+    tablist.addEventListener("pointerdown", () => tablist.setAttribute("data-pointer", ""));
+    tablist.addEventListener("keydown", () => tablist.removeAttribute("data-pointer"), true);
+    tablist.addEventListener("focusout", e => {
+        if (!tablist.contains(e.relatedTarget)) tablist.removeAttribute("data-pointer");
+    });
     tablist.addEventListener("keydown", e => {
         // Only tabs that are shown (the Review tab is hidden without a review, and on laptops)
         const list = tabs().filter(tab => !tab.hidden && tab.getClientRects().length > 0);
@@ -1587,37 +1594,51 @@ function restartBulbs() {
     mirror.classList.add("bulbs-on");
 }
 
-// ---- Backstage left column: scrolls inside the mirror only when it doesn't fit ----
-// The summary and buttons can be taller than the mirror on short windows. Then the column becomes a
-// scroller like Coach's notes (focusable, so arrow keys scroll it too) with a fade while there is more
-// below. On phones the column is display: contents and nothing here applies.
+// ---- Backstage left column: the buttons always show, the part above them scrolls when needed ----
+// The summary, numbers and The Nightly Review can be taller than the mirror on short windows. Then only
+// #perfScroll scrolls, like Coach's notes (focusable, so arrow keys scroll it too, with a fade while there is
+// more below), and "Back to the stage" / "Try this topic again" stay at the bottom. "Scroll for the review"
+// shows while the review is still below the fold. On phones it is all display: contents and nothing here applies.
 const perfColumn = document.querySelector(".perf");
+const perfScroll = document.getElementById("perfScroll");
+const perfHint = document.getElementById("perfHint");
 const perfButtons = perfColumn.querySelector(".perf-buttons");
-const PERF_FOCUS_ROOM = 6;     // the bottom padding added while scrolling (room for the last focus ring)
+const PERF_FADE_ROOM = 40;     // the fade at the bottom while scrolling (the bottom padding is a little taller)
 
 function updatePerfScroll() {
-    const style = getComputedStyle(perfColumn);
-    const box = style.display !== "contents" && perfColumn.clientHeight > 0;
-    // What the content needs, measured the same way with or without the classes, so it never flips back and forth
-    const gap = parseFloat(style.rowGap) || 0;
+    const box = getComputedStyle(perfScroll).display !== "contents" && perfColumn.clientHeight > 0;
+    // What the content needs as it is laid out when it fits (without the scrolling padding or the hint), and
+    // the room above the buttons. Measured the same way with or without the classes, so it never flips back
+    // and forth, and windows where it already fit look exactly as before.
+    const gap = parseFloat(getComputedStyle(perfColumn).rowGap) || 0;
     const reviewShown = !perfReview.hidden && perfReview.offsetHeight > 0;
-    const reviewNeeds = reviewShown ? perfReview.offsetHeight + gap + (parseFloat(getComputedStyle(perfReview).marginTop) || 0) : 0;
-    const needed = perfSummary.offsetHeight + gap + reviewNeeds + perfButtons.offsetHeight + PERF_FOCUS_ROOM;
-    const scrollable = box && needed > perfColumn.clientHeight;
-    perfColumn.classList.toggle("is-scrollable", scrollable);
+    const reviewNeeds = reviewShown ? gap + (parseFloat(getComputedStyle(perfReview).marginTop) || 0) + perfReview.offsetHeight : 0;
+    const needed = perfSummary.offsetHeight + reviewNeeds;
+    const room = perfColumn.clientHeight - perfButtons.offsetHeight - gap;
+    const scrollable = box && needed > room;
+    perfScroll.classList.toggle("is-scrollable", scrollable);
     if (scrollable) {
-        perfColumn.setAttribute("tabindex", "0");
+        perfScroll.setAttribute("tabindex", "0");
+        perfScroll.setAttribute("aria-label", "Your speech, scrollable");
     } else {
-        perfColumn.removeAttribute("tabindex");
-        perfColumn.scrollTop = 0;
+        perfScroll.removeAttribute("tabindex");
+        perfScroll.removeAttribute("aria-label");
+        perfScroll.scrollTop = 0;
     }
-    perfColumn.classList.toggle("has-more", scrollable && perfColumn.scrollTop + perfColumn.clientHeight < perfColumn.scrollHeight - 1);
+    perfScroll.classList.toggle("has-more", scrollable && perfScroll.scrollTop + perfScroll.clientHeight < perfScroll.scrollHeight - 1);
+    // The hint: only while part of the review is still under the fade
+    let reviewBelow = false;
+    if (scrollable && reviewShown) {
+        const visibleBottom = perfScroll.getBoundingClientRect().bottom - PERF_FADE_ROOM;
+        reviewBelow = perfReview.getBoundingClientRect().bottom > visibleBottom + 1;
+    }
+    perfHint.hidden = !reviewBelow;
 }
 
 // Window size, zoom, Backstage opening and new content (now or added later) all change one of these sizes
 const perfObserver = new ResizeObserver(updatePerfScroll);
-[perfColumn, perfSummary, perfButtons, document.getElementById("perfReview")].forEach(element => perfObserver.observe(element));
-perfColumn.addEventListener("scroll", updatePerfScroll, { passive: true });
+[perfColumn, perfScroll, perfSummary, perfButtons, document.getElementById("perfReview")].forEach(element => perfObserver.observe(element));
+perfScroll.addEventListener("scroll", updatePerfScroll, { passive: true });
 
 function focusBackstageHeading() {
     const heading = resultBox.hidden ? backstageEmptyTitle : coachNotesTitle;
