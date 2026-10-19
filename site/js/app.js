@@ -1594,27 +1594,28 @@ function restartBulbs() {
     mirror.classList.add("bulbs-on");
 }
 
-// ---- Backstage left column: the buttons always show, the part above them scrolls when needed ----
-// The summary, numbers and The Nightly Review can be taller than the mirror on short windows. Then only
+// ---- Backstage left column: scrolls when needed ----
+// The summary, the number row and The Nightly Review can be taller than the mirror on short windows. Then
 // #perfScroll scrolls, like Coach's notes (focusable, so arrow keys scroll it too, with a fade while there is
-// more below), and "Back to the stage" / "Try this topic again" stay at the bottom. "Scroll for the review"
-// shows while the review is still below the fold. On phones it is all display: contents and nothing here applies.
+// more below). "Back to the stage" / "Try this topic again" sit under the notes, so they always show.
+// "Scroll for the review" shows while the review is still below the fold. On phones it is all display:
+// contents and nothing here applies.
 const perfColumn = document.querySelector(".perf");
 const perfScroll = document.getElementById("perfScroll");
 const perfHint = document.getElementById("perfHint");
-const perfButtons = perfColumn.querySelector(".perf-buttons");
+const perfButtons = document.querySelector("#result .perf-buttons");   // under the notes (not in this column)
 const PERF_FADE_ROOM = 40;     // the fade at the bottom while scrolling (the bottom padding is a little taller)
 
 function updatePerfScroll() {
     const box = getComputedStyle(perfScroll).display !== "contents" && perfColumn.clientHeight > 0;
     // What the content needs as it is laid out when it fits (without the scrolling padding or the hint), and
-    // the room above the buttons. Measured the same way with or without the classes, so it never flips back
-    // and forth, and windows where it already fit look exactly as before.
+    // the column's height. Measured the same way with or without the classes, so it never flips back and forth,
+    // and windows where it fits show no scrolling at all.
     const gap = parseFloat(getComputedStyle(perfColumn).rowGap) || 0;
     const reviewShown = !perfReview.hidden && perfReview.offsetHeight > 0;
     const reviewNeeds = reviewShown ? gap + (parseFloat(getComputedStyle(perfReview).marginTop) || 0) + perfReview.offsetHeight : 0;
     const needed = perfSummary.offsetHeight + reviewNeeds;
-    const room = perfColumn.clientHeight - perfButtons.offsetHeight - gap;
+    const room = perfColumn.clientHeight;      // the buttons sit under the notes, so the column is all room
     const scrollable = box && needed > room;
     perfScroll.classList.toggle("is-scrollable", scrollable);
     if (scrollable) {

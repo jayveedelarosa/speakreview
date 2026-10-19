@@ -2589,6 +2589,149 @@ html.settings-lock {
     text-align: center;
 }
 
+/* Laptops (the two-column mirror), as in F2Backstage.dc.html: the left column holds the performance, one row
+   of three numbers and The Nightly Review; "Try this topic again" and the gold "Back to the stage" sit at the
+   bottom right, under the notes. Phones keep their own one-column layout (max-width: 600px). */
+@media (min-width: 601px) {
+    .backstage-grid {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) auto;
+        column-gap: 44px;
+        row-gap: 0;
+    }
+
+    /* 318px of content as in the design, a little less on small laptop windows so the notes keep room
+       (plus the 6px focus room on each side) */
+    .perf {
+        grid-column: 1;
+        grid-row: 1 / 3;
+        width: calc(clamp(270px, 28vw, 318px) + 12px);
+        min-height: 0;
+        gap: 14px;
+    }
+
+    /* The performance as compact as the design: topic, then one line for the time */
+    .perf-summary {
+        gap: 8px;
+    }
+
+    .perf-topic {
+        font-size: 22px;
+    }
+
+    .perf-time {
+        align-items: center;
+        gap: 8px;
+        margin-top: 0;
+        padding: 0;
+        border: 0;
+    }
+
+    .perf-elapsed {
+        font-size: 22px;
+    }
+
+    .perf-limit {
+        font-size: 14px;
+    }
+
+    .time-pill {
+        height: 22px;
+        padding: 0 9px;
+        font-size: 11px;
+    }
+
+    .perf-note {
+        margin-top: 0;
+    }
+
+    .notes {
+        grid-column: 2;
+        grid-row: 1;
+        min-height: 0;
+    }
+
+    /* Right-aligned with the gold button last on the right. When the column is too narrow for both, "Try this
+       topic again" wraps under it. The left border carries on the line beside the notes. */
+    .perf-buttons {
+        grid-column: 2;
+        grid-row: 2;
+        flex-direction: row-reverse;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        gap: 8px 10px;
+        margin: 0;
+        padding: 14px 0 0 40px;
+        border-left: 1px solid var(--line);
+    }
+
+    .perf-buttons .btn-gold,
+    .perf-buttons .btn-outline {
+        flex: none;
+        padding: 0 22px;
+    }
+
+    /* The three numbers in one row between two lines. Clarity gets a little more width so its short line
+       ("How clearly your words came through") takes two lines, not three. */
+    .perf-stats {
+        display: grid;
+        grid-template-columns: minmax(0, 0.92fr) minmax(0, 1fr) minmax(0, 1.12fr);
+        align-items: start;
+        gap: 6px;
+        margin-top: 0;
+        padding: 10px 0;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        text-align: center;
+    }
+
+    .stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .stat-num {
+        font-size: 26px;
+    }
+
+    .stat-label {
+        align-items: center;
+        gap: 2px;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1.3;
+        color: var(--text-sec);
+    }
+
+    .stat-sub,
+    .stat-hint {
+        font-size: 11px;
+        line-height: 1.3;
+    }
+
+    .score-bar-bg {
+        width: 80%;
+        height: 5px;
+        margin: 6px auto 0;
+    }
+}
+
+/* Narrow two-column windows (tablets, small laptop windows): the notes column is too narrow for the buttons,
+   so their row runs along the whole bottom of the mirror, still right-aligned with the gold button last */
+@media (min-width: 601px) and (max-width: 899px) {
+    .perf {
+        grid-row: 1;
+    }
+
+    .perf-buttons {
+        grid-column: 1 / -1;
+        padding-left: 0;
+        border-left: 0;
+    }
+}
+
 .btn-outline {
     height: 48px;
     padding: 0 22px;
@@ -4011,33 +4154,27 @@ body.curtains-closed .drape {
     }
 
     .perf {
-        gap: 14px;
+        gap: 10px;
     }
 
     .perf-summary {
-        gap: 8px;
+        gap: 6px;
     }
 
     .perf-topic {
-        font-size: 21px;
-    }
-
-    .perf-time {
-        margin-top: 4px;
-        padding: 10px 0;
+        font-size: 20px;
     }
 
     .perf-elapsed {
-        font-size: 26px;
+        font-size: 20px;
     }
 
     .perf-stats {
-        gap: 8px;
-        margin-top: 4px;
+        padding: 8px 0;
     }
 
     .stat-num {
-        font-size: 30px;
+        font-size: 24px;
     }
 
     .perf-buttons .btn-gold,
