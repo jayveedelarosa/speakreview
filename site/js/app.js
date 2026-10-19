@@ -1461,7 +1461,7 @@ function setupTabs(tablist, onChange, { panels = true } = {}) {
     };
 }
 
-// "Scroll for all notes" shows only when the open tab's content can really scroll (never for a too-short
+// "Scroll for more" shows only when the open tab's content can really scroll (never for a too-short
 // speech's single sentence). The panels have no size while Backstage is hidden, so a ResizeObserver
 // measures again whenever they get one (Backstage opening, window size, new content).
 let notesHintOnNotes = true;
@@ -1473,6 +1473,13 @@ function updateNotesHint() {
     const canScroll = Boolean(scroller) && scroller.clientHeight > 0 && scroller.scrollHeight > scroller.clientHeight + 1;
     notesHint.hidden = !canScroll || (id === "tabNotes" && !notesHintOnNotes);
 }
+
+// Any panel scrolled down gets .is-scrolled, which adds a soft fade at its top (see --fade-top in the CSS).
+// Scroll events don't bubble, so one listener in the capture phase covers every panel, also ones built later.
+document.addEventListener("scroll", event => {
+    const panel = event.target;
+    if (panel instanceof Element) panel.classList.toggle("is-scrolled", panel.scrollTop > 2);
+}, { capture: true, passive: true });
 
 const wordsPanel = document.getElementById("wordsPanel");
 const reviewPanel = document.getElementById("reviewPanel");

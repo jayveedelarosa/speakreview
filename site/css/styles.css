@@ -63,10 +63,26 @@
     /* The stage mic (the design draws it 120 x 156 on laptop) */
     --mic-w: 120px;
     --mic-h: 156px;
+    /* One room height that never changes while a phone's toolbar slides in or out
+       (svh is the height with the toolbar showing). Older browsers use vh. */
+    --stable-h: 100vh;
+    --stable-h: 100svh;
 }
 
 * {
     box-sizing: border-box;
+}
+
+/* A soft fade at the top of a scrolling panel while it is scrolled down, so the top line isn't
+   cut in half (app.js adds .is-scrolled). The panels' masks use it next to their bottom fade. */
+@property --fade-top {
+    syntax: "<length>";
+    inherits: false;
+    initial-value: 0px;
+}
+
+.is-scrolled {
+    --fade-top: 16px;
 }
 
 /* Anything with the hidden attribute stays hidden, even if a class sets display */
@@ -83,14 +99,34 @@
     display: none;
 }
 
+/* The page behind the rooms. When a phone's toolbar hides, the window grows past the room's
+   stable height, and this shows in the gap above the bottom bar: so it continues each room's
+   scenery (the Stage's floor at its darkest shade, the Backstage and Wall wall stripes),
+   never a dark empty band. overscroll-behavior stops the page stretching or bouncing past
+   its end; panels that scroll inside keep scrolling (overscroll-behavior: contain). */
 html {
-    background: var(--bg);
+    overscroll-behavior-y: none;
+    background:
+        linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)),
+        repeating-linear-gradient(90deg, var(--wood) 0 118px, var(--wood-gap) 118px 120px, var(--wood-light) 120px 238px, var(--wood-gap) 238px 240px),
+        var(--bg);
+}
+
+html:has(.app[data-view="backstage"]) {
+    background:
+        repeating-linear-gradient(90deg, var(--backstage-wall) 0 158px, var(--backstage-stripe) 158px 162px),
+        var(--backstage-wall);
+}
+
+html:has(.app[data-view="wall"]) {
+    background:
+        repeating-linear-gradient(90deg, #3E0F16 0 60px, #380D13 60px 120px),
+        #3E0F16;
 }
 
 body {
     margin: 0;
     min-height: 100vh;
-    background: var(--bg);
     color: var(--text);
     font-family: var(--sans);
     line-height: 1.5;
@@ -380,14 +416,15 @@ textarea,
 .stage {
     --audience-min-row: max(calc(var(--audience-h) * 0.7 + var(--audience-gap)), calc(var(--mic-h) + 8px));
     position: relative;
-    min-height: 100vh;
-    min-height: 100dvh;
+    min-height: var(--stable-h);
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto [audience] minmax(var(--audience-min-row), 1fr) [floor] auto;
     justify-items: center;
     padding: var(--stage-top) var(--inset) 0;
     text-align: center;
+    /* The dark behind the see-through backdrop (the page itself shows the floor, see html) */
+    background: var(--bg);
 }
 
 /* Scenery sits behind the content and never catches clicks */
@@ -2218,8 +2255,7 @@ html.settings-lock {
     --backstage-bottom: 24px;
     --backstage-space: calc(var(--backstage-top) + var(--backstage-bottom));
     position: relative;
-    min-height: 100vh;
-    min-height: 100dvh;
+    min-height: var(--stable-h);
     padding: var(--backstage-top) max(24px, 7vw) var(--backstage-bottom);
     background:
         radial-gradient(ellipse 60% 45% at 50% 0%, rgba(255, 220, 150, 0.10), rgba(0, 0, 0, 0) 70%),
@@ -2243,8 +2279,7 @@ html.settings-lock {
     display: flex;
     width: 100%;
     max-width: 1100px;
-    height: max(calc(100vh - var(--backstage-space)), 480px);
-    height: max(calc(100dvh - var(--backstage-space)), 480px);
+    height: max(calc(var(--stable-h) - var(--backstage-space)), 480px);
     margin: 0 auto;
     padding: 16px;
     border-radius: 22px;
@@ -2570,11 +2605,17 @@ html.settings-lock {
     padding-top: 10px;
     padding-bottom: 44px;
     overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .perf-scroll.is-scrollable.has-more {
-    -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 40px), rgba(0, 0, 0, 0));
-    mask-image: linear-gradient(180deg, #000 calc(100% - 40px), rgba(0, 0, 0, 0));
+    -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 40px), rgba(0, 0, 0, 0));
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 40px), rgba(0, 0, 0, 0));
+}
+
+.perf-scroll.is-scrollable.is-scrolled:not(.has-more) {
+    -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px));
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px));
 }
 
 .perf-scroll.is-scrollable:focus-visible {
@@ -2818,8 +2859,10 @@ html.settings-lock {
 }
 
 .tab-row .notes-hint {
+    flex-shrink: 0;
     margin-left: auto;
     padding-bottom: 12px;
+    white-space: nowrap;
 }
 
 .feedback-tabs {
@@ -2883,10 +2926,11 @@ html.settings-lock {
     flex: 1 1 0;
     min-height: 140px;
     overflow-y: auto;
+    overscroll-behavior: contain;
     /* Inner space on the left and right; the bottom space leaves room for the fade */
     padding: 6px 20px 40px 18px;
-    -webkit-mask-image: linear-gradient(180deg, #000 82%, rgba(0, 0, 0, 0));
-    mask-image: linear-gradient(180deg, #000 82%, rgba(0, 0, 0, 0));
+    -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 82%, rgba(0, 0, 0, 0));
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 82%, rgba(0, 0, 0, 0));
 }
 
 .notes-body:focus-visible {
@@ -2920,13 +2964,17 @@ html.settings-lock {
 }
 
 /* The fade is exactly as tall as the bottom padding, so the last line always ends above it */
+/* position: relative makes the panel the containing block of the words' screen-reader labels
+   (.visually-hidden is absolute), so they scroll with it instead of stretching the page below */
 .words-body {
+    position: relative;
     flex: 1 1 0;
     min-height: 60px;
     overflow-y: auto;
+    overscroll-behavior: contain;
     padding-bottom: 40px;
-    -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 40px), rgba(0, 0, 0, 0));
-    mask-image: linear-gradient(180deg, #000 calc(100% - 40px), rgba(0, 0, 0, 0));
+    -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 40px), rgba(0, 0, 0, 0));
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 40px), rgba(0, 0, 0, 0));
 }
 
 .words-body:focus-visible {
@@ -3193,8 +3241,7 @@ html.settings-lock {
     --wall-top: 100px;
     display: flex;
     flex-direction: column;
-    height: max(100vh, 480px);
-    height: max(100dvh, 480px);
+    height: max(var(--stable-h), 480px);
     background:
         radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 214, 150, 0.12), rgba(0, 0, 0, 0) 70%),
         repeating-linear-gradient(90deg, #3E0F16 0 60px, #380D13 60px 120px),
@@ -3207,8 +3254,9 @@ html.settings-lock {
     margin-top: var(--wall-top);
     padding: 26px max(24px, 7vw) 90px;
     overflow-y: auto;
-    -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 70px), rgba(0, 0, 0, 0));
-    mask-image: linear-gradient(180deg, #000 calc(100% - 70px), rgba(0, 0, 0, 0));
+    overscroll-behavior: contain;
+    -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 70px), rgba(0, 0, 0, 0));
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 70px), rgba(0, 0, 0, 0));
 }
 
 .wall-head {
@@ -4082,8 +4130,9 @@ html.settings-lock {
     min-height: 90px;
     padding: 18px 36px 40px;
     overflow-y: auto;
-    -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 40px), rgba(0, 0, 0, 0));
-    mask-image: linear-gradient(180deg, #000 calc(100% - 40px), rgba(0, 0, 0, 0));
+    overscroll-behavior: contain;
+    -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 40px), rgba(0, 0, 0, 0));
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 40px), rgba(0, 0, 0, 0));
 }
 
 .pb-notes:focus-visible {
@@ -4173,8 +4222,9 @@ html.settings-lock {
     min-height: 90px;
     padding: 22px 36px 40px;
     overflow-y: auto;
-    -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 40px), rgba(0, 0, 0, 0));
-    mask-image: linear-gradient(180deg, #000 calc(100% - 40px), rgba(0, 0, 0, 0));
+    overscroll-behavior: contain;
+    -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 40px), rgba(0, 0, 0, 0));
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 40px), rgba(0, 0, 0, 0));
 }
 
 .pb-review:focus-visible {
@@ -4719,20 +4769,17 @@ body.curtains-closed .drape {
     }
 
     .stage {
-        min-height: calc(100vh - var(--tabbar-h));
-        min-height: calc(100dvh - var(--tabbar-h));
+        min-height: calc(var(--stable-h) - var(--tabbar-h));
     }
 
     .backstage {
         --backstage-space: calc(var(--backstage-top) + var(--backstage-bottom) + var(--bar-reach));
         padding-bottom: calc(var(--backstage-bottom) + 18px);
-        min-height: calc(100vh - var(--tabbar-h));
-        min-height: calc(100dvh - var(--tabbar-h));
+        min-height: calc(var(--stable-h) - var(--tabbar-h));
     }
 
     .wall {
-        height: max(calc(100vh - var(--tabbar-h)), 480px);
-        height: max(calc(100dvh - var(--tabbar-h)), 480px);
+        height: max(calc(var(--stable-h) - var(--tabbar-h)), 480px);
     }
 
     /* When the laptop settings panel opens it is scrolled into view above the bar (see openSettings) */
@@ -5015,8 +5062,7 @@ body.curtains-closed .drape {
 
     /* Stage */
     .stage {
-        min-height: calc(100vh - var(--tabbar-h));
-        min-height: calc(100dvh - var(--tabbar-h));
+        min-height: calc(var(--stable-h) - var(--tabbar-h));
     }
 
     .spotlight {
@@ -5301,8 +5347,9 @@ body.curtains-closed .drape {
         bottom: 0;
         translate: none;
         width: auto;
-        max-height: calc(100dvh - 24px);
+        max-height: calc(var(--stable-h) - 24px);
         overflow-y: auto;
+        overscroll-behavior: contain;
         gap: 14px;
         padding: 10px 16px calc(18px + env(safe-area-inset-bottom, 0px));
         border: 3px double #C9A24E;
@@ -5617,8 +5664,7 @@ body.curtains-closed .drape {
         --backstage-top: 54px;
         --backstage-bottom: 10px;
         --backstage-space: calc(var(--backstage-top) + var(--backstage-bottom) + var(--bar-reach));
-        min-height: calc(100vh - var(--tabbar-h));
-        min-height: calc(100dvh - var(--tabbar-h));
+        min-height: calc(var(--stable-h) - var(--tabbar-h));
         padding: var(--backstage-top) 10px calc(var(--backstage-bottom) + 18px);
         background:
             radial-gradient(ellipse 80% 30% at 50% 0%, rgba(255, 220, 150, 0.10), rgba(0, 0, 0, 0) 70%),
@@ -5632,8 +5678,7 @@ body.curtains-closed .drape {
     }
 
     .mirror {
-        height: max(calc(100vh - var(--backstage-space)), 460px);
-        height: max(calc(100dvh - var(--backstage-space)), 460px);
+        height: max(calc(var(--stable-h) - var(--backstage-space)), 460px);
         padding: 10px;
         border-radius: 16px;
         box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
@@ -5777,13 +5822,13 @@ body.curtains-closed .drape {
     :where(.backstage) .stat-label {
         align-items: center;
         gap: 0;
-        font-size: 10px;
+        font-size: 11px;
         font-weight: 400;
         color: var(--text-sec);
     }
 
     :where(.backstage) .stat-sub {
-        font-size: 10px;
+        font-size: 11px;
     }
 
     :where(.backstage) .stat-hint {
@@ -5836,8 +5881,8 @@ body.curtains-closed .drape {
     :where(.backstage) .notes-body {
         min-height: 120px;
         padding: 2px 12px 26px 12px;
-        -webkit-mask-image: linear-gradient(180deg, #000 80%, rgba(0, 0, 0, 0));
-        mask-image: linear-gradient(180deg, #000 80%, rgba(0, 0, 0, 0));
+        -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 80%, rgba(0, 0, 0, 0));
+        mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 80%, rgba(0, 0, 0, 0));
     }
 
     /* Phones: Notes | Your words as a pill group (F2BackstagePhone.dc.html). Each tab takes an equal share,
@@ -5897,8 +5942,8 @@ body.curtains-closed .drape {
 
     :where(.backstage) .words-body {
         padding-bottom: 26px;
-        -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 26px), rgba(0, 0, 0, 0));
-        mask-image: linear-gradient(180deg, #000 calc(100% - 26px), rgba(0, 0, 0, 0));
+        -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 26px), rgba(0, 0, 0, 0));
+        mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 26px), rgba(0, 0, 0, 0));
     }
 
     :where(.backstage) .words-text {
@@ -5927,8 +5972,9 @@ body.curtains-closed .drape {
         min-height: 120px;
         padding: 12px 6px 26px;
         overflow-y: auto;
-        -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 26px), rgba(0, 0, 0, 0));
-        mask-image: linear-gradient(180deg, #000 calc(100% - 26px), rgba(0, 0, 0, 0));
+        overscroll-behavior: contain;
+        -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 26px), rgba(0, 0, 0, 0));
+        mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 26px), rgba(0, 0, 0, 0));
     }
 
     :where(.backstage) .review-panel:focus-visible {
@@ -6017,8 +6063,8 @@ body.curtains-closed .drape {
 
     .words-body {
         padding-bottom: 26px;
-        -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 26px), rgba(0, 0, 0, 0));
-        mask-image: linear-gradient(180deg, #000 calc(100% - 26px), rgba(0, 0, 0, 0));
+        -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 26px), rgba(0, 0, 0, 0));
+        mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 26px), rgba(0, 0, 0, 0));
     }
 
     .words-text {
@@ -6038,8 +6084,9 @@ body.curtains-closed .drape {
         min-height: 120px;
         padding: 12px 6px 26px;
         overflow-y: auto;
-        -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 26px), rgba(0, 0, 0, 0));
-        mask-image: linear-gradient(180deg, #000 calc(100% - 26px), rgba(0, 0, 0, 0));
+        overscroll-behavior: contain;
+        -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 26px), rgba(0, 0, 0, 0));
+        mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 26px), rgba(0, 0, 0, 0));
     }
 
     .review-panel:focus-visible {
@@ -6104,10 +6151,22 @@ body.curtains-closed .drape {
     /* Wall of Fame on phones, following the "wall" screen of theatre-phone.dc.html: the title stays put
        and only the frames scroll, two per row */
     .wall {
-        height: max(calc(100vh - var(--tabbar-h)), 460px);
-        height: max(calc(100dvh - var(--tabbar-h)), 460px);
+        height: max(calc(var(--stable-h) - var(--tabbar-h)), 460px);
         background:
             radial-gradient(ellipse 90% 30% at 50% 0%, rgba(255, 214, 150, 0.12), rgba(0, 0, 0, 0) 70%),
+            repeating-linear-gradient(90deg, #3E0F16 0 40px, #380D13 40px 80px),
+            #3E0F16;
+    }
+
+    /* The page behind the rooms keeps the phone's narrower stripes (see html at the top) */
+    html:has(.app[data-view="backstage"]) {
+        background:
+            repeating-linear-gradient(90deg, var(--backstage-wall) 0 96px, var(--backstage-stripe) 96px 98px),
+            var(--backstage-wall);
+    }
+
+    html:has(.app[data-view="wall"]) {
+        background:
             repeating-linear-gradient(90deg, #3E0F16 0 40px, #380D13 40px 80px),
             #3E0F16;
     }
@@ -6217,8 +6276,9 @@ body.curtains-closed .drape {
         margin-top: 10px;
         padding: 0 0 56px;
         overflow-y: auto;
-        -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 10px, #000 calc(100% - 56px), rgba(0, 0, 0, 0));
-        mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 10px, #000 calc(100% - 56px), rgba(0, 0, 0, 0));
+        overscroll-behavior: contain;
+        -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 max(10px, var(--fade-top, 0px)), #000 calc(100% - 56px), rgba(0, 0, 0, 0));
+        mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 max(10px, var(--fade-top, 0px)), #000 calc(100% - 56px), rgba(0, 0, 0, 0));
     }
 
     .wall-empty {
@@ -6420,15 +6480,19 @@ body.curtains-closed .drape {
     }
 }
 
-/* ---------- Shorter phones (for example 360 x 740): a smaller mic and tighter settings so the stage still fits ---------- */
-@media (max-width: 600px) and (max-height: 760px) {
+/* ---------- Shorter phones (for example 360 x 740): a smaller mic and tighter settings so the stage still fits ----------
+   Decided from the stable height (760px or less), not a max-height media query: the window's height changes
+   while the browser toolbar slides, and the mic must not change size then. --short is 1px on a short phone,
+   0px otherwise. */
+@media (max-width: 600px) {
     :root {
-        --mic-w: 74px;
-        --mic-h: 96px;
+        --short: clamp(0px, calc((760.5px - var(--stable-h)) * 1000), 1px);
+        --mic-w: calc(96px - 22 * var(--short));
+        --mic-h: calc(125px - 29 * var(--short));
     }
 
     .stage-floor {
-        padding: 10px 0;
+        padding: calc(12px - 2 * var(--short)) 0;
     }
 }
 
