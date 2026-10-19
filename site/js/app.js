@@ -197,6 +197,9 @@ const timePage = document.getElementById("timePage");
 const prepPage = document.getElementById("prepPage");
 const settingsDoneBtn = document.getElementById("settingsDoneBtn");
 const phoneQuery = window.matchMedia("(max-width: 600px)");
+// Backstage uses its one-column (phone) layout below 990px, where two columns don't fit properly.
+// Keep in step with the "max-width: 989px" Backstage block in styles.css.
+const backstageOneColumn = window.matchMedia("(max-width: 989px)");
 const fileSilence = document.getElementById("fileSilence");
 const fileSilenceChooseBtn = document.getElementById("fileSilenceChooseBtn");
 const micCheck = document.getElementById("micCheck");
@@ -1110,7 +1113,8 @@ function displayResult(data) {
     // Your words (too-short speeches show theirs too), with the coach's dotted fillers when it judged them
     const transcript = cleanTranscript(data.words, data.filler_flags, data.fillers_judged);
     wordsPanel.replaceChildren(buildWordsView(transcript.words, transcript.flags));
-    // The Nightly Review: in the left column on laptops, in the Review tab on phones. Hidden without a valid review.
+    // The Nightly Review: in the left column with two columns, in the Review tab with one column (phones and
+    // windows below 990px). Hidden without a valid review.
     const review = cleanReview(data.review);
     const hasTopic = typeof data.topic === "string" && data.topic.trim() !== "";
     perfReview.replaceChildren(...(review ? [buildReview(review, hasTopic)] : []));
@@ -1598,8 +1602,8 @@ function restartBulbs() {
 // The summary, the number row and The Nightly Review can be taller than the mirror on short windows. Then
 // #perfScroll scrolls, like Coach's notes (focusable, so arrow keys scroll it too, with a fade while there is
 // more below). "Back to the stage" / "Try this topic again" sit under the notes, so they always show.
-// "Scroll for the review" shows while the review is still below the fold. On phones it is all display:
-// contents and nothing here applies.
+// "Scroll for the review" shows while the review is still below the fold. In the one-column Backstage (phones
+// and windows below 990px) it is all display: contents and nothing here applies.
 const perfColumn = document.querySelector(".perf");
 const perfScroll = document.getElementById("perfScroll");
 const perfHint = document.getElementById("perfHint");
@@ -4082,8 +4086,10 @@ document.addEventListener("keydown", e => {
 phoneQuery.addEventListener("change", () => {
     closeSettings(false);
     updateTickets();
-    // The Review tab is for phones only (laptops show the review in the left column)
-    if (!phoneQuery.matches && backstageTabs.selected() === "tabReview") backstageTabs.select("tabNotes");
+});
+// The Review tab is only in the one-column Backstage (two columns show the review in the left column)
+backstageOneColumn.addEventListener("change", () => {
+    if (!backstageOneColumn.matches && backstageTabs.selected() === "tabReview") backstageTabs.select("tabNotes");
 });
 window.addEventListener("resize", placePanelArrow);
 

@@ -2589,10 +2589,11 @@ html.settings-lock {
     text-align: center;
 }
 
-/* Laptops (the two-column mirror), as in F2Backstage.dc.html: the left column holds the performance, one row
-   of three numbers and The Nightly Review; "Try this topic again" and the gold "Back to the stage" sit at the
-   bottom right, under the notes. Phones keep their own one-column layout (max-width: 600px). */
-@media (min-width: 601px) {
+/* Windows 990px and wider (the two-column mirror), as in F2Backstage.dc.html: the left column holds the
+   performance, one row of three numbers and The Nightly Review; "Try this topic again" and the gold "Back to the
+   stage" sit at the bottom right, under the notes. Narrower windows use the one-column Backstage
+   (max-width: 989px, further down; keep in step with backstageOneColumn in app.js). */
+@media (min-width: 990px) {
     .backstage-grid {
         display: grid;
         grid-template-columns: auto minmax(0, 1fr);
@@ -2715,20 +2716,6 @@ html.settings-lock {
         width: 80%;
         height: 5px;
         margin: 6px auto 0;
-    }
-}
-
-/* Narrow two-column windows (tablets, small laptop windows): the notes column is too narrow for the buttons,
-   so their row runs along the whole bottom of the mirror, still right-aligned with the gold button last */
-@media (min-width: 601px) and (max-width: 899px) {
-    .perf {
-        grid-row: 1;
-    }
-
-    .perf-buttons {
-        grid-column: 1 / -1;
-        padding-left: 0;
-        border-left: 0;
     }
 }
 
@@ -5218,61 +5205,88 @@ body.curtains-closed .drape {
         font-size: 22px;
     }
 
+}
+
+/* ---------- Backstage in one column: phones, and windows too narrow for the two-column mirror (below 990px; keep
+   in step with backstageOneColumn in app.js). These are the phone rules, scoped to Backstage so that between 601px
+   and 989px the Stage, the Wall of Fame and the playbill keep their own look. The mirror frame, the header and
+   the bar stay as they are for each width. ---------- */
+@media (max-width: 989px) {
+    /* The short labels, as on phones ("Notes", "words per min"); the long ones stay for screen readers */
+    :where(.backstage) .short-label {
+        display: inline;
+    }
+
+    :where(.backstage) .long-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+    }
+
+    /* The phone's slimmer padding inside the mirror, so short windows keep room for the notes */
+    :where(.backstage) .mirror-glass {
+        padding: 18px 16px 14px;
+    }
+
     /* One column: compact summary, then the notes, then the buttons.
        The aside uses display: contents, so its two parts are placed in this column directly. */
-    .backstage-grid {
+    :where(.backstage) .backstage-grid {
         flex-direction: column;
         gap: 10px;
     }
 
-    .perf {
+    :where(.backstage) .perf {
         display: contents;
     }
 
     /* Phones: the summary and buttons go in the one column directly, as before */
-    .perf-scroll {
+    :where(.backstage) .perf-scroll {
         display: contents;
     }
 
-    .perf-hint {
+    :where(.backstage) .perf-hint {
         display: none;
     }
 
-    .perf-summary {
+    :where(.backstage) .perf-summary {
         gap: 8px;
     }
 
-    .perf-topic {
+    :where(.backstage) .perf-topic {
         font-size: 19px;
     }
 
-    .perf-badge {
+    :where(.backstage) .perf-badge {
         display: none;
     }
 
-    .perf-time {
+    :where(.backstage) .perf-time {
         gap: 8px;
         margin: 0;
         padding: 0;
         border: 0;
     }
 
-    .perf-elapsed {
+    :where(.backstage) .perf-elapsed {
         font-size: 20px;
     }
 
-    .perf-limit {
+    :where(.backstage) .perf-limit {
         font-size: 13px;
     }
 
-    .time-pill {
+    :where(.backstage) .time-pill {
         height: 22px;
         padding: 0 9px;
         font-size: 11px;
     }
 
     /* The three numbers side by side */
-    .perf-stats {
+    :where(.backstage) .perf-stats {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 6px;
@@ -5283,17 +5297,17 @@ body.curtains-closed .drape {
         text-align: center;
     }
 
-    .stat {
+    :where(.backstage) .stat {
         display: flex;
         flex-direction: column;
         align-items: center;
     }
 
-    .stat-num {
+    :where(.backstage) .stat-num {
         font-size: 22px;
     }
 
-    .stat-label {
+    :where(.backstage) .stat-label {
         align-items: center;
         gap: 0;
         font-size: 10px;
@@ -5301,32 +5315,32 @@ body.curtains-closed .drape {
         color: var(--text-sec);
     }
 
-    .stat-sub {
+    :where(.backstage) .stat-sub {
         font-size: 10px;
     }
 
-    .stat-hint {
+    :where(.backstage) .stat-hint {
         font-size: 11px;
     }
 
-    .source-tag {
+    :where(.backstage) .source-tag {
         height: 22px;
         padding: 0 8px;
         font-size: 11px;
     }
 
-    .perf-note {
+    :where(.backstage) .perf-note {
         margin-top: 0;
         font-size: 12px;
     }
 
-    .score-bar-bg {
+    :where(.backstage) .score-bar-bg {
         width: 70%;
         height: 4px;
         margin-top: 4px;
     }
 
-    .notes {
+    :where(.backstage) .notes {
         order: 1;
         flex: 1;
         min-height: 0;
@@ -5335,24 +5349,24 @@ body.curtains-closed .drape {
         border-left: 0;
     }
 
-    .notes-head {
+    :where(.backstage) .notes-head {
         align-items: baseline;
     }
 
-    .notes-head .eyebrow {
+    :where(.backstage) .notes-head .eyebrow {
         display: none;
     }
 
-    .notes-head h2 {
+    :where(.backstage) .notes-head h2 {
         margin: 0;
         font-size: 22px;
     }
 
-    .notes-hint {
+    :where(.backstage) .notes-hint {
         font-size: 11px;
     }
 
-    .notes-body {
+    :where(.backstage) .notes-body {
         min-height: 120px;
         padding: 2px 12px 26px 12px;
         -webkit-mask-image: linear-gradient(180deg, #000 80%, rgba(0, 0, 0, 0));
@@ -5361,7 +5375,7 @@ body.curtains-closed .drape {
 
     /* Phones: Notes | Your words as a pill group (F2BackstagePhone.dc.html). Each tab takes an equal share,
        so the Review tab fits later. */
-    .notes .tab-row {
+    :where(.backstage) .notes .tab-row {
         align-self: stretch;
         align-items: center;
         gap: 8px;
@@ -5369,11 +5383,11 @@ body.curtains-closed .drape {
     }
 
     /* As in the phone design, the pill takes the whole row (the fade at the bottom still shows there is more) */
-    .notes .tab-row .notes-hint {
+    :where(.backstage) .notes .tab-row .notes-hint {
         display: none;
     }
 
-    .notes .feedback-tabs {
+    :where(.backstage) .notes .feedback-tabs {
         flex: 1;
         min-width: 0;
         gap: 4px;
@@ -5383,7 +5397,7 @@ body.curtains-closed .drape {
         background: rgba(0, 0, 0, 0.35);
     }
 
-    .notes .feedback-tab {
+    :where(.backstage) .notes .feedback-tab {
         flex: 1 1 0;
         min-width: 0;
         height: 34px;
@@ -5398,11 +5412,131 @@ body.curtains-closed .drape {
         white-space: nowrap;
     }
 
-    .notes .feedback-tab[aria-selected="true"] {
+    :where(.backstage) .notes .feedback-tab[aria-selected="true"] {
         background: var(--gold);
         color: #1E1006;
     }
 
+    :where(.backstage) .words-panel {
+        min-height: 120px;
+        gap: 8px;
+        padding: 2px 6px 0;
+    }
+
+    :where(.backstage) .words-legend {
+        gap: 6px 12px;
+        font-size: 11px;
+    }
+
+    :where(.backstage) .words-body {
+        padding-bottom: 26px;
+        -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 26px), rgba(0, 0, 0, 0));
+        mask-image: linear-gradient(180deg, #000 calc(100% - 26px), rgba(0, 0, 0, 0));
+    }
+
+    :where(.backstage) .words-text {
+        font-size: 14px;
+        line-height: 1.85;
+    }
+
+    :where(.backstage) .w-pause {
+        height: 18px;
+        padding: 0 6px;
+        vertical-align: 1px;
+    }
+
+    /* The review: a Review tab instead of the left column */
+    :where(.backstage) .perf-review {
+        display: none;
+    }
+
+    :where(.backstage) .notes .tab-phone-only {
+        display: block;
+    }
+
+    :where(.backstage) .review-panel {
+        display: block;
+        flex: 1 1 0;
+        min-height: 120px;
+        padding: 12px 6px 26px;
+        overflow-y: auto;
+        -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 26px), rgba(0, 0, 0, 0));
+        mask-image: linear-gradient(180deg, #000 calc(100% - 26px), rgba(0, 0, 0, 0));
+    }
+
+    :where(.backstage) .review-panel:focus-visible {
+        outline-offset: -2px;
+    }
+
+    :where(.backstage) .review {
+        transform: rotate(-0.8deg);
+    }
+
+    :where(.backstage) .review-title {
+        font-size: 17px;
+    }
+
+    :where(.backstage) .review-row {
+        padding: 7px 0;
+    }
+
+    /* On phones the note comes at the end of the words, so it never takes space from them */
+    :where(.backstage) .words-panel > .words-note {
+        display: none;
+    }
+
+    :where(.backstage) .words-note-inline {
+        display: block;
+        margin-top: 10px;
+        font-size: 11px;
+    }
+
+    :where(.backstage) .words-empty {
+        font-size: 13px;
+    }
+
+    :where(.backstage) .note-heading {
+        margin: 14px 0 6px;
+        font-size: 10px;
+    }
+
+    :where(.backstage) .note-item {
+        grid-template-columns: 20px minmax(0, 1fr);
+        gap: 2px;
+        margin-bottom: 6px;
+        font-size: 13px;
+        line-height: 1.45;
+    }
+
+    :where(.backstage) .note-num {
+        font-size: 15px;
+    }
+
+    :where(.backstage) .note-text {
+        margin-bottom: 6px;
+        font-size: 13px;
+        line-height: 1.45;
+    }
+
+    :where(.backstage) .perf-buttons {
+        order: 2;
+        flex-direction: row;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 0;
+    }
+
+    :where(.backstage) .perf-buttons .btn-gold,
+    :where(.backstage) .btn-outline {
+        height: 38px;
+        padding: 0 16px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 600px) {
+    /* The playbill (and, for .btn-outline, the Stage) use some of the same classes on phones, so phones keep
+       these unscoped copies of the one-column Backstage rules above */
     .words-panel {
         min-height: 120px;
         gap: 8px;
@@ -5431,15 +5565,6 @@ body.curtains-closed .drape {
         vertical-align: 1px;
     }
 
-    /* The review: a Review tab instead of the left column */
-    .perf-review {
-        display: none;
-    }
-
-    .notes .tab-phone-only {
-        display: block;
-    }
-
     .review-panel {
         display: block;
         flex: 1 1 0;
@@ -5466,7 +5591,6 @@ body.curtains-closed .drape {
         padding: 7px 0;
     }
 
-    /* On phones the note comes at the end of the words, so it never takes space from them */
     .words-panel > .words-note {
         display: none;
     }
@@ -5504,15 +5628,6 @@ body.curtains-closed .drape {
         line-height: 1.45;
     }
 
-    .perf-buttons {
-        order: 2;
-        flex-direction: row;
-        justify-content: center;
-        gap: 10px;
-        margin-top: 0;
-    }
-
-    .perf-buttons .btn-gold,
     .btn-outline {
         height: 38px;
         padding: 0 16px;
