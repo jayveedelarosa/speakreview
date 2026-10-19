@@ -1412,19 +1412,20 @@ function buildReview(review, hasTopic) {
 }
 
 // ---------------------------
-// Tabs (Backstage and the open playbill)
+// Tabs (Backstage, the open playbill and the Wall's "Your run so far")
 // ---------------------------
 // Accessible tabs: a click picks one; Left and Right move and pick (wrapping), Home and End go to the
-// first and last. Only the picked tab is a Tab stop. Each tab shows the panel named by its aria-controls.
+// first and last. Only the picked tab is a Tab stop. Each tab shows the panel named by its aria-controls,
+// unless panels is false (then onChange decides what shows, for example with CSS).
 // Works for any number of tabs. Returns { select(id), selected() }.
-function setupTabs(tablist, onChange) {
+function setupTabs(tablist, onChange, { panels = true } = {}) {
     const tabs = () => Array.from(tablist.querySelectorAll('[role="tab"]'));
     function select(id, focus = false) {
         tabs().forEach(tab => {
             const on = tab.id === id;
             tab.setAttribute("aria-selected", String(on));
             tab.tabIndex = on ? 0 : -1;
-            document.getElementById(tab.getAttribute("aria-controls")).hidden = !on;
+            if (panels) document.getElementById(tab.getAttribute("aria-controls")).hidden = !on;
             if (on && focus) tab.focus();
         });
         if (onChange) onChange(id);
@@ -2131,6 +2132,7 @@ function buildPlaybill(entry, index) {
 function renderWall() {
     wallStorageNote.hidden = wallSavingWorks && trophySavingWorks;
     renderShelf();
+    renderRun();
     wallGroups.replaceChildren();
     wallButtons = new Map();
     wallOrder = wallEntries.slice();
@@ -2423,6 +2425,320 @@ window.addEventListener("storage", e => {
 });
 
 // ---------------------------
+// Your run so far: three trends on the Wall of Fame
+// ---------------------------
+// Plain math on this device from the saved performances (no AI). Saved entries are untrusted: they come from
+// cleanWallEntry(), and every number is checked again here before it counts. Everything is shown with
+// textContent. A performance counts when it isn't a too-short take and has a pace and a speaking time; each
+// chart then uses the counted shows that have its own number (untimed shows are skipped in Timing only).
+const RUN_MIN_SHOWS = 3;                 // trends light up after this many counted performances
+const RUN_MAX_DOTS = 30;                 // above this, All shows one dot per week
+const RUN_TAG_CHANGE = 0.1;              // 10% better or worse than the earlier half
+const RUN_PACE_BAND = [130, 160];        // a comfortable pace, in words per minute
+const RUN_FILLER_SOUNDS = ["um", "uh"];  // fillers per minute counts these only, so every speech is measured the same way
+const RUN_METRICS = {
+    fillers: { name: "Fillers per minute", unit: "/min", lo: 0, hi: 7, fmt: v => v.toFixed(1), shows: "shows",
+        note: "um and uh only, so every speech is counted the same way",
+        none: "No filler details here yet. They come with your next performances." },
+    pace: { name: "Pace", unit: " wpm", lo: 100, hi: 190, fmt: v => String(Math.round(v)), shows: "shows",
+        note: "words per minute; the shaded band is a comfortable 130 to 160",
+        none: "No pace here yet." },
+    off: { name: "Time accuracy", unit: " off", lo: 0, hi: 60, fmt: v => formatTime(v), shows: "timed shows",
+        note: "how far you landed from your time limit (timed speeches only)",
+        none: "No timed shows here yet. Set a speaking time to see this one." }
+};
+const RUN_ICONS = { down: "M12 5v14 M6 13l6 6 6-6", up: "M12 19V5 M6 11l6-6 6 6", check: "M5 12l5 5 9-10", flat: "M5 12h14" };
+const RUN_NUMBER_WORDS = ["zero", "one", "two", "three"];
+const runBoard = document.getElementById("runBoard");
+const runState = { range: "10", sel: null };
+
+const runMean = values => values.reduce((sum, v) => sum + v, 0) / values.length;
+const runDate = date => date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const runFinite = (value, min, max) => typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
+
+// The counted performances, oldest first, each with its three numbers (null where it has none)
+function runPerformances() {
+    const shows = [];
+    wallEntries.slice().reverse().forEach(entry => {
+        if (entry.too_short === true) return;
+        const pace = entry.wpm, speaking = entry.speaking_seconds;
+        if (!runFinite(pace, 1, 1000) || !runFinite(speaking, 1, WALL_MAX_SECONDS)) return;
+        const date = new Date(entry.savedAt);
+        if (!Number.isFinite(date.getTime())) return;
+        let fillers = null;
+        const breakdown = entry.filler_word_breakdown;
+        if (breakdown && typeof breakdown === "object") {
+            let count = 0;
+            let ok = true;
+            Object.entries(breakdown).forEach(([word, n]) => {
+                if (!runFinite(n, 0, 100000)) ok = false;
+                else if (RUN_FILLER_SOUNDS.includes(word.trim().toLowerCase())) count += n;
+            });
+            if (ok) fillers = count / (speaking / 60);
+        }
+        const limit = entry.time_limit_seconds;
+        const off = runFinite(limit, 1, WALL_MAX_SECONDS) ? Math.abs(speaking - limit) : null;
+        shows.push({ kind: "show", key: entry.id, entry, date, num: shows.length + 1, topic: entry.topic, fillers, pace, off });
+    });
+    return shows;
+}
+
+// The points for a filter: the latest 2, 5 or 10 shows, or all of them (one per week above RUN_MAX_DOTS)
+function runView(shows, range) {
+    if (range === "prev" || range === "5" || range === "10") {
+        return { points: shows.slice(-(range === "prev" ? 2 : Number(range))), grouped: false, total: shows.length };
+    }
+    if (shows.length <= RUN_MAX_DOTS) return { points: shows.slice(), grouped: false, total: shows.length };
+    const weeks = new Map();
+    shows.forEach(show => {
+        const d = show.date;
+        const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+        const key = monday.getTime();
+        if (!weeks.has(key)) weeks.set(key, { kind: "week", key: "week-" + key, date: monday, shows: [] });
+        weeks.get(key).shows.push(show);
+    });
+    let points = [...weeks.values()].sort((a, b) => a.date - b.date);
+    const trimmed = points.length > RUN_MAX_DOTS;
+    points = points.slice(-RUN_MAX_DOTS);
+    points.forEach(week => {
+        week.count = week.shows.length;
+        Object.keys(RUN_METRICS).forEach(metric => {
+            const values = week.shows.map(show => show[metric]).filter(v => v !== null);
+            week[metric] = values.length ? runMean(values) : null;
+        });
+    });
+    return { points, grouped: true, trimmed, total: shows.length };
+}
+
+// The tag for a chart: earlier half against later half (exactly 10% counts), or the pace band for the latest show
+function runTag(metric, values) {
+    if (values.length < 2) return { tag: "Not enough yet", tone: "muted", icon: RUN_ICONS.flat };
+    if (metric === "pace") {
+        const last = values[values.length - 1];
+        if (last < RUN_PACE_BAND[0]) return { tag: "A bit slow", tone: "warn", icon: RUN_ICONS.down };
+        if (last > RUN_PACE_BAND[1]) return { tag: "A bit fast", tone: "warn", icon: RUN_ICONS.up };
+        return { tag: "In range", tone: "good", icon: RUN_ICONS.check };
+    }
+    const half = Math.floor(values.length / 2);
+    const earlier = values.length === 2 ? values[0] : runMean(values.slice(0, half));
+    const later = values.length === 2 ? values[1] : runMean(values.slice(values.length - half));
+    const change = Math.round(((later - earlier) / (earlier || 1)) * 1e6) / 1e6;    // rounded, so exactly 10% counts
+    if (change <= -RUN_TAG_CHANGE) return { tag: "Improving", tone: "good", icon: RUN_ICONS.down };
+    if (change >= RUN_TAG_CHANGE) return { tag: "Slipping", tone: "warn", icon: RUN_ICONS.up };
+    return { tag: "Steady", tone: "muted", icon: RUN_ICONS.flat };
+}
+
+function runHeadline(metric, range, values) {
+    const m = RUN_METRICS[metric];
+    if (values.length === 0) return "None yet";
+    const last = values[values.length - 1];
+    if (range === "prev" && values.length === 2) return `${m.fmt(values[0])} → ${m.fmt(last)}`;
+    return m.fmt(last) + m.unit;
+}
+
+function runSentence(metric, range, values, view) {
+    const m = RUN_METRICS[metric];
+    if (values.length === 0) return m.none;
+    const first = values[0], last = values[values.length - 1];
+    if (values.length === 1) return `Just one of your ${m.shows} so far: ${m.fmt(last)}.`;
+    if (range === "prev") return `Last time ${m.fmt(first)}, this time ${m.fmt(last)}.`;
+    if (metric === "pace") {
+        const inBand = values.filter(v => v >= RUN_PACE_BAND[0] && v <= RUN_PACE_BAND[1]).length;
+        return `In the comfortable band for ${inBand} of ${values.length} ${view.grouped ? "weeks" : "shows"}.`;
+    }
+    let span = `your last ${values.length} ${m.shows}`;
+    if (range === "all") span = view.grouped ? `all ${view.total} shows` : `all your ${m.shows}`;
+    return `From ${m.fmt(first)} to ${m.fmt(last)} across ${span}.`;
+}
+
+const runPointName = point => (point.kind === "week" ? `Week of ${runDate(point.date)}, ${point.count} ${point.count === 1 ? "show" : "shows"}` : `Show ${point.num}, ${runDate(point.date)}`);
+const runAxisName = point => (point.kind === "week" ? `Wk of ${runDate(point.date)}` : `Show ${point.num}`);
+
+// One chart: name and tag, the latest value, the line with its dots, first and last labels, and a sentence.
+// The SVG stretches to the tile's width (it never grows wider), and the dots are placed in percent.
+function buildRunChart(metric, view, range) {
+    const m = RUN_METRICS[metric];
+    const points = view.points.filter(point => point[metric] !== null);
+    const values = points.map(point => point[metric]);
+    const tag = runTag(metric, values);
+    const frag = document.createDocumentFragment();
+
+    const head = document.createElement("div");
+    head.className = "run-tile-head";
+    const name = makeSpan("run-name", m.name);
+    name.title = m.note;
+    const tagPill = makeSpan(`run-tag run-tone-${tag.tone}`, "");
+    const icon = svgPart("svg", { width: "10", height: "10", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "3", "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true", focusable: "false" });
+    icon.append(svgPart("path", { d: tag.icon }));
+    tagPill.append(icon, document.createTextNode(tag.tag));
+    head.append(name, tagPill);
+
+    const headline = document.createElement("p");
+    headline.className = "run-headline";
+    headline.textContent = runHeadline(metric, range, values);
+
+    // The chart, in the mockup's 290 x 110 units
+    const W = 290, H = 110, PAD = 12;
+    let lo = m.lo, hi = m.hi;
+    if (values.length) {
+        if (metric === "pace") {
+            lo = Math.min(lo, Math.floor(Math.min(...values) / 10) * 10);
+            hi = Math.max(hi, Math.ceil(Math.max(...values) / 10) * 10);
+        } else if (metric === "off") {
+            hi = Math.max(hi, Math.ceil(Math.max(...values) / 30) * 30);
+        } else {
+            hi = Math.max(hi, Math.ceil(Math.max(...values)));
+        }
+    }
+    const yOf = v => PAD + (1 - (v - lo) / (hi - lo)) * (H - PAD * 2);
+    const xOf = i => (points.length === 1 ? W / 2 : PAD + (i / (points.length - 1)) * (W - PAD * 2));
+
+    const plot = document.createElement("div");
+    plot.className = "run-plot";
+    const svg = svgPart("svg", { class: "run-svg", viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "none", "aria-hidden": "true", focusable: "false" });
+    [0.75, 0.5, 0.25].forEach(share => {
+        const y = yOf(hi * share + lo * (1 - share)).toFixed(1);
+        svg.append(svgPart("line", { class: "run-grid", x1: "0", x2: String(W), y1: y, y2: y }));
+    });
+    if (metric === "pace") {
+        const top = yOf(RUN_PACE_BAND[1]), bottom = yOf(RUN_PACE_BAND[0]);
+        svg.append(svgPart("rect", { class: "run-band", x: "0", y: top.toFixed(1), width: String(W), height: (bottom - top).toFixed(1) }));
+    }
+    if (points.length > 1) {
+        svg.append(svgPart("polyline", { class: "run-line", points: points.map((p, i) => `${xOf(i).toFixed(1)},${yOf(p[metric]).toFixed(1)}`).join(" ") }));
+    }
+    plot.append(svg);
+
+    // The dots: real buttons. Only one per chart is a Tab stop; arrow keys move along the line.
+    const selectedHere = points.some(p => p.key === runState.sel);
+    points.forEach((point, i) => {
+        const on = point.key === runState.sel;
+        const dot = document.createElement("button");
+        dot.type = "button";
+        dot.className = on ? "run-dot is-on" : "run-dot";
+        dot.dataset.key = point.key;
+        dot.setAttribute("aria-label", `${m.name}, ${runPointName(point)}: ${m.fmt(point[metric])}${m.unit}`);
+        dot.setAttribute("aria-pressed", String(on));
+        dot.tabIndex = on || (!selectedHere && i === points.length - 1) ? 0 : -1;
+        dot.style.setProperty("left", `${(xOf(i) / W * 100).toFixed(3)}%`);
+        dot.style.setProperty("top", `${(yOf(point[metric]) / H * 100).toFixed(3)}%`);
+        dot.append(makeSpan("run-dot-mark", ""));
+        plot.append(dot);
+    });
+
+    const axis = document.createElement("div");
+    axis.className = "run-axis";
+    if (points.length) axis.append(makeSpan("", runAxisName(points[0])), makeSpan("", runAxisName(points[points.length - 1])));
+
+    const sentence = document.createElement("p");
+    sentence.className = "run-sentence";
+    sentence.textContent = runSentence(metric, range, values, view);
+
+    frag.append(head, headline, plot, axis, sentence);
+    return frag;
+}
+
+// The Selected bar: the chosen show (or week), its three numbers, and a way to its playbill
+function renderRunSelected(point) {
+    const fillers = point.fillers !== null ? `Fillers ${RUN_METRICS.fillers.fmt(point.fillers)}/min` : "No filler details";
+    const pace = point.pace !== null ? `Pace ${RUN_METRICS.pace.fmt(point.pace)} wpm` : "No pace";
+    const off = point.off !== null ? `${formatTime(point.off)} from limit` : "Untimed";
+    if (point.kind === "week") {
+        document.getElementById("runSelTitle").textContent = `Week of ${runDate(point.date)} (${point.count} ${point.count === 1 ? "show" : "shows"}, averages)`;
+        document.getElementById("runSelTopic").textContent = "";
+    } else {
+        document.getElementById("runSelTitle").textContent = `Show ${point.num}, ${runDate(point.date)}`;
+        document.getElementById("runSelTopic").textContent = `  ·  ${point.topic || "Spoke freely"}`;
+    }
+    document.getElementById("runSelValues").textContent = `${fillers}  ·  ${pace}  ·  ${off}`;
+    document.getElementById("runOpenBtn").hidden = point.kind !== "show";
+}
+
+let runPoints = [];      // the points on show now, to find the one a dot or "Open its playbill" refers to
+
+// Draws the whole board. focus: { metric, key } puts focus back on a dot after a keyboard move.
+function renderRun(focus = null) {
+    const shows = runPerformances();
+    const early = shows.length < RUN_MIN_SHOWS;
+    document.getElementById("runEarly").hidden = !early;
+    document.getElementById("runBody").hidden = early;
+    document.getElementById("runRange").hidden = early;
+    if (early) {
+        runBoard.querySelectorAll(".run-bulb").forEach((bulb, i) => bulb.classList.toggle("is-lit", i < shows.length));
+        const left = RUN_MIN_SHOWS - shows.length;
+        document.getElementById("runEarlyText").textContent =
+            `Your trends light up after ${RUN_MIN_SHOWS} performances. ${shows.length} of ${RUN_MIN_SHOWS} done, ${RUN_NUMBER_WORDS[left]} more to go.`;
+        runPoints = [];
+        return;
+    }
+
+    const view = runView(shows, runState.range);
+    runPoints = view.points;
+    if (!runPoints.some(point => point.key === runState.sel)) runState.sel = runPoints[runPoints.length - 1].key;
+    Object.keys(RUN_METRICS).forEach(metric => {
+        const tile = runBoard.querySelector(`.run-chart[data-metric="${metric}"]`);
+        tile.replaceChildren(buildRunChart(metric, view, runState.range));
+    });
+    renderRunSelected(runPoints.find(point => point.key === runState.sel));
+
+    let note = "Tap any dot to see that show. Fillers count um and uh only, so every speech is measured the same way.";
+    if (view.grouped) {
+        note = view.trimmed
+            ? `You have ${view.total} shows, so All shows one dot per week (weekly averages) for your latest ${RUN_MAX_DOTS} weeks. Tap any dot to see it.`
+            : `You have ${view.total} shows, so All shows one dot per week (weekly averages) to stay readable. Tap any dot to see it.`;
+    }
+    document.getElementById("runNote").textContent = note;
+
+    if (focus) {
+        const dot = runBoard.querySelector(`.run-chart[data-metric="${focus.metric}"] .run-dot[data-key="${CSS.escape(focus.key)}"]`);
+        if (dot) dot.focus();
+    }
+}
+
+// Filters: real radio buttons. A new filter starts again from the latest show.
+runBoard.querySelectorAll('input[name="runRange"]').forEach(radio => radio.addEventListener("change", () => {
+    runState.range = radio.value;
+    runState.sel = null;
+    renderRun();
+}));
+
+// A dot picks its show (or week) in all three charts
+runBoard.addEventListener("click", e => {
+    const dot = e.target.closest(".run-dot");
+    if (!dot) return;
+    runState.sel = dot.dataset.key;
+    renderRun({ metric: dot.closest(".run-chart").dataset.metric, key: dot.dataset.key });
+});
+
+// Left and Right move along a chart's dots (and pick them), Home and End go to the first and last
+runBoard.addEventListener("keydown", e => {
+    const dot = e.target.closest(".run-dot");
+    if (!dot || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+    const dots = [...dot.closest(".run-plot").querySelectorAll(".run-dot")];
+    const at = dots.indexOf(dot);
+    let next = at;
+    if (e.key === "ArrowLeft") next = Math.max(0, at - 1);
+    if (e.key === "ArrowRight") next = Math.min(dots.length - 1, at + 1);
+    if (e.key === "Home") next = 0;
+    if (e.key === "End") next = dots.length - 1;
+    e.preventDefault();
+    runState.sel = dots[next].dataset.key;
+    renderRun({ metric: dot.closest(".run-chart").dataset.metric, key: dots[next].dataset.key });
+});
+
+// "Open its playbill": the same open playbill as on the wall; focus comes back here when it closes
+document.getElementById("runOpenBtn").addEventListener("click", e => {
+    const point = runPoints.find(p => p.key === runState.sel);
+    if (point && point.kind === "show") openPlaybill(point.entry, e.currentTarget);
+});
+
+// Narrow windows: one measurement at a time (the same width as the one-column Backstage)
+const RUN_TAB_METRICS = { runTabFillers: "fillers", runTabPace: "pace", runTabOff: "off" };
+setupTabs(document.getElementById("runTabs"), id => {
+    runBoard.dataset.metric = RUN_TAB_METRICS[id];
+}, { panels: false });
+
+// ---------------------------
 // Trophies: the shelf on the Wall of Fame
 // ---------------------------
 // Progress is saved under TROPHY_KEY as { performances, topicTypes, practiceDays, earned }, apart from
@@ -2455,8 +2771,11 @@ const TROPHIES = [
       progress: () => null },
     { id: "full-repertoire", name: "Full repertoire", cup: false, rule: `All ${TOPIC_TYPE_COUNT} topic types`,
       earnedBy: p => p.topicTypes.length >= TOPIC_TYPE_COUNT, progress: p => `${p.topicTypes.length} of ${TOPIC_TYPE_COUNT} types` },
-    { id: "long-run", name: "Long run", cup: false, rule: "Speak 5 minutes or more",
-      earnedBy: (p, perf) => perf.speaking !== null && perf.speaking >= 300, progress: () => null },
+    // At a real speaking pace too (60 words per minute or more), and never a too-short take, so a silent
+    // 10-minute recording can't earn it. Trophies already earned stay earned.
+    { id: "long-run", name: "Long run", cup: false, rule: "5 min+ at a speaking pace",
+      earnedBy: (p, perf) => perf.speaking !== null && perf.speaking >= 300 && perf.wpm !== null && perf.wpm >= 60 && !perf.tooShort,
+      progress: () => null },
     { id: "three-night-run", name: "Three-night run", cup: true, rule: "3 days in a row",
       earnedBy: p => longestRun(p.practiceDays) >= 3, progress: p => `${Math.min(currentRun(p.practiceDays), 3)} of 3 days` }
 ];
@@ -2578,7 +2897,8 @@ function trophyPerformance(source) {
         speaking: number(source.speaking_seconds, WALL_MAX_SECONDS),
         fillers: number(source.filler_word_total, 100000),
         wpm: number(source.wpm, 10000),
-        cutOff: source.cut_off === true
+        cutOff: source.cut_off === true,
+        tooShort: source.too_short === true
     };
 }
 

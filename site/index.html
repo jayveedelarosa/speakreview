@@ -515,6 +515,55 @@
                 </section>
 
                 <div id="wallFrames" class="wall-frames">
+                    <!-- Your run so far: a box office board with three trends, worked out on this device from the
+                         saved performances (plain math, no AI). Filled by renderRun(). -->
+                    <section id="runBoard" class="run-board" aria-labelledby="runTitle" data-metric="fillers">
+                        <div class="run-felt">
+                            <div class="run-head">
+                                <div class="run-heading">
+                                    <h3 id="runTitle" class="run-title">Your run so far</h3>
+                                    <p class="run-sub">Measured, not judged. The same speeches always give the same numbers.</p>
+                                </div>
+                                <fieldset id="runRange" class="run-range">
+                                    <legend class="visually-hidden">Show progress for</legend>
+                                    <label class="run-pill"><input type="radio" name="runRange" value="prev"><span><span class="long-label">Last vs previous</span><span class="short-label" aria-hidden="true">vs previous</span></span></label>
+                                    <label class="run-pill"><input type="radio" name="runRange" value="5"><span>Last 5</span></label>
+                                    <label class="run-pill"><input type="radio" name="runRange" value="10" checked><span>Last 10</span></label>
+                                    <label class="run-pill"><input type="radio" name="runRange" value="all"><span>All</span></label>
+                                </fieldset>
+                            </div>
+
+                            <!-- Fewer than 3 performances: the bulbs light up one by one -->
+                            <div id="runEarly" class="run-early" hidden>
+                                <div class="run-bulbs" aria-hidden="true"><span class="run-bulb"></span><span class="run-bulb"></span><span class="run-bulb"></span></div>
+                                <p id="runEarlyText" class="run-early-text"></p>
+                            </div>
+
+                            <div id="runBody" class="run-body">
+                                <!-- Narrow windows: one measurement at a time -->
+                                <div id="runTabs" class="run-tabs" role="tablist" aria-label="Measurement">
+                                    <button type="button" id="runTabFillers" class="run-tab" role="tab" aria-selected="true" aria-controls="runChartFillers">Fillers</button>
+                                    <button type="button" id="runTabPace" class="run-tab" role="tab" aria-selected="false" aria-controls="runChartPace" tabindex="-1">Pace</button>
+                                    <button type="button" id="runTabOff" class="run-tab" role="tab" aria-selected="false" aria-controls="runChartOff" tabindex="-1">Timing</button>
+                                </div>
+                                <div class="run-charts">
+                                    <div id="runChartFillers" class="run-chart" data-metric="fillers" role="tabpanel" aria-labelledby="runTabFillers"></div>
+                                    <div id="runChartPace" class="run-chart" data-metric="pace" role="tabpanel" aria-labelledby="runTabPace"></div>
+                                    <div id="runChartOff" class="run-chart" data-metric="off" role="tabpanel" aria-labelledby="runTabOff"></div>
+                                </div>
+                                <div id="runSelected" class="run-selected">
+                                    <span class="run-selected-label">Selected</span>
+                                    <div class="run-selected-text">
+                                        <span class="run-selected-title"><span id="runSelTitle"></span><span id="runSelTopic" class="run-selected-topic"></span></span>
+                                        <span id="runSelValues" class="run-selected-values"></span>
+                                    </div>
+                                    <button type="button" id="runOpenBtn" class="run-open">Open its playbill</button>
+                                </div>
+                                <p id="runNote" class="run-note"></p>
+                            </div>
+                        </div>
+                    </section>
+
                     <div id="wallEmpty" class="wall-empty" hidden>
                         <p class="wall-empty-text">Your wall is empty. Take the stage to hang your first playbill.</p>
                         <button type="button" id="wallStageBtn" class="btn-gold">Go to the stage</button>

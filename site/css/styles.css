@@ -3243,6 +3243,477 @@ html.settings-lock {
 }
 
 /* Empty state */
+/* ---------- Your run so far: the box office board on the Wall of Fame (F2Wall.dc.html) ---------- */
+/* The top margin keeps the board's shadow off the trophy shelf above */
+.run-board {
+    margin: 28px auto 26px;
+    padding: 10px;
+    border-radius: 10px;
+    background: linear-gradient(160deg, #6E4522, #3E2412 55%, #5C3519);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55);
+    text-align: left;
+}
+
+/* Dark felt with faint horizontal lines */
+.run-felt {
+    padding: 14px 18px;
+    border-radius: 4px;
+    background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0) 0 15px, rgba(255, 255, 255, 0.035) 15px 16px), #151010;
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.7);
+}
+
+.run-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(246, 234, 211, 0.14);
+}
+
+.run-heading {
+    display: flex;
+    flex-direction: column;
+}
+
+.run-title {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: #F4E7CC;
+}
+
+.run-sub {
+    margin: 0;
+    font-size: 12px;
+    color: #BCA992;
+}
+
+/* Filters: real radio buttons shown as pills (the input stays focusable for the keyboard) */
+.run-range {
+    display: flex;
+    gap: 6px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.run-pill {
+    position: relative;
+}
+
+.run-pill input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    opacity: 0;
+}
+
+.run-pill > span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    padding: 0 13px;
+    border: 1px solid rgba(246, 234, 211, 0.24);
+    border-radius: 999px;
+    color: #EFE2CF;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.run-pill:hover > span {
+    border-color: var(--gold-line);
+}
+
+.run-pill input:checked + span {
+    border-color: #D9AE52;
+    background: #D9AE52;
+    color: #1E1006;
+    font-weight: 800;
+}
+
+.run-pill input:focus-visible + span {
+    outline: 2px solid var(--gold-light);
+    outline-offset: 3px;
+}
+
+/* Three charts side by side (one at a time on narrow windows, see below) */
+.run-tabs {
+    display: none;
+}
+
+.run-charts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 22px;
+    margin-top: 12px;
+}
+
+.run-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.run-tile-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.run-name {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #BCA992;
+}
+
+/* The tag always has a word and an icon, never only a colour */
+.run-tag {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.run-tone-good {
+    background: rgba(143, 224, 176, 0.14);
+    color: #8FE0B0;
+}
+
+.run-tone-warn {
+    background: rgba(255, 176, 102, 0.16);
+    color: #FFB066;
+}
+
+.run-tone-muted {
+    background: rgba(246, 234, 211, 0.1);
+    color: #D8C6AE;
+}
+
+.run-headline {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 25px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: #FFF6E3;
+}
+
+/* The chart stretches to its tile and never grows wider; the dots are placed in percent */
+.run-plot {
+    position: relative;
+    height: 110px;
+}
+
+.run-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.run-grid {
+    stroke: rgba(246, 234, 211, 0.07);
+    vector-effect: non-scaling-stroke;
+}
+
+.run-band {
+    fill: rgba(143, 224, 176, 0.12);
+}
+
+.run-line {
+    fill: none;
+    stroke: #D9AE52;
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+}
+
+/* Each dot is a button with a 24px target */
+.run-dot {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    margin: -12px 0 0 -12px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.run-dot-mark {
+    display: block;
+    width: 9px;
+    height: 9px;
+    border: 2px solid #151010;
+    border-radius: 999px;
+    background: #D9AE52;
+}
+
+.run-dot.is-on .run-dot-mark {
+    width: 14px;
+    height: 14px;
+    border: 3px solid #D9AE52;
+    background: #FFF6E3;
+    box-shadow: 0 0 10px rgba(255, 200, 120, 0.7);
+}
+
+.run-axis {
+    display: flex;
+    justify-content: space-between;
+    min-height: 16px;
+    font-size: 11px;
+    color: #9C8B76;
+}
+
+.run-sentence {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #DCCBB3;
+}
+
+/* The Selected bar */
+.run-selected {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid rgba(246, 234, 211, 0.1);
+    border-radius: 6px;
+    background: rgba(246, 234, 211, 0.05);
+}
+
+.run-selected-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #BCA992;
+}
+
+.run-selected-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.run-selected-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #FFF6E3;
+    overflow-wrap: anywhere;
+}
+
+.run-selected-topic {
+    font-weight: 500;
+    color: #D8C6AE;
+}
+
+.run-selected-values {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: #DCCBB3;
+}
+
+.run-open {
+    flex: none;
+    height: 34px;
+    padding: 0 14px;
+    border: 1px solid rgba(217, 174, 82, 0.6);
+    border-radius: 999px;
+    background: transparent;
+    color: #F0CF86;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.run-open:hover {
+    background: rgba(217, 174, 82, 0.12);
+}
+
+.run-note {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: #9C8B76;
+}
+
+/* Before 3 performances: three bulbs, lit for each one done */
+.run-early {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 0 8px;
+    text-align: center;
+}
+
+.run-bulbs {
+    display: flex;
+    gap: 12px;
+}
+
+.run-bulb {
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    background: #4A3C36;
+    box-shadow: inset 0 0 0 1px rgba(246, 234, 211, 0.2);
+}
+
+.run-bulb.is-lit {
+    background: radial-gradient(circle at 40% 35%, #FFFFFF, #FFDFA0 60%);
+    box-shadow: 0 0 10px 3px rgba(255, 200, 120, 0.65);
+}
+
+.run-early-text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #EFE2CF;
+}
+
+/* Narrow windows (the same width as the one-column Backstage): one measurement at a time, with a
+   Fillers / Pace / Timing switcher (F2WallPhone.dc.html) */
+@media (max-width: 989px) {
+    .run-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-top: 12px;
+        padding: 3px;
+        border: 1px solid rgba(246, 234, 211, 0.12);
+        border-radius: 999px;
+        background: rgba(246, 234, 211, 0.06);
+    }
+
+    .run-tab {
+        height: 34px;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: #D8C6AE;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .run-tab[aria-selected="true"] {
+        background: #D9AE52;
+        color: #1E1006;
+    }
+
+    .run-tab:focus-visible {
+        outline-offset: -2px;
+    }
+
+    .run-charts {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .run-board:not([data-metric="fillers"]) .run-chart[data-metric="fillers"],
+    .run-board:not([data-metric="pace"]) .run-chart[data-metric="pace"],
+    .run-board:not([data-metric="off"]) .run-chart[data-metric="off"] {
+        display: none;
+    }
+
+    .run-plot {
+        height: 96px;
+    }
+}
+
+/* Phones: the smaller board from F2WallPhone.dc.html */
+@media (max-width: 600px) {
+    .run-board {
+        margin: 12px 0 18px;
+        padding: 7px;
+        border-radius: 8px;
+    }
+
+    .run-felt {
+        padding: 10px;
+    }
+
+    .run-title {
+        font-size: 12px;
+        letter-spacing: 0.2em;
+    }
+
+    .run-sub {
+        font-size: 11px;
+    }
+
+    .run-range {
+        display: grid;
+        grid-template-columns: 1.35fr 1fr 1fr 0.8fr;
+        gap: 5px;
+        width: 100%;
+    }
+
+    .run-pill > span {
+        width: 100%;
+        padding: 0 4px;
+        font-size: 11px;
+    }
+
+    .run-headline {
+        font-size: 21px;
+    }
+
+    .run-sentence {
+        font-size: 12px;
+        line-height: 1.35;
+    }
+
+    .run-selected {
+        flex-wrap: wrap;
+        gap: 6px 10px;
+        padding: 7px 9px;
+    }
+
+    .run-selected-label {
+        display: none;
+    }
+
+    .run-selected-title {
+        font-size: 12px;
+    }
+
+    .run-selected-values {
+        font-size: 11px;
+    }
+
+    .run-note {
+        font-size: 11px;
+    }
+}
+
 .wall-empty {
     display: flex;
     flex-direction: column;
