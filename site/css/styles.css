@@ -3287,12 +3287,6 @@ html.settings-lock {
     color: #F4E7CC;
 }
 
-.run-sub {
-    margin: 0;
-    font-size: 12px;
-    color: #BCA992;
-}
-
 /* Filters: real radio buttons shown as pills (the input stays focusable for the keyboard) */
 .run-range {
     display: flex;
@@ -3354,25 +3348,31 @@ html.settings-lock {
 .run-charts {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 22px;
+    gap: 0 22px;
     margin-top: 12px;
 }
 
+/* Each chart shares the board's rows (head, headline, plot, axis, sentence), so when one title's tag wraps
+   under it the three charts still line up */
 .run-chart {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    display: grid;
+    grid-row: span 5;
+    grid-template-rows: subgrid;
+    row-gap: 4px;
     min-width: 0;
 }
 
+/* The title stays on one line; where the tag doesn't fit beside it, the tag goes under it */
 .run-tile-head {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 4px 8px;
 }
 
 .run-name {
+    white-space: nowrap;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.14em;
@@ -3663,10 +3663,6 @@ html.settings-lock {
     .run-title {
         font-size: 12px;
         letter-spacing: 0.2em;
-    }
-
-    .run-sub {
-        font-size: 11px;
     }
 
     .run-range {

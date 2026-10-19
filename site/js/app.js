@@ -2436,14 +2436,17 @@ const RUN_MAX_DOTS = 30;                 // above this, All shows one dot per we
 const RUN_TAG_CHANGE = 0.1;              // 10% better or worse than the earlier half
 const RUN_PACE_BAND = [130, 160];        // a comfortable pace, in words per minute
 const RUN_FILLER_SOUNDS = ["um", "uh"];  // fillers per minute counts these only, so every speech is measured the same way
+// title: shown on the chart; label: what screen readers hear on its dots. fine: a closer format, used when two
+// different averages would otherwise look the same in a sentence.
 const RUN_METRICS = {
-    fillers: { name: "Fillers per minute", unit: "/min", lo: 0, hi: 7, fmt: v => v.toFixed(1), shows: "shows",
+    fillers: { title: "Fillers per minute · um, uh", label: "Fillers per minute (um and uh)", unit: "/min", lo: 0, hi: 7,
+        fmt: v => v.toFixed(1), fine: v => v.toFixed(2), shows: "shows",
         note: "um and uh only, so every speech is counted the same way",
         none: "No filler details here yet. They come with your next performances." },
-    pace: { name: "Pace", unit: " wpm", lo: 100, hi: 190, fmt: v => String(Math.round(v)), shows: "shows",
+    pace: { title: "Pace", label: "Pace", unit: " wpm", lo: 100, hi: 190, fmt: v => String(Math.round(v)), fine: v => v.toFixed(1), shows: "shows",
         note: "words per minute; the shaded band is a comfortable 130 to 160",
         none: "No pace here yet." },
-    off: { name: "Time accuracy", unit: " off", lo: 0, hi: 60, fmt: v => formatTime(v), shows: "timed shows",
+    off: { title: "Time accuracy", label: "Time accuracy", unit: " off", lo: 0, hi: 60, fmt: v => formatTime(v), fine: v => `${v.toFixed(1)}s`, shows: "timed shows",
         note: "how far you landed from your time limit (timed speeches only)",
         none: "No timed shows here yet. Set a speaking time to see this one." }
 };
@@ -2510,6 +2513,16 @@ function runView(shows, range) {
     return { points, grouped: true, trimmed, total: shows.length };
 }
 
+// The numbers a tag (and its sentence) compare: two values directly, otherwise the average of the earlier half
+// against the later half (the middle value is left out when the count is odd). change is rounded, so exactly 10% counts.
+function runHalves(values) {
+    const half = Math.floor(values.length / 2);
+    const earlier = values.length === 2 ? values[0] : runMean(values.slice(0, half));
+    const later = values.length === 2 ? values[1] : runMean(values.slice(values.length - half));
+    const change = Math.round(((later - earlier) / (earlier || 1)) * 1e6) / 1e6;
+    return { earlier, later, change };
+}
+
 // The tag for a chart: earlier half against later half (exactly 10% counts), or the pace band for the latest show
 function runTag(metric, values) {
     if (values.length < 2) return { tag: "Not enough yet", tone: "muted", icon: RUN_ICONS.flat };
@@ -2519,10 +2532,7 @@ function runTag(metric, values) {
         if (last > RUN_PACE_BAND[1]) return { tag: "A bit fast", tone: "warn", icon: RUN_ICONS.up };
         return { tag: "In range", tone: "good", icon: RUN_ICONS.check };
     }
-    const half = Math.floor(values.length / 2);
-    const earlier = values.length === 2 ? values[0] : runMean(values.slice(0, half));
-    const later = values.length === 2 ? values[1] : runMean(values.slice(values.length - half));
-    const change = Math.round(((later - earlier) / (earlier || 1)) * 1e6) / 1e6;    // rounded, so exactly 10% counts
+    const { change } = runHalves(values);
     if (change <= -RUN_TAG_CHANGE) return { tag: "Improving", tone: "good", icon: RUN_ICONS.down };
     if (change >= RUN_TAG_CHANGE) return { tag: "Slipping", tone: "warn", icon: RUN_ICONS.up };
     return { tag: "Steady", tone: "muted", icon: RUN_ICONS.flat };
@@ -2548,7 +2558,12 @@ function runSentence(metric, range, values, view) {
     }
     let span = `your last ${values.length} ${m.shows}`;
     if (range === "all") span = view.grouped ? `all ${view.total} shows` : `all your ${m.shows}`;
-    return `From ${m.fmt(first)} to ${m.fmt(last)} across ${span}.`;
+    // Fillers and timing: the same two numbers as the tag, so the sentence always agrees with it
+    const tag = runTag(metric, values).tag;
+    if (tag === "Steady") return `About the same, ${m.fmt(runMean(values))} on average, across ${span}.`;
+    const { earlier, later } = runHalves(values);
+    const show = m.fmt(earlier) === m.fmt(later) ? m.fine : m.fmt;     // never "from 0.0 to 0.0"
+    return `${tag === "Improving" ? "Down" : "Up"} from ${show(earlier)} to ${show(later)} on average across ${span}.`;
 }
 
 const runPointName = point => (point.kind === "week" ? `Week of ${runDate(point.date)}, ${point.count} ${point.count === 1 ? "show" : "shows"}` : `Show ${point.num}, ${runDate(point.date)}`);
@@ -2565,7 +2580,7 @@ function buildRunChart(metric, view, range) {
 
     const head = document.createElement("div");
     head.className = "run-tile-head";
-    const name = makeSpan("run-name", m.name);
+    const name = makeSpan("run-name", m.title);
     name.title = m.note;
     const tagPill = makeSpan(`run-tag run-tone-${tag.tone}`, "");
     const icon = svgPart("svg", { width: "10", height: "10", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "3", "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true", focusable: "false" });
@@ -2617,7 +2632,7 @@ function buildRunChart(metric, view, range) {
         dot.type = "button";
         dot.className = on ? "run-dot is-on" : "run-dot";
         dot.dataset.key = point.key;
-        dot.setAttribute("aria-label", `${m.name}, ${runPointName(point)}: ${m.fmt(point[metric])}${m.unit}`);
+        dot.setAttribute("aria-label", `${m.label}, ${runPointName(point)}: ${m.fmt(point[metric])}${m.unit}`);
         dot.setAttribute("aria-pressed", String(on));
         dot.tabIndex = on || (!selectedHere && i === points.length - 1) ? 0 : -1;
         dot.style.setProperty("left", `${(xOf(i) / W * 100).toFixed(3)}%`);
@@ -2681,13 +2696,16 @@ function renderRun(focus = null) {
     });
     renderRunSelected(runPoints.find(point => point.key === runState.sel));
 
-    let note = "Tap any dot to see that show. Fillers count um and uh only, so every speech is measured the same way.";
+    // The note under the board only explains weekly grouping (All with more than RUN_MAX_DOTS shows)
+    let note = "";
     if (view.grouped) {
         note = view.trimmed
             ? `You have ${view.total} shows, so All shows one dot per week (weekly averages) for your latest ${RUN_MAX_DOTS} weeks. Tap any dot to see it.`
             : `You have ${view.total} shows, so All shows one dot per week (weekly averages) to stay readable. Tap any dot to see it.`;
     }
-    document.getElementById("runNote").textContent = note;
+    const runNote = document.getElementById("runNote");
+    runNote.textContent = note;
+    runNote.hidden = !note;
 
     if (focus) {
         const dot = runBoard.querySelector(`.run-chart[data-metric="${focus.metric}"] .run-dot[data-key="${CSS.escape(focus.key)}"]`);
