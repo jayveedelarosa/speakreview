@@ -1,0 +1,5 @@
+# Made by the tests at run time: sample audio and video, the last commit's site, screenshots, logs
+tests/.output/
+tests/node_modules/
+# Screenshots belong in tests/.output only; never commit one
+tests/**/*.png

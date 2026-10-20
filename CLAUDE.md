@@ -5,6 +5,7 @@
 - Speech topics live in `site/js/topics.js` (global `TOPICS` array).
 - GitHub Actions (`.github/workflows/deploy.yml`) deploys them with `aws s3 sync` whenever `site/**` changes.
 - The approved design lives in design/ (reference only, never deployed). Follow design/DESIGN-NOTES.md for any visual change.
+- Browser tests live in `tests/` (never deployed; see tests/README.md). They use a fake API stub, never real AWS. Sample audio/video, screenshots and logs are made at run time in `tests/.output/` (ignored by git); never commit them.
 
 ## Do not change unless asked
 - `API_BASE`, AWS names, bucket names and the IAM role ARN.
@@ -27,5 +28,6 @@
 
 ## Workflow
 - Always show a plan with line numbers before editing.
+- Run the tests (`cd tests && npm test`, or the suites the change touches) before committing, and update or add tests for the change.
 - Make one commit per change.
 - Never push.

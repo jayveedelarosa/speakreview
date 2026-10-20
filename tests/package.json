@@ -1,0 +1,15 @@
+{
+  "name": "speakreview-tests",
+  "private": true,
+  "description": "Browser tests for the SpeakReview site. Never deployed.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node run-all.mjs"
+  },
+  "devDependencies": {
+    "lamejs": "1.2.1"
+  }
+}

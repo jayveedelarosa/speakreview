@@ -76,6 +76,48 @@ The approved mockups are the .dc.html files in this folder. They were made in a 
 - Laptop: three charts side by side. Phone: one measurement at a time with a Fillers / Pace / Timing switcher.
 - Before 3 performances: "Your trends light up after 3 performances. 2 of 3 done, one more to go." with three bulbs (lit for each done).
 
-## 5. Rules that still apply
+## 5. What was built (decisions after the mockups)
+
+These were decided while building and checked in the live site. Where they differ from sections 1 to 4, these win.
+
+**Navigation and layout**
+- **Laptop signs from 1280px.** Below 1280px the curtain signs (12vw minus 14 px) are too narrow for "BACKSTAGE" (measured: it first fits at 1280). So the bottom bar from F2PhoneNav is the navigation below 1280px, on laptop-style layouts too. The phone layout itself still starts at 600px.
+- **One-column Backstage below 990px.** Below 990px the two-column mirror no longer fits properly (measured), so Backstage uses its phone layout there: Notes / Your words / Review tabs and the short number labels. When the window widens past 990px while Review is open, the Notes tab opens instead.
+- **Backstage number row.**
+  - On laptops the three numbers sit in one compact row under the time line.
+  - "Back to the stage" (gold, the most prominent) and "Try this topic again" sit at the bottom right, under the notes. They wrap neatly when the column is narrow, and they are always visible.
+  - The left column scrolls on its own when it doesn't fit, with "Scroll for the review" and a fade.
+- **Label gold #E3BA60.** Small gold caps on dark panels (for example the settings menu kicker) use #E3BA60 instead of #D9AE52. Under the panel's spotlight, #D9AE52 measured just under 4.5:1.
+- **Dressed settings menu.** The Speaking time and Prep time panel follows DESIGN-NOTES-settings-menu.md in this folder (the wooden panel with the kicker, the divider and the choices).
+
+**Your run so far**
+- **Fillers chart title:** "Fillers per minute · um, uh". Screen readers hear "Fillers per minute (um and uh)". The switcher pill stays "Fillers".
+- **The sentences use the same half averages as the tag.**
+  - The middle show is left out when the count is odd. The change is rounded first, so exactly 10% counts.
+  - The wording follows the tag: "Down from 2.0 to 1.8 on average across your last 4 shows." (Improving), "Up from ..." (Slipping) or "About the same, 1.9 on average, across ..." (Steady).
+  - Pace keeps its band sentence, and Last vs previous keeps "Last time 2.0, this time 1.5."
+- No subtitle on the board, and no note under it except the weekly-grouping note above 30 shows.
+
+**Trophies and fillers**
+- **Long run trophy:** "5 min+ at a speaking pace". It needs 5 minutes or more of speaking at 60 words per minute or more, and the speech must not be too short. A long silent recording doesn't count.
+- **Filler judging is steady and done on the server.**
+  - Which "like", "so", "you know" and so on were used as filler is decided on the server, set up so the same speech gets the same marks.
+  - The page shows only the marks it is sent (filler_flags, when fillers_judged is true) and never judges on its own.
+
+**Phones**
+- **Stable heights on phones.**
+  - Room heights use one stable height (`--stable-h`: 100svh, with 100vh for older browsers), never dvh or a height measured by JavaScript. Nothing resizes while the browser toolbar slides in or out.
+  - The short-phone mic size is chosen from that same height, not from a max-height media query.
+- **Scenery under the scene.** When the toolbar hides, the extra space above the bottom bar shows the room's scenery, never an empty dark band: the page background continues the Stage floor (at its darkest shade) and the Backstage and Wall stripes.
+- **No pull past the end.** The page has overscroll-behavior-y: none, and the panels that scroll inside have overscroll-behavior: contain. This also turns off pull-to-refresh on the site.
+- **Top fade.** A scrolling panel with a bottom fade also gets a soft 16 px fade at its top while it is scrolled down, so the top line is never cut in half.
+- **Text sizes.** The hint reads "Scroll for more" everywhere, on one line. The number labels in the one-column Backstage are 11px, the minimum.
+
+**Security sweep (stage 7)**
+- Every piece of text from outside the page was tested with HTML, script tags, quotes and very long strings without spaces. The text came from the topic, coach's notes, words, filler flags, review reasons, stored Wall entries, file names and API messages. All of it shows as plain text and runs nothing.
+- One layout fix came out of it: the status line under the mic wraps long words (overflow-wrap: anywhere), so a long API message can't widen the page.
+- The tests are in tests/ (see tests/README.md).
+
+## 6. Rules that still apply
 
 No visible scrollbars. Reduced motion respected. Every value from the API, the user or localStorage goes through escapeHtml() or textContent. No inline styles, scripts or event handlers (strict CSP). No new outside addresses. No em dashes in visible text.
