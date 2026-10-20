@@ -5018,6 +5018,11 @@ body.curtains-closed .drape {
         --roll-h: 40px;
         --mic-w: 96px;
         --mic-h: 125px;
+        /* How much taller the screen gets when the browser toolbar hides (100lvh is the height with it
+           hidden, 100svh with it showing). Both stay put while the toolbar slides, so this never changes.
+           The floor grows down by it (see .floor below). Browsers without lvh keep 0px. */
+        --floor-extra: 0px;
+        --floor-extra: calc(100lvh - 100svh);
     }
 
     .short-label {
@@ -5076,11 +5081,18 @@ body.curtains-closed .drape {
         background: radial-gradient(ellipse 80% 55% at 50% 10%, rgba(255, 214, 150, 0.28), rgba(0, 0, 0, 0) 70%);
     }
 
+    /* One floor from the audience down to the bottom bar: it reaches --floor-extra below the stage, so
+       when the toolbar hides the extra room is still this floor (when it shows, the extra is behind the
+       bar). Everything on the floor is stage content and doesn't move. The light and the shading keep
+       the stage's floor height (100% minus the extra), so that part looks exactly as before; below it
+       the shading carries on at its last value (0.55) and the planks run straight on. */
     .floor {
+        bottom: calc(-1 * var(--floor-extra));
         border-top-width: 3px;
         background:
-            radial-gradient(ellipse 40% 45% at 50% 0%, rgba(255, 214, 150, 0.36), rgba(0, 0, 0, 0) 70%),
-            linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.55)),
+            radial-gradient(ellipse 40% 45% at 50% 0%, rgba(255, 214, 150, 0.36), rgba(0, 0, 0, 0) 70%) 0 0 / 100% calc(100% - var(--floor-extra)) no-repeat,
+            linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.55)) 0 0 / 100% calc(100% - var(--floor-extra)) no-repeat,
+            linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)) 0 100% / 100% var(--floor-extra) no-repeat,
             repeating-linear-gradient(90deg, var(--wood) 0 78px, var(--wood-gap) 78px 80px, var(--wood-light) 80px 158px, var(--wood-gap) 158px 160px);
     }
 
@@ -6161,7 +6173,16 @@ body.curtains-closed .drape {
             #3E0F16;
     }
 
-    /* The page behind the rooms keeps the phone's narrower stripes (see html at the top) */
+    /* The page behind the rooms keeps the phone's narrower stripes (see html at the top). Under the Stage it
+       is the phone floor's bottom colour (its planks under the 0.55 shading), only a fallback: the floor
+       itself reaches the bar. */
+    html {
+        background:
+            linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
+            repeating-linear-gradient(90deg, var(--wood) 0 78px, var(--wood-gap) 78px 80px, var(--wood-light) 80px 158px, var(--wood-gap) 158px 160px),
+            var(--bg);
+    }
+
     html:has(.app[data-view="backstage"]) {
         background:
             repeating-linear-gradient(90deg, var(--backstage-wall) 0 96px, var(--backstage-stripe) 96px 98px),

@@ -1,5 +1,5 @@
 // Stage 7: phone scrolling (stable heights, scenery under the scene, no overscroll), polish
-import { launch, sleep, only, check, finish, longWords, RESULT, open, done, shot, contrast } from "../lib/page.mjs";
+import { launch, sleep, only, check, finish, longWords, RESULT, STUB, BASE, open, done, shot, contrast } from "../lib/page.mjs";
 import { join } from "node:path";
 import { SITE } from "../lib/paths.mjs";
 import { readFileSync } from "node:fs";
@@ -70,7 +70,7 @@ if (!only || only === "toolbar") {
   check("styles.css: 100vh only as the svh fallback (and the body)", (cssText.match(/100vh/g) || []).length === 2 && /--stable-h: 100vh;\s*--stable-h: 100svh;/.test(cssText));
   for (const [w, h] of SIZES.filter(([w, h]) => !process.env.ONLY_SIZE || process.env.ONLY_SIZE === `${w}x${h}`)) {
     const tag = `${w}x${h}`;
-    for (const room of ["stage", "backstage-notes", "backstage-words", "wall"].filter(r => !process.env.ONLY_ROOM || process.env.ONLY_ROOM === r)) {
+    for (const room of ["backstage-notes", "backstage-words", "wall"].filter(r => !process.env.ONLY_ROOM || process.env.ONLY_ROOM === r)) {
       const b = await open({ width: w, height: h });
       await b.settled();
       if (room.startsWith("backstage")) {
@@ -121,6 +121,73 @@ if (!only || only === "toolbar") {
       await done(b);
     }
   }
+}
+
+// ---------------------------------------------------------------- the Stage: one floor down to the bar
+// A real phone keeps svh at the toolbar-shown height and lvh at the hidden one, so --floor-extra (lvh - svh)
+// is the toolbar's height. Emulation can't slide a toolbar, so the test holds both: Chrome's toolbar (56px)
+// and a Brave-like pair of toolbars (112px).
+const FLOOR = `(() => {
+  const r = sel => { const e = document.querySelector(sel); const b = e.getBoundingClientRect(); return [b.left, b.top + scrollY, b.width, b.height].map(v => +v.toFixed(1)); };
+  const f = document.querySelector(".floor").getBoundingClientRect(), st = document.querySelector(".stage").getBoundingClientRect(), nav = document.querySelector(".main-nav").getBoundingClientRect();
+  const raised = [...document.querySelectorAll(".main-nav *")].map(e => e.getBoundingClientRect()).filter(b => b.top < nav.top - 0.5).map(b => [b.left - 12, b.right + 12]);
+  return { fixed: { floorTop: +(f.top + scrollY).toFixed(1), mic: r(".mic-btn"), audience: r(".audience-phone"), title: r(".action-title"), text: r("#actionText"), upload: r(".upload-row") },
+    floorH: +f.height.toFixed(1), floorBottom: f.bottom, stageBottom: st.bottom, navTop: nav.top, raised, docH: document.documentElement.scrollHeight, sideways: document.documentElement.scrollWidth - innerWidth };
+})()`;
+
+if (!only || only === "floor") {
+  console.log("\n== the Stage: one continuous floor from the audience down to the bar");
+  for (const [w, h] of SIZES.filter(([w, h]) => !process.env.ONLY_SIZE || process.env.ONLY_SIZE === `${w}x${h}`)) {
+    // Where things sat before this change (the last commit), toolbar showing
+    const old = await launch({ width: w, height: h, mobile: true });
+    await old.goto(BASE, [STUB]);
+    await sleep(1500);
+    const before = await old.evaluate(FLOOR);
+    await old.close();
+    for (const T of [56, 112]) {
+      const tag = `${w}x${h}, ${T}px toolbar`;
+      const b = await open({ width: w, height: h });
+      await b.settled();
+      check(`${tag}: test browser has no toolbar, so the floor adds nothing on its own`, (await b.evaluate(`getComputedStyle(document.querySelector(".floor")).bottom`)) === "0px");
+      await b.evaluate(`document.documentElement.style.setProperty("--stable-h", "${h}px"); document.documentElement.style.setProperty("--floor-extra", "${T}px")`);
+      await sleep(250);
+      const shown = await b.evaluate(FLOOR);
+      check(`${tag}: toolbar shown: everything on the floor where it was before the change`, JSON.stringify(shown.fixed) === JSON.stringify(before.fixed), JSON.stringify(before.fixed) + " -> " + JSON.stringify(shown.fixed));
+      check(`${tag}: toolbar shown: the floor reaches behind the bar`, shown.floorBottom >= shown.navTop - 0.5, `${shown.floorBottom} vs bar ${shown.navTop}`);
+      const extraScroll = Math.max(0, T - 64);
+      check(`${tag}: page height: ${extraScroll ? `${extraScroll}px more floor to scroll (the extra above the bar's 64px)` : "nothing new to scroll"}`, Math.abs(shown.docH - (h + extraScroll)) <= 1, `${shown.docH} for a ${h}px window`);
+      check(`${tag}: no sideways scroll`, shown.sideways <= 0);
+      // Toolbar hides
+      await resize(b, w, h + T);
+      await b.evaluate("scrollTo(0, document.documentElement.scrollHeight)");
+      await sleep(200);
+      const hidden = await b.evaluate(FLOOR);
+      const sy = await b.evaluate("scrollY");
+      check(`${tag}: toolbar hidden: nothing moves, the floor keeps its height`, JSON.stringify(hidden.fixed) === JSON.stringify(shown.fixed) && hidden.floorH === shown.floorH, JSON.stringify(hidden.fixed));
+      check(`${tag}: toolbar hidden: the floor reaches the bar (no page background above it)`, hidden.floorBottom >= hidden.navTop - 0.5, `${hidden.floorBottom} vs bar ${hidden.navTop}`);
+      // The old seam: where the floor used to end (the bottom of the stage). Rows 3px above and below must match.
+      const seam = Math.round(hidden.stageBottom);
+      const xs = []; for (let x = 1; x < w - 1; x++) if (!hidden.raised.some(([l, r]) => x >= l && x <= r)) xs.push(x);
+      const px = await pixels(b, w, [...xs.map(x => [x, seam - 3]), ...xs.map(x => [x, seam + 3])]);
+      const above = px.slice(0, xs.length), below = px.slice(xs.length);
+      const worst = Math.max(...above.map((p, i) => Math.max(...p.map((v, c) => Math.abs(v - below[i][c])))));
+      // Plank gaps: the 2px dark lines, found as the darkest columns of each row
+      const gaps = row => { const lum = row.map(p => p[0] + p[1] + p[2]); const min = Math.min(...lum); return xs.filter((x, i) => lum[i] <= min + 6 && (i === 0 || lum[i - 1] > min + 6)); };
+      await shot(b, `floor-${w}x${h}-${T}`);
+      check(`${tag}: no seam where the floor used to end (rows 3px above and below within 3 colour levels)`, worst <= 3, `worst ${worst} at y ${seam}, scrolled ${sy}`);
+      check(`${tag}: plank lines line up across the old seam`, JSON.stringify(gaps(above)) === JSON.stringify(gaps(below)) && gaps(above).length >= 2, JSON.stringify(gaps(above)) + " / " + JSON.stringify(gaps(below)));
+      await resize(b, w, h);
+      const again = await b.evaluate(FLOOR);
+      check(`${tag}: toolbar shown again: same as before`, JSON.stringify(again.fixed) === JSON.stringify(shown.fixed) && again.floorH === shown.floorH);
+      await done(b);
+    }
+  }
+  // The page background under the Stage is the floor's bottom colour (fallback only)
+  const b = await open({ width: 390, height: 780 });
+  await b.settled();
+  const bg = await b.evaluate(`getComputedStyle(document.documentElement).backgroundImage`);
+  check("phone page background under the Stage: phone planks (80/160) under the 0.55 shading", bg.includes("rgba(0, 0, 0, 0.55)") && bg.includes("78px") && bg.includes("160px"), bg.slice(0, 160));
+  await done(b);
 }
 
 if (!only || only === "overscroll") {
