@@ -203,6 +203,16 @@ if (!only || only === "behaviour") {
   check("wheel scrolls the page again after closing", (await b.evaluate("scrollY")) > 0 && !(await b.evaluate(`document.documentElement.classList.contains("settings-lock")`)));
   await b.evaluate("window.scrollTo(0, 0)");
   await b.mouse("#prepSetting");
+  // The sheet slides up when it opens: tap Done only once it is open and two readings 100ms apart agree
+  const doneBox = () => b.evaluate(`!settingsPanel.hidden && JSON.stringify(settingsDoneBtn.getBoundingClientRect())`);
+  let box = await doneBox();
+  for (let i = 0; i < 30; i++) {
+    await sleep(100);
+    const next = await doneBox();
+    const settled = next && next === box;
+    box = next;
+    if (settled) break;
+  }
   await b.mouse("#settingsDoneBtn");
   check("phone Done closes", !(await b.state()).open && (await b.active()) === "prepSetting" && !(await b.evaluate(`document.documentElement.classList.contains("settings-lock")`)));
   await b.mouse("#prepSetting");
