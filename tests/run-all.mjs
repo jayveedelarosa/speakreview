@@ -1,6 +1,7 @@
 // Runs the test suites against a local copy of site/ served with the production security headers.
 //   node run-all.mjs                   every suite
 //   node run-all.mjs wall security     only these suites
+//   node run-all.mjs --only <suites>   the same, but at least one suite must be named (npm run test:only)
 //   node run-all.mjs --shots           save every screenshot to .output/shots (a few are always saved)
 // Nothing here talks to AWS: the suites answer every API call with a fake response inside the page.
 import { spawn, execFileSync } from "node:child_process";
@@ -35,6 +36,11 @@ const SUITE_TIMEOUT = 30 * 60 * 1000;
 
 const args = process.argv.slice(2);
 const wanted = args.filter(a => !a.startsWith("--"));
+// npm run test:only -- <suites>: a targeted run, never the full run by mistake
+if (args.includes("--only") && !wanted.length) {
+  console.error(`Usage: npm run test:only -- <suite> [<suite> ...]   (for example: npm run test:only -- throttle stage3-upload)\nSuites: ${SUITES.map(([s]) => s).join(", ")}`);
+  process.exit(2);
+}
 const unknown = wanted.filter(name => !SUITES.some(([s]) => s === name));
 if (unknown.length) {
   console.error(`Unknown suite: ${unknown.join(", ")}. Suites: ${SUITES.map(([s]) => s).join(", ")}`);

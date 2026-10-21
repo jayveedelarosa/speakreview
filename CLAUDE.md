@@ -28,6 +28,7 @@
 
 ## Workflow
 - Always show a plan with line numbers before editing.
-- Run the tests (`cd tests && npm test`, or the suites the change touches) before committing, and update or add tests for the change.
+- For small changes, run only the suites related to the change before committing (`cd tests && npm run test:only -- <suites>`), and add `security` when the change touches text from outside the page (API replies, storage, typed text, file names). Update or add tests for the change.
+- Run the full run (`cd tests && npm test`) once at the end of each stage, before that stage's last push.
 - Make one commit per change.
 - Never push.

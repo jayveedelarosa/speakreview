@@ -7,7 +7,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node run-all.mjs"
+    "test": "node run-all.mjs",
+    "test:only": "node run-all.mjs --only"
   },
   "devDependencies": {
     "lamejs": "1.2.1"

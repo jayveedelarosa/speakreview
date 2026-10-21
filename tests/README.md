@@ -26,9 +26,12 @@ From the `tests` folder:
 | Command | Runs |
 |---|---|
 | `npm test` | every suite, then a table of results |
+| `npm run test:only -- throttle stage3-upload` | only the named suites (any names from the table below), in the usual order; with no names it prints how to use it and runs nothing |
 | `node run-all.mjs wall` | one suite (any name from the table below) |
 | `node run-all.mjs wall security` | several suites |
 | `node run-all.mjs --shots` | every suite, saving all screenshots to `.output/shots` (without it, only a few are saved) |
+
+Which to run: for small changes, only the suites related to the change, plus `security` when the change touches text from outside the page (API replies, storage, typed text, file names). The full run (`npm test`) runs once at the end of each stage, before that stage's last push.
 
 The whole run takes about an hour. Keep the computer awake. Ports 8765 and 8766 must be free: close any other test run first.
 
