@@ -101,14 +101,8 @@ const topicBadgeHint = document.getElementById("topicBadgeHint");
 const topicArea = document.getElementById("stepTopic");
 const showLabel = document.getElementById("showLabel");
 const openMicLine = document.getElementById("openMicLine");
-const timeRadios = document.querySelectorAll('input[name="timeLimit"]');
-const customTime = document.getElementById("customTime");
-const customMinutes = document.getElementById("customMinutes");
-const customSeconds = document.getElementById("customSeconds");
-const customTimeError = document.getElementById("customTimeError");
 const topicAnnounce = document.getElementById("topicAnnounce");
 const resultPlaceholder = document.getElementById("resultPlaceholder");
-const stepperButtons = document.querySelectorAll(".stepper-btn");
 const writeTopicBtn = document.getElementById("writeTopicBtn");
 const fileInfo = document.getElementById("fileInfo");
 const uploadLabel = document.getElementById("uploadLabel");
@@ -142,7 +136,6 @@ const micBtn = document.getElementById("micBtn");
 const stepSpeakTitle = document.getElementById("stepSpeakTitle");
 const actionText = document.getElementById("actionText");
 const prepSetting = document.getElementById("prepSetting");
-const prepRadios = document.querySelectorAll('input[name="prepTime"]');
 const recPanels = {
     idle: document.getElementById("recIdle"),
     prep: document.getElementById("recPrep"),
@@ -192,16 +185,26 @@ const trophyPopover = document.getElementById("trophyPopover");
 const trophyBanner = document.getElementById("trophyBanner");
 const trophyBannerText = document.getElementById("trophyBannerText");
 const clearTrophiesBox = document.getElementById("clearTrophiesBox");
-// Ticket stubs for Speaking time and Prep time, and the panel (laptop) or sheet (phone) they open
+// The ticket's show label and stubs for Speaking time and Prep time, and Tonight's programme they open
+// (a paper form over the ticket on laptops, a bottom sheet on phones)
+const showLabelBtn = document.getElementById("showLabelBtn");
 const timeTicket = document.getElementById("timeTicket");
 const prepTicket = prepSetting;
 const timeTicketValue = document.getElementById("timeTicketValue");
 const prepTicketValue = document.getElementById("prepTicketValue");
-const settingsPanel = document.getElementById("settingsPanel");
+const programme = document.getElementById("programme");
 const settingsBackdrop = document.getElementById("settingsBackdrop");
-const timePage = document.getElementById("timePage");
-const prepPage = document.getElementById("prepPage");
-const settingsDoneBtn = document.getElementById("settingsDoneBtn");
+const progName = document.getElementById("progName");
+const progNameCount = document.getElementById("progNameCount");
+const progNameClear = document.getElementById("progNameClear");
+const progNoLimit = document.getElementById("progNoLimit");
+const progMinus = document.getElementById("progMinus");
+const progPlus = document.getElementById("progPlus");
+const progMin = document.getElementById("progMin");
+const progSec = document.getElementById("progSec");
+const progTimeError = document.getElementById("progTimeError");
+const progPrepChoices = document.querySelectorAll("#progPrep [role=radio]");
+const progDoneBtn = document.getElementById("progDoneBtn");
 const phoneQuery = window.matchMedia("(max-width: 600px)");
 // Backstage uses its one-column (phone) layout below 990px, where two columns don't fit properly.
 // Keep in step with the "max-width: 989px" Backstage block in styles.css.
@@ -371,7 +374,7 @@ async function prepareUpload(file, request) {
         filePlayer.setPeaks(peaksFromChunks(chunks));
         filePlayerBox.hidden = false;
         uploadBtn.hidden = false;
-        uploadBtn.disabled = isBusy || isRolling || !getTimeLimit().valid;
+        uploadBtn.disabled = isBusy || isRolling;
         setFileSilence(isAlmostSilent(chunks));
         renderLengthLine();
     } catch (err) {
@@ -532,12 +535,29 @@ function showTopicBadge(type) {
 }
 
 let speakFreely = false;       // true after "Speak freely, no topic"
+// The optional stage name: saved on this device only, never sent anywhere, and only ever shown with textContent
+let stageName = "";
+const NAME_MAX = 16;
 
-// The ticket reads "Tonight's show", or "Open mic night" with its line under the topic when there is no topic
+// The ticket reads "Tonight's show", or "Open mic night" with its line under the topic when there is no topic.
+// With a stage name: "Jayvee's show" or "Jayvee's open mic" (always 's, also "James's show").
 function updateShowState() {
-    showLabel.textContent = speakFreely ? "Open mic night" : "Tonight's show";
+    if (stageName) {
+        showLabel.textContent = speakFreely ? `${stageName}'s open mic` : `${stageName}'s show`;
+    } else {
+        showLabel.textContent = speakFreely ? "Open mic night" : "Tonight's show";
+    }
+    showLabelBtn.classList.toggle("has-name", stageName !== "");
+    const who = stageName ? `Stage name: ${stageName}` : "No stage name yet";
+    showLabelBtn.setAttribute("aria-label", `${who}. ${phoneQuery.matches ? "Tap" : "Click"} to open tonight's programme`);
     openMicLine.hidden = !speakFreely;
     topicArea.classList.toggle("is-open-mic", speakFreely);
+}
+
+// Letters in any language (with their accent marks), numbers, spaces, apostrophes and hyphens; runs of spaces
+// become one; up to 16 characters. Used for typing and for the saved name.
+function cleanName(value) {
+    return String(value).replace(/[^\p{L}\p{M}\p{N} '’-]/gu, "").replace(/ {2,}/g, " ").slice(0, NAME_MAX);
 }
 
 // The placeholder doubles as the big heading when there is no topic
@@ -672,7 +692,7 @@ function landTopic(topic) {
     randomTopicBtn.disabled = isBusy;
     writeTopicBtn.disabled = isBusy;
     clearTopicBtn.disabled = isBusy;
-    uploadBtn.disabled = isBusy || !getTimeLimit().valid;
+    uploadBtn.disabled = isBusy;
     updateTakeButtons();
 }
 
@@ -725,59 +745,125 @@ if (document.fonts) document.fonts.ready.then(fitTopicHeight);
 // ---------------------------
 // Time limit
 // ---------------------------
-const TIME_LIMIT_ERROR = `Choose a time between ${formatTime(MIN_TIME_LIMIT_SECONDS)} and ${formatTime(MAX_TIME_LIMIT_SECONDS)}.`;
 let isBusy = false;            // true while a speech is uploading or being analyzed
 
-// Returns { valid, seconds }. seconds is null when the speech is untimed.
-function getTimeLimit() {
-    const choice = document.querySelector('input[name="timeLimit"]:checked');
-    if (!choice || choice.value !== "custom") {
-        const seconds = choice ? Number(choice.value) : 0;
-        return { valid: true, seconds: seconds > 0 ? seconds : null };
-    }
+// No limit, or a set time in whole seconds from 0:30 to 10:00. The set time is remembered while No limit
+// is ticked, so unticking it brings the last set time back (3:00 if none was ever set).
+const DEFAULT_TIME_SECONDS = 180;
+const TIME_STEP_SECONDS = 30;
+const TIME_ERROR = `Pick a time from ${formatTime(MIN_TIME_LIMIT_SECONDS)} to ${formatTime(MAX_TIME_LIMIT_SECONDS)}.`;
+let timeLimitOn = false;
+let setSeconds = DEFAULT_TIME_SECONDS;
+let prepSeconds = 0;           // Curtain in: 0, 30 or 60
 
-    // Number inputs give "" when the box is empty or not a number
-    const isWholeNumber = text => /^\d+$/.test(text.trim());
-    if (!isWholeNumber(customMinutes.value) || !isWholeNumber(customSeconds.value)) {
-        return { valid: false, seconds: null };
-    }
-    const minutes = Number(customMinutes.value);
-    const seconds = Number(customSeconds.value);
-    const total = minutes * 60 + seconds;
-    const valid = minutes <= 10 && seconds <= 59
-        && total >= MIN_TIME_LIMIT_SECONDS && total <= MAX_TIME_LIMIT_SECONDS;
-    return { valid, seconds: valid ? total : null };
+// Returns { seconds }: null when the speech is untimed
+function getTimeLimit() {
+    return { seconds: timeLimitOn ? setSeconds : null };
 }
 
-function onTimeChange() {
-    const isCustom = document.querySelector('input[name="timeLimit"]:checked')?.value === "custom";
-    customTime.hidden = !isCustom;
+const pad2 = number => String(number).padStart(2, "0");
 
-    const { valid } = getTimeLimit();
-    customTimeError.textContent = valid ? "" : TIME_LIMIT_ERROR;
-    customMinutes.setAttribute("aria-invalid", String(!valid));
-    customSeconds.setAttribute("aria-invalid", String(!valid));
+function showTimeError(show) {
+    progTimeError.textContent = show ? TIME_ERROR : "";
+    progMin.setAttribute("aria-invalid", String(show));
+    progSec.setAttribute("aria-invalid", String(show));
+}
 
-    if (!isBusy && !isRolling) uploadBtn.disabled = !valid;
-    updateTakeButtons();
+// The minutes and seconds boxes show the last valid time again, with two digits each ("03", "00")
+function resetTimeBoxes() {
+    progMin.value = pad2(Math.floor(setSeconds / 60));
+    progSec.value = pad2(setSeconds % 60);
+    showTimeError(false);
+}
+
+// Everything that shows or uses the time limit follows it, and the choice is remembered
+function timeChanged() {
     renderLengthLine();
     updateTickets();
+    renderProgramme();
+    saveSettings();
 }
 
-timeRadios.forEach(radio => radio.addEventListener("change", onTimeChange));
-customMinutes.addEventListener("input", onTimeChange);
-customSeconds.addEventListener("input", onTimeChange);
+// No limit: ticking it keeps the set time for later; unticking it brings that time back
+progNoLimit.addEventListener("click", () => {
+    timeLimitOn = !timeLimitOn;
+    resetTimeBoxes();
+    timeChanged();
+});
 
-// − and + buttons beside the custom minutes and seconds boxes
-stepperButtons.forEach(button => {
-    button.addEventListener("click", () => {
-        const input = document.getElementById(button.dataset.target);
-        const step = Number(button.dataset.step);
-        const current = /^\d+$/.test(input.value.trim()) ? Number(input.value) : 0;
-        // Stay inside the box's own min and max (minutes 0 to 10, seconds 0 to 59)
-        const next = Math.min(Number(input.max), Math.max(Number(input.min), current + step));
-        input.value = String(next);
-        onTimeChange();
+// − and + move 30 seconds, snapping to the half minute (3:15 becomes 3:00 or 3:30), from 0:30 to 10:00.
+// While No limit is ticked they only untick it, showing the last set time.
+function stepTime(direction) {
+    if (timeLimitOn) {
+        const next = direction < 0
+            ? Math.ceil(setSeconds / TIME_STEP_SECONDS) * TIME_STEP_SECONDS - TIME_STEP_SECONDS
+            : Math.floor(setSeconds / TIME_STEP_SECONDS) * TIME_STEP_SECONDS + TIME_STEP_SECONDS;
+        setSeconds = Math.min(MAX_TIME_LIMIT_SECONDS, Math.max(MIN_TIME_LIMIT_SECONDS, next));
+    }
+    timeLimitOn = true;
+    resetTimeBoxes();
+    timeChanged();
+}
+progMinus.addEventListener("click", () => stepTime(-1));
+progPlus.addEventListener("click", () => stepTime(1));
+
+// Typing: digits only, minutes 0 to 10 and seconds 0 to 59, 0:30 to 10:00 in all. A valid time ticks off
+// No limit right away; anything else shows the error and the last valid time stays in use.
+function onTimeTyped(e) {
+    const box = e.target;
+    const digits = box.value.replace(/\D/g, "").slice(0, 2);
+    if (digits !== box.value) box.value = digits;
+
+    const filled = progMin.value !== "" && progSec.value !== "";
+    const minutes = Number(progMin.value);
+    const seconds = Number(progSec.value);
+    const total = minutes * 60 + seconds;
+    if (filled && seconds <= 59 && total >= MIN_TIME_LIMIT_SECONDS && total <= MAX_TIME_LIMIT_SECONDS) {
+        timeLimitOn = true;
+        setSeconds = total;
+        showTimeError(false);
+        timeChanged();
+    } else {
+        showTimeError(true);
+    }
+
+    // After two minute digits the cursor moves on to the seconds
+    if (box === progMin && digits.length === 2 && e.inputType && e.inputType.startsWith("insert")) {
+        progSec.focus();
+        progSec.select();
+    }
+}
+
+// Leaving both boxes puts the last valid time back in them
+function onTimeBoxLeft(e) {
+    if (e.relatedTarget === progMin || e.relatedTarget === progSec) return;
+    resetTimeBoxes();
+}
+
+[progMin, progSec].forEach(box => {
+    box.addEventListener("input", onTimeTyped);
+    box.addEventListener("focusout", onTimeBoxLeft);
+});
+
+// Curtain in: three check boxes that work as radio buttons. Only the ticked one is a Tab stop; the arrow
+// keys move to the next one and tick it.
+function setPrep(seconds) {
+    prepSeconds = seconds;
+    updateActionText();
+    updateTickets();
+    renderProgramme();
+    saveSettings();
+}
+
+progPrepChoices.forEach((choice, index) => {
+    choice.addEventListener("click", () => setPrep(Number(choice.dataset.prep)));
+    choice.addEventListener("keydown", e => {
+        const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+        if (!step) return;
+        e.preventDefault();
+        const next = progPrepChoices[(index + step + progPrepChoices.length) % progPrepChoices.length];
+        setPrep(Number(next.dataset.prep));
+        next.focus();
     });
 });
 
@@ -800,10 +886,10 @@ function renderLength(line, seconds) {
         return;
     }
 
-    const { valid, seconds: limit } = getTimeLimit();
+    const { seconds: limit } = getTimeLimit();
     line.textContent = `Length: ${formatTime(seconds)}`;
 
-    if (valid && limit !== null) {
+    if (limit !== null) {
         const timing = describeTiming(seconds, limit);
         line.append(` / Limit: ${formatTime(limit)} `);
         const note = document.createElement("span");
@@ -818,7 +904,7 @@ function renderLength(line, seconds) {
 // Lock the topic and time controls during analysis
 // ---------------------------
 function setOptionsDisabled(disabled) {
-    if (disabled) closeSettings(false);
+    if (disabled) closeProgramme(false);
     isBusy = disabled;
     optionControls.forEach(control => {
         control.disabled = disabled;
@@ -835,7 +921,7 @@ function failUpload(message) {
     statusText.textContent = message;
     waitNote.hidden = true;
     setOptionsDisabled(false);
-    uploadBtn.disabled = !getTimeLimit().valid;
+    uploadBtn.disabled = false;
 }
 
 // Sends a WAV: a recorded take or a converted file ({ blob, seconds, source: "recording" or "upload" })
@@ -854,10 +940,6 @@ async function upload(take) {
     if(isRecording) takeAudio.pause();
 
     const timeLimit = getTimeLimit();
-    if(!timeLimit.valid) {
-        failUpload(TIME_LIMIT_ERROR);
-        return;
-    }
 
     const topic = topicInput.value.trim();
     if(topic.length > MAX_TOPIC_LENGTH) {
@@ -1601,7 +1683,7 @@ function showView(name) {
     const isStage = name === "stage";
     if (!isStage) {
         pausePlayers();                // nothing keeps playing behind the curtains
-        closeSettings(false);
+        closeProgramme(false);
     }
     currentView = name;
     dropZone.hidden = !isStage;
@@ -2384,21 +2466,18 @@ pbPracticeBtn.addEventListener("click", () => {
 document.getElementById("pbReplaceBtn").addEventListener("click", practiceOpenEntry);
 pbReplaceKeepBtn.addEventListener("click", () => showPlaybillRow("buttons", pbPracticeBtn));
 
-// Selects a time limit on the Stage: a preset, untimed, or Custom minutes and seconds
+// Sets the Stage's time limit: any whole number of seconds from 0:30 to 10:00, or No limit for anything else
+// (the last set time is kept for when No limit is unticked)
 function selectTimeLimit(limit) {
     const seconds = limit ? Math.round(limit) : 0;
-    let value = "0";
-    if ([60, 180, 300].includes(seconds)) {
-        value = String(seconds);
-    } else if (seconds >= MIN_TIME_LIMIT_SECONDS && seconds <= MAX_TIME_LIMIT_SECONDS) {
-        value = "custom";
-        customMinutes.value = String(Math.floor(seconds / 60));
-        customSeconds.value = String(seconds % 60);
+    if (seconds >= MIN_TIME_LIMIT_SECONDS && seconds <= MAX_TIME_LIMIT_SECONDS) {
+        timeLimitOn = true;
+        setSeconds = seconds;
+    } else {
+        timeLimitOn = false;
     }
-    timeRadios.forEach(radio => {
-        radio.checked = radio.value === value;
-    });
-    onTimeChange();
+    resetTimeBoxes();
+    timeChanged();
 }
 
 // Back to the Stage with the entry's topic, type and time limit, and nothing recorded or picked
@@ -3245,7 +3324,7 @@ function setRecState(name) {
     micBtn.setAttribute("aria-label", name === "recording" ? "Stop recording" : "Start recording");
 
     // Topic, time and prep controls, the menu and the file picker can't change while preparing or recording
-    if (locked) closeSettings(false);
+    if (locked) closeProgramme(false);
     optionControls.forEach(control => {
         control.disabled = locked || isBusy;
     });
@@ -3279,15 +3358,14 @@ function updateTakeButtons() {
     const busy = isBusy || isRolling;
     micBtn.disabled = busy || recState === "starting" || recState === "countdown" || recState === "review";
     const longEnough = currentTake !== null && currentTake.seconds >= MIN_TAKE_SECONDS;
-    takeSendBtn.disabled = busy || !longEnough || !getTimeLimit().valid;
+    takeSendBtn.disabled = busy || !longEnough;
     reRecordBtn.disabled = busy;
     discardBtn.disabled = busy;
 }
 
 // ---- Prep time ----
 function getPrepSeconds() {
-    const choice = document.querySelector('input[name="prepTime"]:checked');
-    return choice ? Number(choice.value) : 0;
+    return prepSeconds;
 }
 
 // For example 30 becomes "30 seconds" and 120 becomes "2 minutes"
@@ -3303,12 +3381,6 @@ function updateActionText() {
         ? `Tap the mic to begin. You get ${describePrep(prep)} to prepare, then recording starts.`
         : "Tap the mic to begin.";
 }
-
-prepRadios.forEach(radio => radio.addEventListener("change", () => {
-    updateActionText();
-    updateTickets();
-    saveSettings();
-}));
 
 // ---- Opening the mic ----
 const MIC_ERRORS = {
@@ -4158,8 +4230,8 @@ function updateStopwatch() {
     liveShownSecond = elapsed;
     swElapsed.textContent = formatTime(elapsed);
 
-    const { valid, seconds: limit } = getTimeLimit();
-    if (valid && limit !== null) {
+    const { seconds: limit } = getTimeLimit();
+    if (limit !== null) {
         const over = elapsed > limit;
         swLimit.textContent = ` / ${formatTime(limit)}`;
         swElapsed.className = `sw-elapsed ${over ? "timing-over" : "timing-ok"}`;
@@ -4250,20 +4322,23 @@ reRecordBtn.addEventListener("click", () => {
 discardBtn.addEventListener("click", discardTake);
 
 // ---------------------------
-// Speaking time and Prep time, on the topic ticket's stub
+// Tonight's programme: the stage name, Speaking time and Prep time
 // ---------------------------
-// Each stub button (RUNTIME, CURTAIN IN) opens only its own setting: a wooden panel under the ticket on laptops,
-// a bottom sheet on phones. The radio buttons inside still hold the values, so everything that reads the settings is unchanged.
-// The last choice is remembered under SETTINGS_KEY, for example {"time":"180","prep":"30"}: time in seconds
-// ("" for no limit), prep in seconds ("0" for none). It is checked strictly when read back.
+// The ticket's show label, RUNTIME and CURTAIN IN each open the same paper form on their own section: pinned
+// over the ticket on laptops, a bottom sheet on phones. Every change shows on the ticket right away; DONE, Escape
+// and clicking outside (or the phone backdrop) only close it, they never undo anything.
+// The choice is remembered under SETTINGS_KEY, for example {"time":"180","prep":"30","name":"Jayvee"}: time in
+// seconds ("" for no limit), prep in seconds ("0" for none) and the stage name ("" for none). It is checked
+// strictly, field by field, when read back.
 const SETTINGS_KEY = "speakreview.settings.v1";
-const PREP_CHOICES = ["0", "30", "60", "120"];
-let openSetting = null;        // "time" or "prep" while its panel or sheet is open
+const PREP_CHOICES = ["0", "30", "60"];
+const OPENERS = { cast: showLabelBtn, time: timeTicket, prep: prepTicket };
+let programmeOpen = false;
+let programmeOpener = null;    // the button that opened it: focus goes back there when it closes
 
-// For example "No limit", "3 minutes", "2 min 30 sec", "4 minutes" or "45 seconds"
+// For example "No limit", "3 minutes", "2 min 30 sec", "1 minute" or "45 seconds"
 function describeTimeLimit() {
-    const { valid, seconds } = getTimeLimit();
-    if (!valid) return "Custom";
+    const { seconds } = getTimeLimit();
     if (seconds === null) return "No limit";
     const minutes = Math.floor(seconds / 60);
     const rest = seconds % 60;
@@ -4277,11 +4352,8 @@ function describePrepChoice() {
     return prep > 0 ? describePrep(prep) : "None";
 }
 
-function ticketFor(which) {
-    return which === "prep" ? prepTicket : timeTicket;
-}
-
-// Shows the current values on the tickets (with textContent) and keeps their names and states in step
+// Shows the current values on the ticket (with textContent) and keeps the buttons' names and states in step.
+// The button whose section is being worked on reads as expanded.
 function updateTickets() {
     const action = phoneQuery.matches ? "Tap to change" : "Click to change";
     const time = describeTimeLimit();
@@ -4290,167 +4362,184 @@ function updateTickets() {
     prepTicketValue.textContent = prep;
     timeTicket.setAttribute("aria-label", `Speaking time: ${time}. ${action}`);
     prepTicket.setAttribute("aria-label", `Prep time: ${prep}. ${action}`);
-    timeTicket.setAttribute("aria-expanded", String(openSetting === "time"));
-    prepTicket.setAttribute("aria-expanded", String(openSetting === "prep"));
-    const isCustom = document.querySelector('input[name="timeLimit"]:checked')?.value === "custom";
-    settingsPanel.classList.toggle("is-custom", openSetting === "time" && isCustom);
+    Object.entries(OPENERS).forEach(([section, button]) => {
+        button.setAttribute("aria-expanded", String(programmeOpen && programme.dataset.section === section));
+    });
 }
 
-// Laptop: the small arrow on the panel points at the middle of the open ticket
-function placePanelArrow() {
-    if (!openSetting || phoneQuery.matches) return;
-    const ticket = ticketFor(openSetting).getBoundingClientRect();
-    const panel = settingsPanel.getBoundingClientRect();
-    // The arrow is placed from inside the panel's border, so the border width (clientLeft) is taken off
-    settingsPanel.style.setProperty("--arrow-x", `${Math.round(ticket.left + ticket.width / 2 - panel.left - settingsPanel.clientLeft)}px`);
+// The form's check boxes, counter and × button show the current choice
+function renderProgramme() {
+    progNoLimit.setAttribute("aria-pressed", String(!timeLimitOn));
+    programme.classList.toggle("no-limit", !timeLimitOn);
+    progPrepChoices.forEach(choice => {
+        const ticked = Number(choice.dataset.prep) === prepSeconds;
+        choice.setAttribute("aria-checked", String(ticked));
+        choice.tabIndex = ticked ? 0 : -1;
+    });
+    progNameCount.textContent = `${progName.value.length} / ${NAME_MAX}`;
+    progNameClear.hidden = !stageName;
 }
 
-function openSettings(which) {
+// The section being worked on: its number box is filled and its label turns red
+function setSection(section) {
+    programme.dataset.section = section;
+    updateTickets();
+}
+
+// ---- The stage name ----
+function setStageName(name) {
+    stageName = name;
+    renderProgramme();
+    updateShowState();
+    saveSettings();
+}
+
+// Anything that isn't allowed is removed as it is typed (or pasted), keeping the cursor in its place
+progName.addEventListener("input", () => {
+    const typed = progName.value;
+    const cleaned = cleanName(typed.replace(/^\s+/, ""));
+    if (cleaned !== typed) {
+        const caret = progName.selectionStart ?? typed.length;
+        const before = Math.min(cleaned.length, cleanName(typed.slice(0, caret).replace(/^\s+/, "")).length);
+        progName.value = cleaned;
+        progName.setSelectionRange(before, before);
+    }
+    setStageName(progName.value.trim());
+});
+
+progNameClear.addEventListener("click", () => {
+    progName.value = "";
+    setStageName("");
+    progName.focus();
+});
+
+// ---- Opening and closing ----
+// Laptop: the paper is pinned over the ticket, 26px in from its left edge and 20px below its top
+function placeProgramme() {
+    if (!programmeOpen || phoneQuery.matches) return;
+    // The ticket hangs slightly tilted: measure it from its centre, as if it were straight
+    const ticketWrap = document.querySelector(".ticket-wrap");
+    const box = ticketWrap.getBoundingClientRect();
+    const ticketLeft = box.left + box.width / 2 - ticketWrap.offsetWidth / 2;
+    const ticketTop = box.top + box.height / 2 - ticketWrap.offsetHeight / 2;
+    const strip = settingsStrip.getBoundingClientRect();
+    programme.style.setProperty("--prog-left", `${Math.round(ticketLeft - strip.left + 26)}px`);
+    programme.style.setProperty("--prog-top", `${Math.round(ticketTop - strip.top + 20)}px`);
+}
+
+function openProgramme(section, opener) {
     const phone = phoneQuery.matches;
     setPrivacyOpen(false);
-    openSetting = which;
-    const page = which === "prep" ? prepPage : timePage;
-    timePage.hidden = which !== "time";
-    prepPage.hidden = which !== "prep";
-    settingsPanel.setAttribute("aria-labelledby", which === "prep" ? "prepTimeLabel" : "speakingTimeLabel");
-    settingsPanel.hidden = false;
+    programmeOpen = true;
+    programmeOpener = opener;
+    programme.hidden = false;
     stageView.classList.add("settings-open");
     if (phone) {
         // A modal sheet: the stage behind is dimmed and doesn't scroll
-        settingsPanel.setAttribute("aria-modal", "true");
+        programme.setAttribute("aria-modal", "true");
         settingsBackdrop.hidden = false;
         document.documentElement.classList.add("settings-lock");
+        watchKeyboard(true);
     } else {
-        settingsPanel.removeAttribute("aria-modal");
+        programme.removeAttribute("aria-modal");
         settingsBackdrop.hidden = true;
         document.documentElement.classList.remove("settings-lock");
     }
-    updateTickets();
-    placePanelArrow();
-    // On short laptop windows the panel can open below the fold or under the bottom bar: bring it into view
+    renderProgramme();
+    setSection(section);
+    placeProgramme();
+    // On short laptop windows the paper can reach below the fold or under the bottom bar: bring it into view
     // (only as far as needed; its scroll-margin keeps it clear of the bar)
-    if (!phone) settingsPanel.scrollIntoView({ block: "nearest" });
-    const checked = page.querySelector("input:checked");
-    if (checked) checked.focus({ preventScroll: true });
+    if (!phone) programme.scrollIntoView({ block: "nearest" });
+    // Focus goes to the section's first control. On phones Cast focuses the sheet itself, so the keyboard
+    // doesn't open over it until the name box is tapped.
+    let target = progNoLimit;
+    if (section === "cast") target = phone ? programme : progName;
+    if (section === "prep") target = programme.querySelector('#progPrep [aria-checked="true"]');
+    target.focus({ preventScroll: true });
 }
 
-// returnFocus: put focus back on the ticket that opened it
-function closeSettings(returnFocus) {
-    if (!openSetting) return;
-    const ticket = ticketFor(openSetting);
-    openSetting = null;
-    settingsPanel.hidden = true;
+// returnFocus: put focus back on the button that opened it
+function closeProgramme(returnFocus) {
+    if (!programmeOpen) return;
+    const opener = programmeOpener;
+    programmeOpen = false;
+    programmeOpener = null;
+    resetTimeBoxes();                   // an unfinished typed time goes back to the last valid one
+    watchKeyboard(false);
+    programme.hidden = true;
     settingsBackdrop.hidden = true;
-    settingsPanel.removeAttribute("aria-modal");
+    programme.removeAttribute("aria-modal");
     stageView.classList.remove("settings-open");
     document.documentElement.classList.remove("settings-lock");
     updateTickets();
-    if (returnFocus && !ticket.disabled) ticket.focus({ preventScroll: true });
+    if (returnFocus && opener && !opener.disabled) opener.focus({ preventScroll: true });
 }
 
-// After a pick: closes once the radio has been checked, then focus goes back to the ticket
-function closeAfterPick() {
-    setTimeout(() => closeSettings(true), 0);
+// The button showing its own section closes the form; the others switch it to their section
+Object.entries(OPENERS).forEach(([section, button]) => {
+    button.addEventListener("click", () => {
+        if (programmeOpen && programme.dataset.section === section) {
+            closeProgramme(true);
+        } else {
+            openProgramme(section, button);
+        }
+    });
+});
+
+// The red highlight follows the last thing touched
+function followSection(e) {
+    const section = e.target.closest(".prog-sec");
+    if (section && section.dataset.section !== programme.dataset.section) setSection(section.dataset.section);
 }
-
-[timeTicket, prepTicket].forEach(ticket => {
-    ticket.addEventListener("click", () => {
-        const which = ticket === prepTicket ? "prep" : "time";
-        if (openSetting === which) {
-            closeSettings(true);
-        } else {
-            openSettings(which);        // the other ticket switches the panel to its setting
-        }
-    });
+programme.addEventListener("focusin", e => {
+    followSection(e);
+    fitSheetToKeyboard();
 });
+programme.addEventListener("click", followSection);
 
-// A mouse click or a tap on a choice picks it and closes the panel (Custom stays open for its controls).
-// Arrow keys move through a radio group by checking each choice on the way, so they only change the
-// choice (the ticket follows) and never close the panel. Enter or Space picks the focused choice and closes.
-settingsPanel.querySelectorAll(".choice-group").forEach(group => {
-    group.addEventListener("click", e => {
-        if (e.detail === 0) return;            // a click made by the keyboard, or passed on from a label
-        const input = e.target.closest(".choice")?.querySelector("input");
-        if (!input || input.disabled) return;
-        if (input.value !== "custom") closeAfterPick();
-    });
-
-    group.addEventListener("keydown", e => {
-        if (e.key !== "Enter" || e.target.type !== "radio") return;
-        e.preventDefault();
-        if (!e.target.checked) {
-            e.target.checked = true;
-            e.target.dispatchEvent(new Event("change", { bubbles: true }));
-        }
-        if (e.target.value === "custom") {
-            customMinutes.focus();
-        } else {
-            closeAfterPick();
-        }
-    });
-
-    // Space checks the radio when the key comes back up, so close after that
-    group.addEventListener("keyup", e => {
-        if (e.key !== " " || e.target.type !== "radio") return;
-        if (e.target.value === "custom") {
-            setTimeout(() => customMinutes.focus(), 0);
-        } else {
-            closeAfterPick();
-        }
-    });
-});
-
-// Done: closes, unless the custom time isn't valid yet (then the message shows and Minutes gets focus)
-settingsDoneBtn.addEventListener("click", () => {
-    if (!getTimeLimit().valid) {
-        onTimeChange();
-        customMinutes.focus();
-        return;
-    }
-    closeSettings(true);
-});
+progDoneBtn.addEventListener("click", () => closeProgramme(true));
 
 // The phone backdrop closes the sheet. preventDefault stops the tap's mouse events from moving focus away.
 settingsBackdrop.addEventListener("pointerdown", e => {
     e.preventDefault();
-    closeSettings(true);
+    closeProgramme(true);
 });
 
-// A click or tap anywhere outside the stub buttons and the panel closes it. If that click doesn't land on
-// something focusable, focus goes back to the ticket.
+// A click or tap anywhere outside the form and the three buttons closes it. If that click doesn't land on
+// something focusable, focus goes back to the button that opened it.
 document.addEventListener("pointerdown", e => {
-    if (!openSetting || e.target === settingsBackdrop) return;
-    if (settingsPanel.contains(e.target) || e.target.closest(".stub-btn")) return;
-    const ticket = ticketFor(openSetting);
-    closeSettings(false);
+    if (!programmeOpen || e.target === settingsBackdrop) return;
+    if (programme.contains(e.target) || e.target.closest(".stub-btn, .show-btn")) return;
+    const opener = programmeOpener;
+    closeProgramme(false);
     setTimeout(() => {
         const active = document.activeElement;
-        if ((!active || active === document.body) && !ticket.disabled && !appRoot.inert) ticket.focus({ preventScroll: true });
+        if ((!active || active === document.body) && opener && !opener.disabled && !appRoot.inert) opener.focus({ preventScroll: true });
     }, 0);
 });
 
-// Laptop: tabbing away from the stub buttons and the panel closes it
-function leftSettings(e) {
-    if (!openSetting || phoneQuery.matches || !e.relatedTarget) return;
-    if (!settingsStrip.contains(e.relatedTarget) && !e.relatedTarget.closest(".stub-btn")) closeSettings(false);
+// Laptop: tabbing away from the form and the three buttons closes it
+function leftProgramme(e) {
+    if (!programmeOpen || phoneQuery.matches || !e.relatedTarget) return;
+    if (!settingsStrip.contains(e.relatedTarget) && !e.relatedTarget.closest(".stub-btn, .show-btn")) closeProgramme(false);
 }
-settingsStrip.addEventListener("focusout", leftSettings);
-[timeTicket, prepTicket].forEach(button => button.addEventListener("focusout", leftSettings));
+settingsStrip.addEventListener("focusout", leftProgramme);
+Object.values(OPENERS).forEach(button => button.addEventListener("focusout", leftProgramme));
 
-// Escape closes it. On phones Tab stays inside the sheet.
+// Escape closes it. On phones Tab stays inside the sheet (only the ticked prep choice is a Tab stop).
 document.addEventListener("keydown", e => {
-    if (!openSetting || openOverlay) return;
+    if (!programmeOpen || openOverlay) return;
     if (e.key === "Escape") {
         e.preventDefault();
-        closeSettings(true);
+        closeProgramme(true);
     } else if (e.key === "Tab" && phoneQuery.matches) {
-        // Only the checked radio of a group is a Tab stop
-        const items = dialogFocusables(settingsPanel).filter(element => element.type !== "radio" || element.checked);
+        const items = dialogFocusables(programme).filter(element => element.tabIndex >= 0);
         if (items.length === 0) return;
         const first = items[0];
         const last = items[items.length - 1];
-        const inside = settingsPanel.contains(document.activeElement);
-        if (e.shiftKey && (!inside || document.activeElement === first)) {
+        const inside = programme.contains(document.activeElement);
+        if (e.shiftKey && (!inside || document.activeElement === first || document.activeElement === programme)) {
             e.preventDefault();
             last.focus();
         } else if (!e.shiftKey && (!inside || document.activeElement === last)) {
@@ -4460,24 +4549,46 @@ document.addEventListener("keydown", e => {
     }
 });
 
-// Switching between the laptop and phone layouts closes it; "Click" becomes "Tap" in the tickets' names
+// Phones: when the on-screen keyboard opens over the sheet, the sheet rises to sit on top of it (scrolling
+// inside if it has to) and the focused box stays in view. It goes back down when the keyboard closes.
+const visualView = window.visualViewport || null;
+function fitSheetToKeyboard() {
+    if (!programmeOpen || !phoneQuery.matches || !visualView) return;
+    const keyboard = Math.max(0, Math.round(window.innerHeight - visualView.height - visualView.offsetTop));
+    programme.classList.toggle("over-keyboard", keyboard > 0);
+    programme.style.setProperty("--kb", `${keyboard}px`);
+    programme.style.setProperty("--vvh", `${Math.floor(visualView.height)}px`);
+    const active = document.activeElement;
+    if (keyboard > 0 && active && active.tagName === "INPUT" && programme.contains(active)) active.scrollIntoView({ block: "nearest" });
+}
+function watchKeyboard(on) {
+    if (!visualView) return;
+    const method = on ? "addEventListener" : "removeEventListener";
+    visualView[method]("resize", fitSheetToKeyboard);
+    visualView[method]("scroll", fitSheetToKeyboard);
+    if (!on) {
+        programme.classList.remove("over-keyboard");
+        programme.style.removeProperty("--kb");
+        programme.style.removeProperty("--vvh");
+    }
+}
+
+// Switching between the laptop and phone layouts closes it; "Click" becomes "Tap" in the buttons' names
 phoneQuery.addEventListener("change", () => {
-    closeSettings(false);
+    closeProgramme(false);
     updateTickets();
+    updateShowState();
 });
 // The Review tab is only in the one-column Backstage (two columns show the review in the left column)
 backstageOneColumn.addEventListener("change", () => {
     if (!backstageOneColumn.matches && backstageTabs.selected() === "tabReview") backstageTabs.select("tabNotes");
 });
-window.addEventListener("resize", placePanelArrow);
+window.addEventListener("resize", placeProgramme);
 
 // ---- Remembering the choice on this device ----
-// An unfinished custom time is not saved. If storage is blocked, everything still works; the choice just
-// isn't remembered.
+// If storage is blocked, everything still works; the choice just isn't remembered.
 function saveSettings() {
-    const { valid, seconds } = getTimeLimit();
-    if (!valid) return;
-    const data = { time: seconds === null ? "" : String(seconds), prep: String(getPrepSeconds()) };
+    const data = { time: timeLimitOn ? String(setSeconds) : "", prep: String(prepSeconds), name: stageName };
     try {
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
     } catch (err) {
@@ -4485,19 +4596,16 @@ function saveSettings() {
     }
 }
 
-timeRadios.forEach(radio => radio.addEventListener("change", saveSettings));
-customMinutes.addEventListener("input", saveSettings);
-customSeconds.addEventListener("input", saveSettings);
-stepperButtons.forEach(button => button.addEventListener("click", saveSettings));
-
-// Reads the saved choice. Stored data is untrusted: each value must be exactly one the page can make,
-// anything else falls back to the default (No limit, None). Returns { time, prep }, null for each bad value.
+// Reads the saved choice. Stored data is untrusted, so each field is checked on its own and a bad one falls back
+// to its default (No limit, None, no name) while the others still load. A prep of "120" (the 2 minutes choice,
+// now gone) becomes "60". Returns { time, prep, name }, null for each missing or bad value.
 function readSavedSettings() {
+    const none = { time: null, prep: null, name: null };
     let text = null;
     try {
         text = localStorage.getItem(SETTINGS_KEY);
     } catch (err) {
-        return { time: null, prep: null };
+        return none;
     }
     let data = null;
     try {
@@ -4505,26 +4613,35 @@ function readSavedSettings() {
     } catch (err) {
         data = null;
     }
-    if (!data || typeof data !== "object" || Array.isArray(data)) return { time: null, prep: null };
+    if (!data || typeof data !== "object" || Array.isArray(data)) return none;
 
     const seconds = Number(data.time);
     const timeOk = typeof data.time === "string"
         && (data.time === "" || (/^[1-9]\d{1,2}$/.test(data.time) && seconds >= MIN_TIME_LIMIT_SECONDS && seconds <= MAX_TIME_LIMIT_SECONDS));
-    const prepOk = typeof data.prep === "string" && PREP_CHOICES.includes(data.prep);
-    return { time: timeOk ? data.time : null, prep: prepOk ? data.prep : null };
+    let prep = null;
+    if (data.prep === "120") prep = "60";
+    else if (typeof data.prep === "string" && PREP_CHOICES.includes(data.prep)) prep = data.prep;
+    const name = typeof data.name === "string" ? cleanName(data.name).trim() : null;
+    return { time: timeOk ? data.time : null, prep, name, migrated: data.prep === "120" };
 }
 
-// 60, 180 and 300 select their own radio; any other valid time selects Custom with the minutes and seconds
 function loadSettings() {
     const saved = readSavedSettings();
-    if (saved.time !== null) selectTimeLimit(saved.time === "" ? 0 : Number(saved.time));
-    if (saved.prep !== null && micSupported) {
-        prepRadios.forEach(radio => {
-            radio.checked = radio.value === saved.prep;
-        });
+    if (saved.time !== null && saved.time !== "") {
+        timeLimitOn = true;
+        setSeconds = Number(saved.time);
     }
+    if (saved.prep !== null && micSupported) prepSeconds = Number(saved.prep);
+    if (saved.name !== null) {
+        stageName = saved.name;
+        progName.value = saved.name;
+    }
+    resetTimeBoxes();
+    renderProgramme();
+    updateShowState();
     updateActionText();
     updateTickets();
+    if (saved.migrated) saveSettings();     // the old 2 minutes is stored as 1 minute from now on
 }
 
 // Browsers that can't record keep the upload-first layout

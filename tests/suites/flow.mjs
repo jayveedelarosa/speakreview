@@ -56,7 +56,7 @@ async function test(name, fn) {
 // ---------------------------------------------------------------
 await test("full flow with 30 s prep", async () => {
   const b = await page();
-  await b.evaluate("document.querySelector('input[name=prepTime][value=\"30\"]').click()");
+  await b.evaluate("document.querySelector('#progPrep [data-prep=\"30\"]').click()");
   check("action text mentions prep", (await b.evaluate("actionText.textContent")) === "Tap the mic to begin. You get 30 seconds to prepare, then recording starts.");
   check("mic label idle", (await b.evaluate("micBtn.getAttribute('aria-label')")) === "Start recording");
   check("no leave warning when idle", !(await b.evaluate(LEAVE)));
@@ -163,7 +163,7 @@ await test("short take, discard, re-record, cancel", async () => {
   check("controls unlocked after cancel", await b.evaluate("[...optionControls].every(x => !x.disabled) && [...navButtons].every(x => !x.disabled) && !fileInput.disabled"));
   check("no leave warning after cancel", !(await b.evaluate(LEAVE)));
   // Prep cancel
-  await b.evaluate("document.querySelector('input[name=prepTime][value=\"60\"]').click()");
+  await b.evaluate("document.querySelector('#progPrep [data-prep=\"60\"]').click()");
   check("prep 1 minute text", (await b.evaluate("actionText.textContent")).includes("You get 1 minute to prepare"));
   await b.click("#micBtn");
   await b.waitFor("recState === 'prep'");
@@ -249,7 +249,7 @@ await test("interruptions", async () => {
   check("context suspended → review", await b.waitFor("recState === 'review'", 3000));
   await b.click("#discardBtn");
   // Interrupted before recording starts → idle with a message
-  await b.evaluate("document.querySelector('input[name=prepTime][value=\"30\"]').click()");
+  await b.evaluate("document.querySelector('#progPrep [data-prep=\"30\"]').click()");
   await b.click("#micBtn");
   await b.waitFor("recState === 'prep'");
   await b.evaluate("window.__streams.at(-1).getAudioTracks()[0].dispatchEvent(new Event('ended'))");

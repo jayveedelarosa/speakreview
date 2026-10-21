@@ -1,4 +1,6 @@
-// Feature set 2, stage 1b part 2: dressed settings menu and topic buttons
+// Feature set 2, stage 1b part 2: dressed settings menu and topic buttons.
+// Since Feature set 3 stage 2 the settings menu is Tonight's programme (its look is checked in programme.mjs);
+// this suite keeps the topic buttons and the layout at every size.
 import { launch, sleep, API_STUB } from "../lib/cdp.mjs";
 import { readFileSync } from "node:fs";
 import { SITE, LIVE } from "../lib/paths.mjs";
@@ -104,88 +106,10 @@ if (!only || only === "look") {
     check(`${tag} mic icon ${phone ? 13 : 15}px, aria-hidden`, tb.mic === (phone ? 13 : 15) && tb.micHidden === "true", tb.mic);
     check(`${tag} texts kept`, tb.writeText === "Write your own" && tb.clearText === (phone ? "No topic" : "Speak freely, no topic"), tb.clearText);
 
-    // Speaking time panel
-    await b.mouse("#timeTicket");
-    await sleep(400);
-    const p = await b.evaluate(`(() => { const cs = getComputedStyle(settingsPanel); const k = timePage.querySelector(".panel-kicker"); const kc = getComputedStyle(k);
-      const d = timePage.querySelector(".panel-divider"); const dm = getComputedStyle(d.querySelector(".panel-diamond"));
-      const kids = [...timePage.children].map(c => c.className);
-      const chip = timePage.querySelector('.choice:has(input[value="60"]) > span'), on = timePage.querySelector('.choice:has(input:checked) > span');
-      const c1 = getComputedStyle(chip), c2 = getComputedStyle(on);
-      const arrow = getComputedStyle(settingsPanel.querySelector(".panel-arrow"));
-      return { border: ["Top", "Left", "Right", "Bottom"].map(s => cs["border" + s + "Style"] + " " + cs["border" + s + "Width"]).join(", "), color: cs.borderTopColor,
-        radius: [cs.borderTopLeftRadius, cs.borderBottomLeftRadius].join(" "), bg: cs.backgroundImage,
-        kicker: k.textContent, kHidden: k.getAttribute("aria-hidden"), kStyle: [kc.fontSize, kc.fontWeight, kc.letterSpacing, kc.textTransform, kc.color].join(" "),
-        order: kids.slice(0, 3).join(" > "), divHidden: d.getAttribute("aria-hidden"), diamond: [dm.width, dm.height, dm.backgroundColor, dm.transform].join(" "),
-        lines: [...d.children].filter(c => !c.classList.contains("panel-diamond")).map(c => getComputedStyle(c).backgroundImage + " " + getComputedStyle(c).height),
-        help: timePage.querySelector(".panel-help").textContent, label: settingsPanel.getAttribute("aria-labelledby"),
-        chipOff: [c1.borderTopLeftRadius, c1.borderTopStyle, c1.borderTopColor, c1.backgroundColor, c1.color, c1.fontWeight].join(" "),
-        chipOn: [c2.borderTopLeftRadius, c2.borderTopStyle, c2.backgroundColor, c2.color, c2.fontWeight].join(" "),
-        arrow: [arrow.width, arrow.height, arrow.top, arrow.backgroundColor, arrow.borderLeftStyle, arrow.borderLeftWidth, arrow.borderTopStyle, arrow.borderLeftColor].join(" "),
-        noNote: !document.querySelector(".panel-note, #rememberNote") && !document.body.textContent.includes("Remembered") && !document.body.textContent.includes("Picking one") }; })()`);
-    if (phone) {
-      check("sheet: gold double border on top, left and right, none at the bottom", p.border === "double 3px, double 3px, double 3px, none 0px" && p.color === "rgb(201, 162, 78)", p.border);
-      check("sheet: 18px top corners", p.radius === "18px 0px", p.radius);
-      check("sheet: spotlight wood, 26/27px stripes", p.bg.includes("rgba(255, 205, 130, 0.16)") && p.bg.includes("26px, rgba(0, 0, 0, 0.12) 26px, rgba(0, 0, 0, 0.12) 27px") && p.bg.includes("rgb(74, 41, 20), rgb(38, 19, 10)"), p.bg.slice(0, 200));
-      check("sheet: drag handle stays", await b.evaluate(`settingsPanel.querySelector(".sheet-handle").getClientRects().length > 0`));
-    } else {
-      check("panel: gold double border all round", p.border === "double 3px, double 3px, double 3px, double 3px" && p.color === "rgb(201, 162, 78)", p.border);
-      check("panel: 10px corners", p.radius === "10px 10px", p.radius);
-      check("panel: spotlight wood, 30/31px stripes", p.bg.includes("rgba(255, 205, 130, 0.16)") && p.bg.includes("30px, rgba(0, 0, 0, 0.12) 30px, rgba(0, 0, 0, 0.12) 31px") && p.bg.includes("rgb(74, 41, 20), rgb(38, 19, 10)"), p.bg.slice(0, 200));
-      check("arrow: 13px, #4A2914, gold double left and top, 9px above", p.arrow === "13px 13px -9px rgb(74, 41, 20) double 3px double rgb(201, 162, 78)", p.arrow);
-      const off = await b.evaluate(`(() => { const a = settingsPanel.querySelector(".panel-arrow").getBoundingClientRect(), t = timeTicket.getBoundingClientRect(); return Math.abs(a.left + a.width / 2 - t.left - t.width / 2); })()`);
-      check("arrow still on the open stub button", off < 1.5, off.toFixed(1));
-    }
-    check(`${tag} RUNTIME label above the title, aria-hidden`, p.kicker === "Runtime" && p.kHidden === "true" && p.order.startsWith("panel-kicker > panel-head > panel-divider"), p.order);
-    check(`${tag} label style`, p.kStyle === "11px 800 2.64px uppercase rgb(227, 186, 96)", p.kStyle);
-    check(`${tag} dialog still named by its title`, p.label === "speakingTimeLabel");
-    check(`${tag} Speaking time line`, p.help === "How long your speech should last. Going over is fine.", p.help);
-    check(`${tag} divider with a 6px gold diamond, aria-hidden`, p.divHidden === "true" && p.diamond === "6px 6px rgb(217, 174, 82) matrix(0.707107, 0.707107, -0.707107, 0.707107, 0, 0)", p.diamond);
-    check(`${tag} divider lines fade in and out`, p.lines.length === 2 && p.lines[0].includes("rgba(217, 174, 82, 0), rgba(217, 174, 82, 0.6)") && p.lines[1].includes("rgba(217, 174, 82, 0.6), rgba(217, 174, 82, 0)") && p.lines.every(l => l.endsWith("1px")), JSON.stringify(p.lines));
-    check(`${tag} choice not picked: 6px, dashed gold, dark, #F3E6D0, 600`, p.chipOff === "6px dashed rgba(217, 174, 82, 0.6) rgba(0, 0, 0, 0.18) rgb(243, 230, 208) 600", p.chipOff);
-    check(`${tag} choice picked: 6px, solid gold, dark text, 800`, p.chipOn === "6px solid rgb(217, 174, 82) rgb(30, 16, 6) 800", p.chipOn);
-    check(`${tag} bottom line removed`, p.noNote);
+    // The wooden Speaking time and Prep time panel (its look, choices, Custom and Done) was checked here until
+    // Feature set 3 stage 2 replaced it with Tonight's programme: see programme.mjs.
+    let items, res, worst;
 
-    // hover on a choice
-    await b.hover('#timePage .choice:has(input[value="60"]) > span');
-    check(`${tag} hover makes the choice border solid gold`, (await b.evaluate(`getComputedStyle(document.querySelector('#timePage .choice:has(input[value="60"]) > span')).borderTopStyle`)) === "solid");
-
-    // Custom + Done
-    await b.mouse('#timePage .choice:has(input[value="custom"]) > span');
-    check(`${tag} Done 6px corners`, (await b.evaluate("getComputedStyle(settingsDoneBtn).borderTopLeftRadius")) === "6px");
-    check(`${tag} Done ${phone ? "44" : "36"}px`, (await b.evaluate("settingsDoneBtn.getBoundingClientRect().height")) === (phone ? 44 : 36));
-    let items = await b.evaluate(ITEMS(["#timePage .panel-kicker", "#timePage .panel-title", "#timePage .panel-help", "#timePage .choice > span", "#settingsDoneBtn", "#timePage .field-label", "#timePage .custom-range"]));
-    let res = await contrast(b, w, h, items);
-    let worst = res.reduce((a, c) => c[1] < a[1] ? c : a, ["", 99]);
-    check(`${tag} Speaking time panel text >= 4.5:1`, worst[1] >= 4.5, `worst ${worst.join(" ")}; ${res.map(r => r.join(" ")).join(", ")}`);
-    await b.shot(`shots/1c-${tag}-custom.png`);
-
-    // focus rings
-    const rings = [];
-    for (const sel of ['#timePage input[value="60"]', "#settingsDoneBtn"]) {
-      await b.tab();
-      await b.evaluate(`document.querySelector(${JSON.stringify(sel)}).focus()`);
-      rings.push(await b.evaluate(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); const t = e.type === "radio" ? e.nextElementSibling : e; const c = getComputedStyle(t);
-        return ${JSON.stringify(sel)} + ": " + [e.matches(":focus-visible"), c.outlineStyle, c.outlineWidth, c.outlineColor, c.outlineOffset].join(" "); })()`));
-    }
-    check(`${tag} focus rings on a choice and Done: 2px light gold, outside the border`, rings.every(r => r.endsWith("true solid 2px rgb(240, 207, 134) 3px")), rings.join(" | "));
-    await b.shot(`shots/1c-${tag}-focus-done.png`);
-    await b.evaluate(`settingsDoneBtn.click()`);
-    await sleep(150);
-
-    // Prep time
-    await b.mouse("#prepSetting");
-    await sleep(400);                    // let the sheet finish sliding in before measuring
-    const pp = await b.evaluate(`({ k: prepPage.querySelector(".panel-kicker").textContent, help: prepPage.querySelector(".panel-help").textContent, label: settingsPanel.getAttribute("aria-labelledby"), timeShown: !timePage.hidden })`);
-    check(`${tag} CURTAIN IN label and Prep time line`, pp.k === "Curtain in" && pp.help === "Thinking time before recording starts." && pp.label === "prepTimeLabel" && !pp.timeShown, JSON.stringify(pp));
-    items = await b.evaluate(ITEMS(["#prepPage .panel-kicker", "#prepPage .panel-title", "#prepPage .panel-help", "#prepPage .choice > span"]));
-    res = await contrast(b, w, h, items);
-    worst = res.reduce((a, c) => c[1] < a[1] ? c : a, ["", 99]);
-    check(`${tag} Prep time panel text >= 4.5:1`, worst[1] >= 4.5, `worst ${worst.join(" ")}; ${res.map(r => r.join(" ")).join(", ")}`);
-    await b.shot(`shots/1c-${tag}-prep.png`);
-    if (phone) await b.mouse("#settingsDoneBtn"); else await b.evaluate(`document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))`);
-    await sleep(150);
-    check(`${tag} closes as before`, await b.evaluate("settingsPanel.hidden"));
 
     // topic buttons: contrast, hover, focus, disabled
     items = await b.evaluate(ITEMS(["#randomTopicBtn", "#writeTopicBtn", "#clearTopicBtn"]));
@@ -206,7 +130,7 @@ if (!only || only === "look") {
     await b.evaluate("randomTopicBtn.focus()");
     await b.shot(`shots/1c-${tag}-focus-roll.png`);
     await b.evaluate("setOptionsDisabled(true)");
-    const dis = await b.evaluate(`[randomTopicBtn, writeTopicBtn, clearTopicBtn, timeTicket, prepTicket].map(e => e.disabled && getComputedStyle(e).opacity === "0.5")`);
+    const dis = await b.evaluate(`[randomTopicBtn, writeTopicBtn, clearTopicBtn, timeTicket, prepTicket, showLabelBtn].map(e => e.disabled && getComputedStyle(e).opacity === "0.5")`);
     check(`${tag} disabled while busy (0.5)`, dis.every(Boolean), JSON.stringify(dis));
     await b.evaluate("setOptionsDisabled(false)");
     await done(b);
@@ -222,15 +146,14 @@ if (!only || only === "sizes") {
     const b = await open({ width: w, height: h, dpr });
     if (w === 390) check(`${tag} no page scroll with nothing open`, await b.evaluate("document.documentElement.scrollHeight <= innerHeight"));
     check(`${tag} buttons under the ticket inside the window`, await b.evaluate(`[randomTopicBtn, writeTopicBtn, clearTopicBtn].every(e => { const r = e.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; })`));
-    for (const which of ["time", "prep"]) {
-      await b.mouse(which === "time" ? "#timeTicket" : "#prepSetting");
-      if (which === "time") await b.mouse('#timePage .choice:has(input[value="custom"]) > span');
-      const r = await b.evaluate(`(() => { const p = settingsPanel.getBoundingClientRect(); const t = (openSetting === "prep" ? prepTicket : timeTicket).getBoundingClientRect(); const a = settingsPanel.querySelector(".panel-arrow").getBoundingClientRect();
-        return { inside: p.left >= 0 && p.right <= innerWidth + 0.5, hScroll: document.documentElement.scrollWidth > innerWidth, arrow: Math.abs(a.left + a.width / 2 - t.left - t.width / 2) }; })()`);
-      check(`${tag} ${which} open: inside the window, no sideways scroll${phone ? "" : ", arrow on the stub"}`, r.inside && !r.hScroll && (phone || r.arrow < 1.5), JSON.stringify(r));
+    for (const which of ["showLabelBtn", "timeTicket", "prepSetting"]) {
+      await b.mouse("#" + which);
+      await sleep(400);
+      const r = await b.evaluate(`(() => { const p = programme.getBoundingClientRect();
+        return { open: !programme.hidden, inside: p.left >= 0 && p.right <= innerWidth + 0.5, hScroll: document.documentElement.scrollWidth > innerWidth }; })()`);
+      check(`${tag} programme opened from ${which}: inside the window, no sideways scroll`, r.open && r.inside && !r.hScroll, JSON.stringify(r));
       await b.shot(`shots/1c-${tag}-${which}.png`);
-      if (phone || which === "time") await b.mouse("#settingsDoneBtn");
-      else await b.evaluate(`document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))`);
+      await b.evaluate(`document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))`);
       await sleep(150);
     }
     await done(b);

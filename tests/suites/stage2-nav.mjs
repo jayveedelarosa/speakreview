@@ -119,10 +119,11 @@ if (!only || only === "signs") {
     const stageOver = await overlaps(b, [[".sign", ".ticket-wrap"], [".sign", ".site-header .logo"], [".sign", "#privacyWrap"], [".sign", ".mic-spot"], [".sign", ".topic-actions"], [".sign", ".stage-floor"],
       [".ticket-wrap", ".site-header"], [".ticket-wrap", ".mic-spot"], [".topic-actions", ".mic-spot"]]);
     check(`${tag} Stage: nothing overlaps the ticket, signs, header or mic`, stageOver.length === 0, stageOver.join("; "));
-    for (const which of ["#timeTicket", "#prepSetting"]) {
+    // Tonight's programme is pinned over the ticket on purpose; it must clear the signs and the header
+    for (const which of ["#showLabelBtn", "#timeTicket", "#prepSetting"]) {
       await b.mouse(which); await sleep(300);
-      const po = await overlaps(b, [["#settingsPanel", ".sign"], ["#settingsPanel", ".site-header"], ["#settingsPanel", ".ticket-wrap"]]);
-      check(`${tag} open ${which === "#timeTicket" ? "Speaking" : "Prep"} time panel clears the signs, header and ticket`, po.length === 0, po.join("; "));
+      const po = await overlaps(b, [["#programme", ".sign"], ["#programme", ".site-header"]]);
+      check(`${tag} programme opened from ${which} clears the signs and header`, po.length === 0, po.join("; "));
       await b.evaluate(`document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))`); await sleep(100);
     }
     await b.shot(`shots/nav-${tag}-stage.png`);
@@ -247,8 +248,8 @@ if (!only || only === "narrow") {
     const row = await b.evaluate(`(() => { const tear = document.querySelector(".ticket-tear").getBoundingClientRect().left; return [...document.querySelectorAll(".topic-label, .topic-badge, .topic-hint, .ticket-serial")].filter(e => e.getClientRects().length && e.getBoundingClientRect().right > tear - 1).map(e => e.className); })()`);
     check(`${tag} ticket's top row stays clear of the stub`, row.length === 0, row.join());
     await b.mouse("#timeTicket"); await sleep(300);
-    const po = await overlaps(b, [["#settingsPanel", ".site-header"], ["#settingsPanel", ".ticket-wrap"], ["#settingsPanel", ".main-nav"]]);
-    check(`${tag} the open panel clears the header, ticket and bar`, po.length === 0 && await b.evaluate("settingsPanel.getBoundingClientRect().left >= 0 && settingsPanel.getBoundingClientRect().right <= innerWidth"), po.join("; "));
+    const po = await overlaps(b, [["#programme", ".site-header"], ["#programme", ".main-nav"]]);
+    check(`${tag} the open programme clears the header and bar, inside the window`, po.length === 0 && await b.evaluate("programme.getBoundingClientRect().left >= 0 && programme.getBoundingClientRect().right <= innerWidth"), po.join("; "));
     await b.evaluate(`document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))`); await sleep(100);
     // bar works by click, Enter and Space
     await b.mouse("#navWall"); await b.settled();

@@ -13,14 +13,14 @@ const PHONE = [
   ["Roll a new topic", "#randomTopicBtn", "#randomTopicBtn"], ["Write your own", "#writeTopicBtn", "#writeTopicBtn"], ["Speak freely", "#clearTopicBtn", "#clearTopicBtn"],
   ["mic", "#micBtn", "#micBtn"], ["upload label", "#audioFile", ".btn-upload"], ["Privacy", "#privacyBtn", "#privacyBtn"]
 ];
-const CHOICES = [["choice: 3 minutes", '#timePage input[value="180"]', '#timePage .choice:has(input[value="180"]) > span'], ["Done", "#settingsDoneBtn", "#settingsDoneBtn"]];
+// The old settings panel's choices and Done were compared here until Feature set 3 stage 2 replaced the panel with
+// Tonight's programme, which has no earlier version to compare with: programme.mjs checks its controls instead.
 const LAPTOP = [["sign: Backstage", "#signBackstage", "#signBackstage"], ["sign: Wall of Fame", "#signWall", "#signWall"], ...PHONE.slice(3)];
 
-async function snapshot(url, w, h, items, openPanel) {
+async function snapshot(url, w, h, items) {
   const b = await launch({ width: w, height: h, flags: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"], mobile: w <= 600 });
   await b.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "no-preference" }] });
   await b.goto(url, [API_STUB]);
-  if (openPanel) { await b.evaluate("timeTicket.click()"); await sleep(400); await b.evaluate(`document.querySelector('#timePage input[value="custom"]').click()`); await sleep(200); }
   const out = {};
   for (const [label, sel, ringSel] of items) {
     // tap highlight on the element and on everything inside it
@@ -46,11 +46,10 @@ async function snapshot(url, w, h, items, openPanel) {
   return { out, errors, violations };
 }
 
-for (const [w, h, items, tag] of [[390, 780, PHONE, "phone"], [390, 780, CHOICES, "phone sheet"], [1280, 800, LAPTOP, "laptop"], [1280, 800, CHOICES, "laptop panel"]]) {
+for (const [w, h, items, tag] of [[390, 780, PHONE, "phone"], [1280, 800, LAPTOP, "laptop"]]) {
   console.log(`\n== ${tag} (${w}x${h})`);
-  const panel = tag.includes("sheet") || tag.includes("panel");
-  const before = await snapshot(BASE, w, h, items, panel);
-  const after = await snapshot(LIVE, w, h, items, panel);
+  const before = await snapshot(BASE, w, h, items);
+  const after = await snapshot(LIVE, w, h, items);
   for (const [label] of items) {
     const a = after.out[label], bf = before.out[label];
     check(`${tag} ${label}: no tap highlight`, a.tap.length > 0 && a.tap.every(c => c === "rgba(0, 0, 0, 0)"), [...new Set(a.tap)].join());

@@ -71,7 +71,7 @@ const FIELDS = ["id", "savedAt", "topic", "topic_type", "time_limit_seconds", "s
 await test("empty wall, tab and privacy", async () => {
   const b = await page();
   check("Wall tab visible", await b.evaluate(`!document.getElementById('navWall').hidden && getComputedStyle(navWall).display !== 'none'`));
-  check("privacy sentence", await b.evaluate(`privacyNote.textContent.includes("results after 30 days. Your Wall of Fame and trophies are saved only in this browser on this device.") && privacyNote.textContent.endsWith("saved on this device for your latest 30 performances.")`));
+  check("privacy sentence", await b.evaluate(`privacyNote.textContent.includes("results after 30 days. Your Wall of Fame and trophies are saved only in this browser on this device.") && privacyNote.textContent.includes("saved on this device for your latest 30 performances.") && privacyNote.textContent.endsWith("An optional stage name can be saved on this device, and it is never sent anywhere.")`));
   await b.go("wall");
   check("empty state shown", await b.evaluate(`!wallEmpty.hidden && wallEmpty.textContent.includes("Your wall is empty. Take the stage to hang your first playbill.")`));
   check("clear hidden when empty", await b.evaluate(`clearWallBtn.hidden`));
@@ -267,17 +267,17 @@ await test("practice this topic again", async () => {
   await b.openCard("seed-6"); await sleep(100);
   await b.click("#pbPracticeBtn");
   await b.settled();
-  let st = await b.evaluate(`({ view: currentView, topic: topicInput.value, rt: randomTopic, badge: !topicBadge.hidden && topicBadgeType.textContent, radio: document.querySelector('input[name=timeLimit]:checked').value, min: customMinutes.value, sec: customSeconds.value, custom: !customTime.hidden, file: fileInput.files.length, dialog: playbillDialog.hidden, inert: appRoot.inert, h: topicInput.offsetHeight })`);
+  let st = await b.evaluate(`({ view: currentView, topic: topicInput.value, rt: randomTopic, badge: !topicBadge.hidden && topicBadgeType.textContent, radio: String(getTimeLimit().seconds ?? 0), min: progMin.value, sec: progSec.value, timed: timeLimitOn, file: fileInput.files.length, dialog: playbillDialog.hidden, inert: appRoot.inert, h: topicInput.offsetHeight })`);
   console.log("  " + JSON.stringify(st));
-  check("type explain + custom 2:30", st.view === "stage" && st.topic === "What makes a good apology?" && st.rt?.type === "explain" && st.badge === "Explain" && st.radio === "custom" && st.min === "2" && st.sec === "30" && st.custom && st.file === 0 && st.dialog && !st.inert && st.h > 30);
+  check("type explain + custom 2:30", st.view === "stage" && st.topic === "What makes a good apology?" && st.rt?.type === "explain" && st.badge === "Explain" && st.radio === "150" && st.min === "02" && st.sec === "30" && st.timed && st.file === 0 && st.dialog && !st.inert && st.h > 30);
   await b.go("wall"); await b.openCard("seed-4"); await b.click("#pbPracticeBtn"); await b.settled();
-  st = await b.evaluate(`({ topic: topicInput.value, free: speakFreely, rt: randomTopic, radio: document.querySelector('input[name=timeLimit]:checked').value, ph: topicInput.placeholder })`);
+  st = await b.evaluate(`({ topic: topicInput.value, free: speakFreely, rt: randomTopic, radio: String(getTimeLimit().seconds ?? 0), ph: topicInput.placeholder })`);
   check("no topic + 1 min", st.topic === "" && st.free && st.rt === null && st.radio === "60" && st.ph === "Speak on anything you like", st);
   await b.go("wall"); await b.openCard("seed-2"); await b.click("#pbPracticeBtn"); await b.settled();
-  st = await b.evaluate(`({ topic: topicInput.value, rt: randomTopic, badge: topicBadge.hidden, radio: document.querySelector('input[name=timeLimit]:checked').value })`);
+  st = await b.evaluate(`({ topic: topicInput.value, rt: randomTopic, badge: topicBadge.hidden, radio: String(getTimeLimit().seconds ?? 0) })`);
   check("typed topic + 3 min", st.topic === "Why my grandmother's garden still matters" && st.rt === null && st.badge && st.radio === "180", st);
   await b.go("wall"); await b.openCard("seed-3"); await b.click("#pbPracticeBtn"); await b.settled();
-  st = await b.evaluate(`({ rt: randomTopic, radio: document.querySelector('input[name=timeLimit]:checked').value })`);
+  st = await b.evaluate(`({ rt: randomTopic, radio: String(getTimeLimit().seconds ?? 0) })`);
   check("imagine + untimed", st.rt.type === "imagine" && st.radio === "0", st);
   // the topic is really sent with its type and limit
   await b.sendMp3();
@@ -295,7 +295,7 @@ await test("practice this topic again", async () => {
   await b.click("#pbPracticeBtn"); await b.click("#pbReplaceKeepBtn");
   check("Keep it keeps it", await b.evaluate(`pbReplace.hidden && fileInput.files.length === 1`));
   await b.click("#pbPracticeBtn"); await b.click("#pbReplaceBtn"); await b.settled();
-  check("Replace it clears and continues", await b.evaluate(`currentView === 'stage' && fileInput.files.length === 0 && topicInput.value === "Is failure a better teacher than success?" && document.querySelector('input[name=timeLimit]:checked').value === '180'`));
+  check("Replace it clears and continues", await b.evaluate(`currentView === 'stage' && fileInput.files.length === 0 && topicInput.value === "Is failure a better teacher than success?" && getTimeLimit().seconds === 180`));
 
   // unsent take pending
   await b.evaluate(`setTake(new Blob([new Uint8Array(1000)], { type: 'audio/wav' }), 20, null); setRecState('review'); true`);
@@ -363,7 +363,7 @@ await test("storage full", async () => {
 
 await test("tab locked while preparing and recording", async () => {
   const b = await page();
-  await b.evaluate(`document.querySelector('input[name=prepTime][value="30"]').click(); true`);
+  await b.evaluate(`document.querySelector('#progPrep [data-prep="30"]').click(); true`);
   await b.click("#micBtn");
   await b.waitFor(`recState === 'prep'`, 6000);
   check("locked in prep", await b.evaluate(`navWall.disabled`));

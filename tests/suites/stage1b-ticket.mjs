@@ -136,7 +136,8 @@ if (!only || only === "sizes") {
       await sleep(300);
       await b.shot(`shots/1b-${tag}-prep.png`);
       if (phone) {
-        await b.mouse("#settingsDoneBtn");
+        await sleep(200);
+        await b.mouse("#progDoneBtn");
         await b.mouse("#privacyBtn");
         check(`${tag} Privacy opens`, await b.evaluate("!privacyNote.hidden"));
       }
@@ -178,10 +179,11 @@ if (!only || only === "ticket") {
     const o = await b.evaluate(`(() => { const c = getComputedStyle(timeTicket); return { style: c.borderTopStyle, color: c.borderTopColor, ring: c.boxShadow, other: getComputedStyle(prepTicket).borderTopStyle }; })()`);
     check(`${tag} open stub button: solid burgundy with a ring`, o.style === "solid" && o.color === "rgb(122, 18, 34)" && o.ring.includes("rgba(122, 18, 34, 0.16)") && o.other === "dashed", JSON.stringify(o));
     if (!phone) {
-      // The panel slides in when it opens: measure once two readings 100ms apart agree (at most 3 seconds)
-      const measure = () => b.evaluate(`(() => { const t = ${TICKET_BOX}; const a = document.getElementById("stepTime").getBoundingClientRect(); const p = settingsPanel.getBoundingClientRect();
-        const ar = settingsPanel.querySelector(".panel-arrow").getBoundingClientRect(), bt = timeTicket.getBoundingClientRect();
-        return { rightOff: Math.abs(p.right - a.right), anchorRight: Math.abs(a.right - t.right), topOff: p.top - a.top, anchorTop: a.top - t.bottom, arrow: Math.abs(ar.left + ar.width / 2 - (bt.left + bt.width / 2)) }; })()`);
+      // The paper slides in when it opens: measure once two readings 100ms apart agree (at most 3 seconds).
+      // Both are tilted, so each is measured as if it were straight (from its centre).
+      const measure = () => b.evaluate(`(() => { const t = ${TICKET_BOX}; const r = programme.getBoundingClientRect();
+        const left = r.left + r.width / 2 - programme.offsetWidth / 2, top = r.top + r.height / 2 - programme.offsetHeight / 2;
+        return { leftOff: +(left - t.left).toFixed(1), topOff: +(top - t.top).toFixed(1), w: programme.offsetWidth }; })()`);
       let p = await measure();
       for (let i = 0; i < 30; i++) {
         await sleep(100);
@@ -190,14 +192,22 @@ if (!only || only === "ticket") {
         p = next;
         if (same) break;
       }
-      check("panel right-aligned with the ticket", p.rightOff < 0.5 && p.anchorRight < 0.5, JSON.stringify(p));
-      check("panel 12px under the ticket", Math.abs(p.topOff - 12) < 0.5 && Math.abs(p.anchorTop) < 0.5, JSON.stringify(p));
-      check("arrow points at the open stub button", p.arrow < 1.5, p.arrow.toFixed(1));
+      check("the paper is pinned 26px in from the ticket's left and 20px below its top, 500px wide", Math.abs(p.leftOff - 26) <= 1 && Math.abs(p.topOff - 20) <= 1 && p.w === 500, JSON.stringify(p));
     } else {
-      check("phone opens the bottom sheet", await b.evaluate(`settingsPanel.getAttribute("aria-modal") === "true" && getComputedStyle(settingsPanel).position === "fixed"`));
+      check("phone opens the bottom sheet", await b.evaluate(`programme.getAttribute("aria-modal") === "true" && getComputedStyle(programme).position === "fixed"`));
     }
     await b.key("Escape");
     check(`${tag} Escape returns focus to the stub button`, await b.evaluate("document.activeElement === timeTicket"));
+    // The show label is a button too: dashed at rest, solid burgundy while the programme is open on Cast
+    const lb = await b.evaluate(`(() => { const c = getComputedStyle(showLabelBtn), r = showLabelBtn.getBoundingClientRect();
+      return { tag: showLabelBtn.tagName, style: c.borderTopStyle, color: c.borderTopColor, h: showLabelBtn.offsetHeight, radius: c.borderTopLeftRadius, pen: !!showLabelBtn.querySelector("svg.show-pen[aria-hidden=true]") }; })()`);
+    check(`${tag} show label: a button, 28px, 1px dashed rgba(122,18,34,0.42), 4px corners, pen icon`, lb.tag === "BUTTON" && lb.style === "dashed" && lb.color === "rgba(122, 18, 34, 0.42)" && lb.h === 28 && lb.radius === "4px" && lb.pen, JSON.stringify(lb));
+    await b.mouse("#showLabelBtn");
+    await sleep(300);
+    const lo = await b.evaluate(`(() => { const c = getComputedStyle(showLabelBtn); return { style: c.borderTopStyle, color: c.borderTopColor, ring: c.boxShadow, exp: showLabelBtn.getAttribute("aria-expanded"), section: programme.dataset.section }; })()`);
+    check(`${tag} show label opens Cast: solid burgundy with a ring`, lo.style === "solid" && lo.color === "rgb(122, 18, 34)" && lo.ring.includes("rgba(122, 18, 34, 0.16)") && lo.exp === "true" && lo.section === "cast", JSON.stringify(lo));
+    await b.key("Escape");
+    check(`${tag} Escape returns focus to the show label`, await b.evaluate("document.activeElement === showLabelBtn"));
     await b.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
     await sleep(100);
     check(`${tag} no tilt with reduced motion`, (await b.evaluate(`getComputedStyle(document.querySelector(".ticket-wrap")).transform`)) === "none");
@@ -286,6 +296,21 @@ if (!only || only === "height") {
     await b.evaluate(`topicInput.value = "x".repeat(0) + "A very long topic that someone typed to see what happens when it does not fit at all in the box"; topicInput.dispatchEvent(new Event("input"));`); await sleep(100);
     const long = await pos();
     check(`${w}x${h} same place for open mic, empty, typed and long typed topics`, new Set([start, mic, empty, typed, long]).size === 1, [start, mic, empty, typed, long].join(" | "));
+    // The longest stage name, as "<Name>'s show" and "<Name>'s open mic" (two lines on phones)
+    await b.evaluate(`progName.value = "Maximilianoooooo"; progName.dispatchEvent(new Event("input", { bubbles: true })); true`); await sleep(100);
+    const named = await pos();
+    const fit = () => b.evaluate(`(() => { const l = showLabelBtn.getBoundingClientRect(), m = document.querySelector(".ticket-main").getBoundingClientRect(), s = document.querySelector(".ticket-serial");
+      const sr = s.getClientRects().length ? s.getBoundingClientRect() : null;
+      const pen = showLabelBtn.querySelector(".show-pen").getBoundingClientRect();
+      return { inside: l.left >= m.left - 8 && l.right <= m.right + 0.5, clear: !sr || (l.right <= sr.left + 0.5 && pen.right <= sr.left), penInside: pen.right <= l.right + 0.5,
+        whole: showLabel.scrollHeight <= showLabel.clientHeight + 3 && showLabel.scrollWidth <= showLabel.clientWidth + 1,
+        lines: Math.round(showLabel.getBoundingClientRect().height / parseFloat(getComputedStyle(showLabel).lineHeight)), text: showLabel.textContent }; })()`);
+    const f1 = await fit();
+    await b.click("#clearTopicBtn"); await sleep(100);
+    const namedMic = await pos();
+    const f2 = await fit();
+    check(`${w}x${h} a 16-character stage name keeps the ticket's height and the Roll button in place`, named === start && namedMic === start, [start, named, namedMic].join(" | "));
+    check(`${w}x${h} the named label fits whole beside the serial (pen included, at most 2 lines)`, [f1, f2].every(f => f.inside && f.clear && f.penInside && f.whole && f.lines <= 2) && f2.text === "Maximilianoooooo's open mic", JSON.stringify([f1, f2]));
     await done(b);
   }
 
@@ -310,7 +335,7 @@ if (!only || only === "topic") {
     const tag = phone ? "phone" : "laptop";
     const b = await open(LIVE, { width: w, height: h });
     check(`${tag} starts as Tonight's show`, (await b.evaluate("showLabel.textContent")) === "Tonight's show" && await b.evaluate("openMicLine.hidden"));
-    check(`${tag} topic field label`, (await b.evaluate(`document.querySelector('label[for=topicInput]').textContent`)) === "Tonight's show, your topic");
+    check(`${tag} topic field label (the show label is its own button now)`, (await b.evaluate(`document.querySelector('label[for=topicInput]').textContent`)) === "Your topic");
     await b.evaluate(`landTopic(TOPICS[0])`);
     await b.mouse("#clearTopicBtn");
     const om = await b.evaluate(`({ label: showLabel.textContent, badge: topicBadge.hidden, topic: topicInput.placeholder, value: topicInput.value,
@@ -351,7 +376,7 @@ if (!only || only === "misc") {
     const b = await open(LIVE, { width: w, height: h, pre: ["delete window.AudioWorkletNode;"], flags: [] });
     check(`${w}x${h} only RUNTIME on the stub`, await b.evaluate("prepTicket.getClientRects().length === 0 && timeTicket.getClientRects().length > 0"));
     await b.mouse("#timeTicket");
-    check(`${w}x${h} its panel still opens`, await b.evaluate("!settingsPanel.hidden && openSetting === 'time'"));
+    check(`${w}x${h} the programme still opens`, await b.evaluate("!programme.hidden && programmeOpen && programme.dataset.section === 'time'"));
     await b.shot(`shots/1b-nomic-${w}x${h}.png`);
     await done(b);
   }

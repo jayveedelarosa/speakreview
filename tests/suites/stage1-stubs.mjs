@@ -1,5 +1,8 @@
 // Feature set 2, stage 1: the ticket stubs (Speaking time, Prep time): behaviour, saved choices, no mic, end to end.
-// Retired: the comparison with the commit before stage 1 and the old ticket sizes (stage 1b replaced them; see stage1b-ticket).
+// Since Feature set 3 stage 2 the stubs open Tonight's programme (one paper form) on their own section; the form's
+// own details (name, typed times, −/+, highlight, sizes) are in programme.mjs.
+// Retired: the comparison with the commit before stage 1 and the old ticket sizes (stage 1b replaced them; see
+// stage1b-ticket), and the wooden panel's "a pick closes it", Custom page and arrow (stage 2 of feature set 3).
 import { launch, sleep, API_STUB } from "../lib/cdp.mjs";
 import { readFileSync } from "node:fs";
 import { SHOTS, LIVE } from "../lib/paths.mjs";
@@ -12,6 +15,8 @@ const check = (name, ok, detail = "") => {
 };
 const SEED = readFileSync(new URL("../lib/seed.js", import.meta.url), "utf8");
 const KEYS = { Enter: [13, "Enter", "\r"], " ": [32, "Space", " "], ArrowRight: [39, "ArrowRight"], ArrowLeft: [37, "ArrowLeft"], Tab: [9, "Tab"], Escape: [27, "Escape"] };
+const KEY = "speakreview.settings.v1";
+const stored = b => b.evaluate(`localStorage.getItem(${JSON.stringify(KEY)})`);
 
 async function open(url = LIVE, { width = 1280, height = 800, pre = [], dpr = 1, flags = FAKE } = {}) {
   const mobile = width <= 600;
@@ -40,10 +45,16 @@ async function open(url = LIVE, { width = 1280, height = 800, pre = [], dpr = 1,
     await b.send("Input.dispatchKeyEvent", { type: "keyUp", ...base });
     await sleep(80);
   };
-  b.active = () => b.evaluate("document.activeElement && (document.activeElement.id || document.activeElement.name + ':' + document.activeElement.value)");
-  b.state = () => b.evaluate(`({ open: !settingsPanel.hidden, which: openSetting, time: timeTicketValue.textContent, prep: prepTicketValue.textContent,
+  b.active = () => b.evaluate("(e => e && (e.id || (e.dataset.prep !== undefined ? 'prep:' + e.dataset.prep : e.tagName)))(document.activeElement)");
+  b.state = () => b.evaluate(`({ open: !programme.hidden, which: programmeOpen ? programme.dataset.section : null, time: timeTicketValue.textContent, prep: prepTicketValue.textContent,
     tLabel: timeTicket.getAttribute("aria-label"), pLabel: prepTicket.getAttribute("aria-label"),
-    tExp: timeTicket.getAttribute("aria-expanded"), pExp: prepTicket.getAttribute("aria-expanded") })`);
+    tExp: timeTicket.getAttribute("aria-expanded"), pExp: prepTicket.getAttribute("aria-expanded"), sExp: showLabelBtn.getAttribute("aria-expanded") })`);
+  // The paper or sheet animates in: wait until two readings 100ms apart agree
+  b.still = async sel => {
+    const box = () => b.evaluate(`JSON.stringify(document.querySelector(${JSON.stringify(sel)}).getBoundingClientRect())`);
+    let last = await box();
+    for (let i = 0; i < 30; i++) { await sleep(100); const next = await box(); if (next === last) break; last = next; }
+  };
   return b;
 }
 const done = async b => {
@@ -51,7 +62,6 @@ const done = async b => {
   check("no CSP violations", b.violations.length === 0, JSON.stringify(b.violations).slice(0, 300));
   await b.close();
 };
-const choice = (name, value) => `.choice:has(input[name=${name}][value="${value}"]) > span`;
 
 // ---------------------------------------------------------------- 3. behaviour
 if (!only || only === "behaviour") {
@@ -60,132 +70,114 @@ if (!only || only === "behaviour") {
   let s = await b.state();
   check("defaults: No limit and None", s.time === "No limit" && s.prep === "None", `${s.time} / ${s.prep}`);
   check("accessible names", s.tLabel === "Speaking time: No limit. Click to change" && s.pLabel === "Prep time: None. Click to change", s.tLabel);
-  check("aria-controls points at the panel", await b.evaluate(`timeTicket.getAttribute("aria-controls") === "settingsPanel" && prepTicket.getAttribute("aria-controls") === "settingsPanel"`));
+  check("aria-controls points at the programme", await b.evaluate(`[timeTicket, prepTicket, showLabelBtn].every(e => e.getAttribute("aria-controls") === "programme")`));
   check("tickets are real buttons", await b.evaluate(`timeTicket.tagName === "BUTTON" && prepTicket.tagName === "BUTTON"`));
 
   await b.mouse("#timeTicket");
   s = await b.state();
-  check("time ticket opens only Speaking time", s.open && s.which === "time" && s.tExp === "true" && s.pExp === "false" && await b.evaluate("!timePage.hidden && prepPage.hidden"));
-  check("panel labelled by its title", await b.evaluate(`settingsPanel.getAttribute("aria-labelledby") === "speakingTimeLabel" && settingsPanel.getAttribute("role") === "dialog"`));
-  check("focus on the checked choice", (await b.active()) === "timeLimit:0", await b.active());
-  check("help text", await b.evaluate(`timePage.querySelector(".panel-help").textContent === "How long your speech should last. Going over is fine."`));
-  check("Done hidden until Custom", !(await b.evaluate("settingsDoneBtn.getClientRects().length > 0")));
+  check("RUNTIME opens the programme on Runtime", s.open && s.which === "time" && s.tExp === "true" && s.pExp === "false" && s.sExp === "false", JSON.stringify(s));
+  check("a dialog named by its title", await b.evaluate(`programme.getAttribute("aria-labelledby") === "progTitle" && programme.getAttribute("role") === "dialog" && progTitle.textContent === "Tonight's programme"`));
+  check("focus on No limit", (await b.active()) === "progNoLimit", await b.active());
+  check("help text", await b.evaluate(`document.querySelector('.prog-sec[data-section="time"] .prog-line').textContent === "How long your speech should last. Going over is fine."`));
+  check("DONE always shown", await b.evaluate("progDoneBtn.getClientRects().length > 0"));
   await b.mouse("#prepSetting");
   s = await b.state();
-  check("other ticket switches to Prep time", s.open && s.which === "prep" && s.tExp === "false" && s.pExp === "true" && await b.evaluate("timePage.hidden && !prepPage.hidden"));
-  check("prep help text", await b.evaluate(`prepPage.querySelector(".panel-help").textContent === "Thinking time before recording starts."`));
+  check("CURTAIN IN switches it to Curtain in", s.open && s.which === "prep" && s.tExp === "false" && s.pExp === "true", JSON.stringify(s));
+  check("focus on the ticked prep choice", (await b.active()) === "prep:0", await b.active());
+  check("prep help text", await b.evaluate(`document.querySelector('.prog-sec[data-section="prep"] .prog-line').textContent === "Thinking time before recording starts."`));
   await b.mouse("#prepSetting");
   s = await b.state();
-  check("clicking the open ticket closes it", !s.open && s.pExp === "false");
+  check("clicking the button of the open section closes it", !s.open && s.pExp === "false");
 
   await b.mouse("#timeTicket");
-  await b.mouse(choice("timeLimit", 180));
-  await sleep(100);
+  await b.mouse("#progPlus");
   s = await b.state();
-  check("mouse pick closes and updates the ticket", !s.open && s.time === "3 minutes" && s.tLabel === "Speaking time: 3 minutes. Click to change", JSON.stringify(s));
-  check("focus back on the ticket after a pick", (await b.active()) === "timeTicket", await b.active());
-  check("saved after a pick", (await b.evaluate(`localStorage.getItem("speakreview.settings.v1")`)) === '{"time":"180","prep":"0"}');
+  check("+ with No limit ticked brings back 3:00 and keeps it open", s.open && s.time === "3 minutes" && s.tLabel === "Speaking time: 3 minutes. Click to change", JSON.stringify(s));
+  check("saved right away", (await stored(b)) === '{"time":"180","prep":"0","name":""}', await stored(b));
   check("length logic sees 180", await b.evaluate("getTimeLimit().seconds === 180"));
 
-  await b.mouse("#timeTicket");
   await b.key("Escape");
   s = await b.state();
-  check("Escape closes, focus back on ticket", !s.open && (await b.active()) === "timeTicket");
+  check("Escape closes without undoing, focus back on the ticket", !s.open && s.time === "3 minutes" && (await b.active()) === "timeTicket");
 
   await b.mouse("#prepSetting");
-  await b.mouseAt(290, 460);       // empty stage beside the tickets, nothing focusable there
+  await b.mouseAt(1000, 470);      // empty stage beside the paper, nothing focusable there
   await sleep(100);
   s = await b.state();
-  check("outside click closes, focus back on ticket", !s.open && (await b.active()) === "prepSetting", await b.active());
+  check("outside click closes, focus back on the ticket", !s.open && (await b.active()) === "prepSetting", await b.active());
 
   await b.mouse("#prepSetting");
-  await b.mouse("#topicInput");
+  await b.mouse("#signBackstage .sign-face");
+  await b.waitFor("currentView === 'backstage'", 5000);
+  await b.evaluate("goToView('stage')");
+  await b.waitFor("currentView === 'stage' && !document.body.classList.contains('curtains-closed')", 5000);
+  await sleep(600);
+  check("changing rooms closes it", !(await b.state()).open);
+
+  await b.mouse("#prepSetting");
+  // The paper is pinned over the left of the ticket, so click the topic where it still shows
+  const [tx, ty] = await b.evaluate(`(() => { const r = topicInput.getBoundingClientRect(), p = programme.getBoundingClientRect(); return [(Math.max(r.left, p.right) + r.right) / 2, r.top + r.height / 2]; })()`);
+  await b.mouseAt(tx, ty);
   check("outside click on a field closes and leaves focus there", !(await b.state()).open && (await b.active()) === "topicInput", await b.active());
 
-  // Keyboard: arrows move, Enter / Space pick
+  // Keyboard
   await b.evaluate("timeTicket.focus()");
   await b.key("Enter");
   s = await b.state();
-  check("Enter on ticket opens it", s.open && s.which === "time");
-  await b.key("ArrowRight");
+  check("Enter on RUNTIME opens it", s.open && s.which === "time" && (await b.active()) === "progNoLimit");
+  await b.key(" ");
   s = await b.state();
-  check("arrow key changes choice but keeps panel open", s.open && s.time === "5 minutes", s.time);
-  await b.key("ArrowLeft");
-  await b.key("Enter");
-  await sleep(100);
-  s = await b.state();
-  check("Enter picks and closes", !s.open && s.time === "3 minutes" && (await b.active()) === "timeTicket", `${s.time} ${await b.active()}`);
+  check("Space ticks No limit, the ticket follows, still open", s.open && s.time === "No limit", s.time);
+  await b.key(" ");
+  check("Space again brings back 3 minutes", (await b.state()).time === "3 minutes");
+  await b.key("Escape");
   await b.evaluate("prepTicket.focus()");
   await b.key(" ");
   await sleep(100);
-  check("Space on ticket opens prep", (await b.state()).which === "prep");
+  check("Space on CURTAIN IN opens it", (await b.state()).which === "prep");
   await b.key("ArrowRight");
-  await b.key(" ");
-  await sleep(150);
+  await sleep(100);
   s = await b.state();
-  check("Space picks and closes (and does not reopen)", !s.open && s.prep === "30 seconds" && (await b.active()) === "prepSetting", `${JSON.stringify(s)} ${await b.active()}`);
+  check("arrow key ticks 30 sec and keeps it open", s.open && s.prep === "30 seconds" && (await b.active()) === "prep:30", `${JSON.stringify(s)} ${await b.active()}`);
   check("line under the mic follows prep", (await b.evaluate("actionText.textContent")) === "Tap the mic to begin. You get 30 seconds to prepare, then recording starts.");
+  await b.mouse("#progDoneBtn");
+  s = await b.state();
+  check("DONE closes, focus back on the ticket", !s.open && (await b.active()) === "prepSetting" && s.prep === "30 seconds");
 
   // Tab away on laptop closes it
   await b.mouse("#timeTicket");
   for (let i = 0; i < 30 && (await b.state()).open; i++) await b.key("Tab");
-  check("tabbing out of the panel closes it", !(await b.state()).open);
-
-  // Custom
-  await b.mouse("#timeTicket");
-  await b.mouse(choice("timeLimit", "custom"));
-  s = await b.state();
-  check("Custom keeps it open with the controls and Done", s.open && await b.evaluate("!customTime.hidden && settingsDoneBtn.getClientRects().length > 0"));
-  check("Custom default 2:00 shown as 2 minutes", s.time === "2 minutes", s.time);
-  const setCustom = (mm, ss) => b.evaluate(`customMinutes.value = "${mm}"; customSeconds.value = "${ss}"; customMinutes.dispatchEvent(new Event("input")); customSeconds.dispatchEvent(new Event("input")); timeTicketValue.textContent`);
-  const storedBefore = JSON.parse(await b.evaluate(`localStorage.getItem("speakreview.settings.v1")`)).time;
-  check("0:20 rejected", (await setCustom(0, 20)) === "Custom" && (await b.evaluate("customTimeError.textContent")) === "Choose a time between 0:30 and 10:00.");
-  await b.mouse("#settingsDoneBtn");
-  check("Done with an invalid time stays open, focus on Minutes", (await b.state()).open && (await b.active()) === "customMinutes");
-  check("10:01 rejected", (await setCustom(10, 1)) === "Custom");
-  check("stored time unchanged while invalid", JSON.parse(await b.evaluate(`localStorage.getItem("speakreview.settings.v1")`)).time === storedBefore, storedBefore);
-  check("0:45 shows 45 seconds", (await setCustom(0, 45)) === "45 seconds");
-  check("4:00 shows 4 minutes", (await setCustom(4, 0)) === "4 minutes");
-  check("2:30 shows 2 min 30 sec", (await setCustom(2, 30)) === "2 min 30 sec");
-  await b.mouse('.stepper-btn[data-target="customSeconds"][data-step="1"]');
-  check("stepper updates ticket and storage", (await b.state()).time === "2 min 31 sec" && JSON.parse(await b.evaluate(`localStorage.getItem("speakreview.settings.v1")`)).time === "151");
-  await setCustom(2, 30);
-  await b.mouse("#settingsDoneBtn");
-  s = await b.state();
-  check("Done closes, focus back on the ticket", !s.open && (await b.active()) === "timeTicket" && s.tLabel === "Speaking time: 2 min 30 sec. Click to change", s.tLabel);
-  check("saved custom as 150 seconds", (await b.evaluate(`localStorage.getItem("speakreview.settings.v1")`)) === '{"time":"150","prep":"30"}');
+  check("tabbing out of the programme closes it", !(await b.state()).open);
+  check("saved as 180 and 30", (await stored(b)) === '{"time":"180","prep":"30","name":""}', await stored(b));
   await done(b);
 
   console.log("\n== phone behaviour");
   b = await open(LIVE, { width: 390, height: 780 });
   s = await b.state();
-  check("phone names say Tap", s.tLabel === "Speaking time: No limit. Tap to change", s.tLabel);
+  check("phone names say Tap", s.tLabel === "Speaking time: No limit. Tap to change" && (await b.evaluate("showLabelBtn.getAttribute('aria-label')")) === "No stage name yet. Tap to open tonight's programme", s.tLabel);
   await b.mouse("#timeTicket");
-  check("sheet is modal with a backdrop", await b.evaluate(`settingsPanel.getAttribute("aria-modal") === "true" && !settingsBackdrop.hidden`));
-  check("focus inside the sheet", await b.evaluate("settingsPanel.contains(document.activeElement)"));
+  check("sheet is modal with a backdrop", await b.evaluate(`programme.getAttribute("aria-modal") === "true" && !settingsBackdrop.hidden`));
+  check("focus inside the sheet", await b.evaluate("programme.contains(document.activeElement)"));
   let escaped = false;
-  for (let i = 0; i < 12; i++) { await b.key("Tab"); if (!(await b.evaluate("settingsPanel.contains(document.activeElement)"))) escaped = true; }
-  for (let i = 0; i < 12; i++) { await b.key("Tab", true); if (!(await b.evaluate("settingsPanel.contains(document.activeElement)"))) escaped = true; }
+  for (let i = 0; i < 14; i++) { await b.key("Tab"); if (!(await b.evaluate("programme.contains(document.activeElement)"))) escaped = true; }
+  for (let i = 0; i < 14; i++) { await b.key("Tab", true); if (!(await b.evaluate("programme.contains(document.activeElement)"))) escaped = true; }
   check("Tab and Shift+Tab stay inside the sheet", !escaped);
-  await b.mouse(choice("timeLimit", "custom"));
-  escaped = false;
-  for (let i = 0; i < 14; i++) { await b.key("Tab"); if (!(await b.evaluate("settingsPanel.contains(document.activeElement)"))) escaped = true; }
-  check("Tab stays inside with Custom open", !escaped);
-  await b.mouse(choice("timeLimit", 60));
+  await b.still("#programme");
+  await b.mouse("#progPlus");
   s = await b.state();
-  check("phone pick closes, ticket says 1 minute", !s.open && s.time === "1 minute" && (await b.active()) === "timeTicket");
+  check("a change shows on the ticket and the sheet stays open", s.open && s.time === "3 minutes");
 
-  // Addition 3: above the tab bar, no page scroll behind
+  // Above the tab bar, no page scroll behind
+  await b.mouse("#progDoneBtn");
   await b.evaluate(`document.body.style.setProperty("min-height", "3000px")`);
   await b.mouse("#prepSetting");
-  await sleep(400);
+  await b.still("#programme");
   const cover = await b.evaluate(`(() => {
     const nav = document.querySelector(".main-nav").getBoundingClientRect();
-    const hit = document.elementFromPoint(nav.left + nav.width / 2, nav.top + nav.height / 2);
+    const hit = document.elementFromPoint(nav.left + 20, nav.top + nav.height / 2);
     const hitTop = document.elementFromPoint(20, 60);
-    const sheet = settingsPanel.getBoundingClientRect();
-    return { navHit: settingsPanel.contains(hit) || hit === settingsBackdrop, topHit: hitTop === settingsBackdrop, sheetBottom: sheet.bottom, h: innerHeight,
-             z: getComputedStyle(document.getElementById("stepTime")).zIndex };
+    const sheet = programme.getBoundingClientRect();
+    return { navHit: programme.contains(hit) || hit === settingsBackdrop, topHit: hitTop === settingsBackdrop, sheetBottom: sheet.bottom, h: innerHeight };
   })()`);
   check("sheet covers the tab bar", cover.navHit && Math.abs(cover.sheetBottom - cover.h) < 1, JSON.stringify(cover));
   check("backdrop covers the rest of the page", cover.topHit);
@@ -194,84 +186,85 @@ if (!only || only === "behaviour") {
   await sleep(400);
   check("wheel does not scroll the page behind", (await b.evaluate("scrollY")) === 0, await b.evaluate("scrollY"));
   check("page overflow hidden while open", (await b.evaluate("getComputedStyle(document.documentElement).overflowY")) === "hidden");
-  const [bx, by] = [195, 60];
-  await b.mouseAt(bx, by);
+  await b.mouseAt(195, 60);
   s = await b.state();
-  check("tapping the backdrop closes, focus back on ticket", !s.open && (await b.active()) === "prepSetting", await b.active());
+  check("tapping the backdrop closes without undoing, focus back on the ticket", !s.open && s.time === "3 minutes" && (await b.active()) === "prepSetting", await b.active());
   await b.send("Input.dispatchMouseEvent", { type: "mouseWheel", x: 195, y: 300, deltaX: 0, deltaY: 600 });
   await sleep(500);
   check("wheel scrolls the page again after closing", (await b.evaluate("scrollY")) > 0 && !(await b.evaluate(`document.documentElement.classList.contains("settings-lock")`)));
   await b.evaluate("window.scrollTo(0, 0)");
   await b.mouse("#prepSetting");
-  // The sheet slides up when it opens: tap Done only once it is open and two readings 100ms apart agree
-  const doneBox = () => b.evaluate(`!settingsPanel.hidden && JSON.stringify(settingsDoneBtn.getBoundingClientRect())`);
-  let box = await doneBox();
-  for (let i = 0; i < 30; i++) {
-    await sleep(100);
-    const next = await doneBox();
-    const settled = next && next === box;
-    box = next;
-    if (settled) break;
-  }
-  await b.mouse("#settingsDoneBtn");
-  check("phone Done closes", !(await b.state()).open && (await b.active()) === "prepSetting" && !(await b.evaluate(`document.documentElement.classList.contains("settings-lock")`)));
+  await b.still("#programme");
+  await b.mouse("#progDoneBtn");
+  check("phone DONE closes", !(await b.state()).open && (await b.active()) === "prepSetting" && !(await b.evaluate(`document.documentElement.classList.contains("settings-lock")`)));
   await b.mouse("#prepSetting");
   await b.send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
   await sleep(300);
   check("crossing the breakpoint closes it and unlocks scrolling", !(await b.state()).open && !(await b.evaluate(`document.documentElement.classList.contains("settings-lock")`)));
-  check("names switch to Click", (await b.state()).tLabel.endsWith("Click to change"));
+  check("names switch to Click", (await b.state()).tLabel.endsWith("Click to change") && (await b.evaluate("showLabelBtn.getAttribute('aria-label')")).includes("Click to open"));
   await done(b);
 
   console.log("\n== reduced motion");
   b = await open(LIVE);
   await b.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
   await b.mouse("#timeTicket");
-  check("laptop panel has no animation", (await b.evaluate("getComputedStyle(settingsPanel).animationName")) === "none");
+  check("laptop paper: no animation, no tilt, DONE not tilted", await b.evaluate(`getComputedStyle(programme).animationName === "none" && getComputedStyle(programme).transform === "none" && getComputedStyle(progDoneBtn).transform === "none"`));
   await b.key("Escape");
   await b.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 780, deviceScaleFactor: 1, mobile: true });
   await sleep(200);
   await b.mouse("#timeTicket");
-  check("phone sheet and backdrop have no animation", (await b.evaluate("getComputedStyle(settingsPanel).animationName + getComputedStyle(settingsBackdrop).animationName")) === "nonenone");
+  check("phone sheet and backdrop have no animation", (await b.evaluate("getComputedStyle(programme).animationName + getComputedStyle(settingsBackdrop).animationName")) === "nonenone");
   await done(b);
 }
 
 // ---------------------------------------------------------------- 4. storage
 if (!only || only === "storage") {
   console.log("\n== restoring saved choices");
-  const KEY = "speakreview.settings.v1";
   const preset = v => `localStorage.setItem(${JSON.stringify(KEY)}, ${JSON.stringify(v)});`;
+  // [stored, seconds (null = no limit), prep, time stub, prep stub, minutes and seconds boxes, show label]
+  const SHOW = "Tonight's show";
   const cases = [
-    ['{"time":"180","prep":"30"}', "180", "30", "3 minutes", "30 seconds"],
-    ['{"time":"60","prep":"0"}', "60", "0", "1 minute", "None"],
-    ['{"time":"300","prep":"120"}', "300", "120", "5 minutes", "2 minutes"],
-    ['{"time":"150","prep":"60"}', "custom", "60", "2 min 30 sec", "1 minute", [2, 30]],
-    ['{"time":"240","prep":"0"}', "custom", "0", "4 minutes", "None", [4, 0]],
-    ['{"time":"30","prep":"0"}', "custom", "0", "30 seconds", "None", [0, 30]],
-    ['{"time":"600","prep":"0"}', "custom", "0", "10 minutes", "None", [10, 0]],
-    ['{"time":"","prep":"120"}', "0", "120", "No limit", "2 minutes"],
-    // invalid: each bad field falls back to its default
-    ["not json", "0", "0", "No limit", "None"],
-    ["[]", "0", "0", "No limit", "None"],
-    ["null", "0", "0", "No limit", "None"],
-    ['"180"', "0", "0", "No limit", "None"],
-    ['{"time":"25","prep":"30"}', "0", "30", "No limit", "30 seconds"],
-    ['{"time":"601"}', "0", "0", "No limit", "None"],
-    ['{"time":"060","prep":"45"}', "0", "0", "No limit", "None"],
-    ['{"time":180,"prep":30}', "0", "0", "No limit", "None"],
-    ['{"time":"abc","prep":"45"}', "0", "0", "No limit", "None"],
-    ['{"time":" 180","prep":"30 "}', "0", "0", "No limit", "None"],
-    ['{"time":"<img src=x onerror=window.__xss=1>","prep":"<b>hi</b>"}', "0", "0", "No limit", "None"],
-    ['{"__proto__":{"time":"180"}}', "0", "0", "No limit", "None"]
+    ['{"time":"180","prep":"30"}', 180, 30, "3 minutes", "30 seconds", "03:00", SHOW],
+    ['{"time":"60","prep":"0"}', 60, 0, "1 minute", "None", "01:00", SHOW],
+    ['{"time":"150","prep":"60"}', 150, 60, "2 min 30 sec", "1 minute", "02:30", SHOW],
+    ['{"time":"167","prep":"0"}', 167, 0, "2 min 47 sec", "None", "02:47", SHOW],
+    ['{"time":"45","prep":"0"}', 45, 0, "45 seconds", "None", "00:45", SHOW],
+    ['{"time":"30","prep":"0"}', 30, 0, "30 seconds", "None", "00:30", SHOW],
+    ['{"time":"600","prep":"0"}', 600, 0, "10 minutes", "None", "10:00", SHOW],
+    // the 2 minutes prep is gone: it becomes 1 minute
+    ['{"time":"300","prep":"120"}', 300, 60, "5 minutes", "1 minute", "05:00", SHOW],
+    ['{"time":"","prep":"120"}', null, 60, "No limit", "1 minute", "03:00", SHOW],
+    // the stage name
+    ['{"time":"","prep":"0","name":"Jayvee"}', null, 0, "No limit", "None", "03:00", "Jayvee's show"],
+    ['{"time":"","prep":"0","name":"James"}', null, 0, "No limit", "None", "03:00", "James's show"],
+    ['{"time":"","prep":"0","name":"  Ja<b>y</b>  vee!!  "}', null, 0, "No limit", "None", "03:00", "Jabyb vee's show"],
+    ['{"time":"","prep":"0","name":"Maximilianoooooooooooo"}', null, 0, "No limit", "None", "03:00", "Maximilianoooooo's show"],
+    ['{"time":"","prep":"0","name":"<img src=x onerror=window.__xss=1>"}', null, 0, "No limit", "None", "03:00", "img srcx onerror's show"],
+    ['{"time":"","prep":"0","name":"   "}', null, 0, "No limit", "None", "03:00", SHOW],
+    // each bad field falls back to its default, the others still load
+    ['{"time":"180","prep":"30","name":["Jayvee"]}', 180, 30, "3 minutes", "30 seconds", "03:00", SHOW],
+    ['{"time":"180","prep":"30","name":5}', 180, 30, "3 minutes", "30 seconds", "03:00", SHOW],
+    ['{"time":"25","prep":"30","name":"Ana"}', null, 30, "No limit", "30 seconds", "03:00", "Ana's show"],
+    ['{"time":"601","name":"Ana"}', null, 0, "No limit", "None", "03:00", "Ana's show"],
+    ['{"time":"060","prep":"45"}', null, 0, "No limit", "None", "03:00", SHOW],
+    ['{"time":180,"prep":30}', null, 0, "No limit", "None", "03:00", SHOW],
+    ['{"time":"abc","prep":"90"}', null, 0, "No limit", "None", "03:00", SHOW],
+    ['{"time":" 180","prep":"30 "}', null, 0, "No limit", "None", "03:00", SHOW],
+    ['{"time":"<img src=x onerror=window.__xss=1>","prep":"<b>hi</b>"}', null, 0, "No limit", "None", "03:00", SHOW],
+    ['{"__proto__":{"time":"180"}}', null, 0, "No limit", "None", "03:00", SHOW],
+    ["not json", null, 0, "No limit", "None", "03:00", SHOW],
+    ["[]", null, 0, "No limit", "None", "03:00", SHOW],
+    ["null", null, 0, "No limit", "None", "03:00", SHOW],
+    ['"180"', null, 0, "No limit", "None", "03:00", SHOW]
   ];
-  for (const [stored, t, p, tText, pText, mmss] of cases) {
-    const b = await open(LIVE, { pre: [preset(stored)] });
-    const r = await b.evaluate(`({ t: document.querySelector('input[name=timeLimit]:checked').value, p: document.querySelector('input[name=prepTime]:checked').value,
-      tt: timeTicketValue.textContent, pt: prepTicketValue.textContent, mm: customMinutes.value, ss: customSeconds.value,
-      action: actionText.textContent, xss: !!window.__xss || !!document.querySelector("#stepTime img, #stepTime b") })`);
-    let ok = r.t === t && r.p === p && r.tt === tText && r.pt === pText && !r.xss;
-    if (mmss) ok = ok && r.mm === String(mmss[0]) && r.ss === String(mmss[1]);
-    check(`stored ${stored}`, ok, JSON.stringify(r));
-    if (p === "30") check("  line under the mic follows the restored prep", r.action === "Tap the mic to begin. You get 30 seconds to prepare, then recording starts.");
+  for (const [data, t, p, tText, pText, mmss, show] of cases) {
+    const b = await open(LIVE, { pre: [preset(data)] });
+    const r = await b.evaluate(`({ t: getTimeLimit().seconds, p: getPrepSeconds(), tt: timeTicketValue.textContent, pt: prepTicketValue.textContent,
+      mmss: progMin.value + ":" + progSec.value, show: showLabel.textContent, action: actionText.textContent,
+      xss: !!window.__xss || !!document.querySelector("#stepTopic img, #stepTopic b") })`);
+    check(`stored ${data}`, r.t === t && r.p === p && r.tt === tText && r.pt === pText && r.mmss === mmss && r.show === show && !r.xss, JSON.stringify(r));
+    if (p === 30) check("  line under the mic follows the restored prep", r.action === "Tap the mic to begin. You get 30 seconds to prepare, then recording starts.");
+    if (data.includes('"120"')) check("  1 minute is stored in its place", JSON.parse(await stored(b)).prep === "60", await stored(b));
     check("  no errors", b.consoleErrors.length === 0, JSON.stringify(b.consoleErrors));
     await b.close();
   }
@@ -280,11 +273,15 @@ if (!only || only === "storage") {
   const BLOCK = `Storage.prototype.getItem = function () { throw new DOMException("blocked", "SecurityError"); };
     Storage.prototype.setItem = function () { throw new DOMException("blocked", "SecurityError"); };`;
   let b = await open(LIVE, { pre: [BLOCK] });
-  check("page loads with defaults", (await b.state()).time === "No limit");
+  check("page loads with defaults", (await b.state()).time === "No limit" && (await b.evaluate("showLabel.textContent")) === "Tonight's show");
   check("no remember note in the page", await b.evaluate("!document.getElementById('rememberNote') && !document.body.textContent.includes('Remembered')"));
   await b.mouse("#timeTicket");
-  await b.mouse(choice("timeLimit", 60));
-  check("picking still works", (await b.state()).time === "1 minute" && await b.evaluate("getTimeLimit().seconds === 60"));
+  await b.mouse("#progPlus");
+  await b.mouse("#progMinus");
+  await b.mouse("#progMinus");
+  check("−/+ still work", (await b.state()).time === "2 minutes" && await b.evaluate("getTimeLimit().seconds === 120"));
+  await b.evaluate(`progName.value = "Ana"; progName.dispatchEvent(new Event("input", { bubbles: true })); true`);
+  check("the name still shows on the ticket", (await b.evaluate("showLabel.textContent")) === "Ana's show");
   await done(b);
 
   console.log("\n== Practice this topic again saves the time");
@@ -299,7 +296,8 @@ if (!only || only === "storage") {
   await b.waitFor("currentView === 'stage' && !document.body.classList.contains('curtains-closed')", 5000);
   await sleep(900);
   check("ticket shows 2 min 30 sec", (await b.state()).time === "2 min 30 sec");
-  check("stored time is 150", JSON.parse(await b.evaluate(`localStorage.getItem("speakreview.settings.v1")`)).time === "150");
+  check("the boxes show 02:30, No limit unticked", await b.evaluate(`progMin.value === "02" && progSec.value === "30" && progNoLimit.getAttribute("aria-pressed") === "false"`));
+  check("stored time is 150", JSON.parse(await stored(b)).time === "150");
   await done(b);
 }
 
@@ -317,45 +315,43 @@ if (!only || only === "nomic") {
     check(`${w}x${h} time stub shown inside the ticket's stub column`, r.inStub && r.inWindow, JSON.stringify(r));
     if (SHOTS) await b.shot(`${SHOTS}/nomic-${w}x${h}.png`);
     await b.mouse("#timeTicket");
-    if (w > 600) {
-      const off = await b.evaluate(`(() => { const a = settingsPanel.querySelector(".panel-arrow").getBoundingClientRect(), t = timeTicket.getBoundingClientRect(); return Math.abs(a.left + a.width / 2 - t.left - t.width / 2); })()`);
-      check(`${w}x${h} arrow points at the lone ticket`, off < 1.5, off.toFixed(1));
-      if (SHOTS) await b.shot(`${SHOTS}/nomic-${w}x${h}-open.png`);
-    }
+    check(`${w}x${h} the programme opens on Runtime, without Curtain in`, await b.evaluate(`!programme.hidden && programme.dataset.section === "time" && document.querySelector('.prog-sec[data-section="prep"]').getClientRects().length === 0`));
+    if (SHOTS) await b.shot(`${SHOTS}/nomic-${w}x${h}-open.png`);
     await done(b);
   }
 }
 
 // ---------------------------------------------------------------- 6. end to end
 if (!only || only === "e2e") {
-  console.log("\n== end to end: 1 minute and 30 seconds prep through the tickets");
+  console.log("\n== end to end: 1 minute and 30 seconds prep through the programme");
   const b = await open(LIVE);
   await b.mouse("#timeTicket");
-  await b.mouse(choice("timeLimit", 60));
+  await b.evaluate(`progMin.value = "01"; progMin.dispatchEvent(new Event("input", { bubbles: true })); progSec.value = "00"; progSec.dispatchEvent(new Event("input", { bubbles: true })); true`);
   await b.mouse("#prepSetting");
-  await b.mouse(choice("prepTime", 30));
+  await b.mouse('#progPrep [data-prep="30"]');
+  await b.mouse("#progDoneBtn");
   const s = await b.state();
-  check("tickets show 1 minute and 30 seconds", s.time === "1 minute" && s.prep === "30 seconds");
-  check("radios hold the values", await b.evaluate("getTimeLimit().seconds === 60 && getPrepSeconds() === 30"));
+  check("tickets show 1 minute and 30 seconds", s.time === "1 minute" && s.prep === "30 seconds" && !s.open);
+  check("the values are in use", await b.evaluate("getTimeLimit().seconds === 60 && getPrepSeconds() === 30"));
   await b.mouse("#micBtn");
   check("prep starts", await b.waitFor("recState === 'prep'", 8000));
   check("prep countdown starts at 0:30", ["0:30", "0:29"].includes(await b.evaluate("prepCount.textContent")), await b.evaluate("prepCount.textContent"));
-  check("tickets disabled while preparing", await b.evaluate("timeTicket.disabled && prepTicket.disabled"));
+  check("tickets and show label disabled while preparing", await b.evaluate("timeTicket.disabled && prepTicket.disabled && showLabelBtn.disabled"));
   await b.mouse("#timeTicket");
   check("disabled ticket doesn't open", !(await b.state()).open);
   await sleep(1500);
   check("prep counting down from 0:30", ["0:29", "0:28", "0:27"].includes(await b.evaluate("prepCount.textContent")), await b.evaluate("prepCount.textContent"));
   await b.click("#prepStartBtn");
   check("recording", await b.waitFor("recState === 'recording'", 8000));
-  check("tickets disabled while recording", await b.evaluate("timeTicket.disabled && prepTicket.disabled"));
+  check("tickets and show label disabled while recording", await b.evaluate("timeTicket.disabled && prepTicket.disabled && showLabelBtn.disabled"));
   await sleep(1200);
   check("stopwatch limit / 1:00", (await b.evaluate("swLimit.textContent")) === " / 1:00", await b.evaluate("swLimit.textContent"));
   await sleep(15500);
   await b.click("#finishBtn");
   check("review", await b.waitFor("recState === 'review'", 5000));
-  check("tickets enabled in review", await b.evaluate("!timeTicket.disabled"));
+  check("tickets enabled in review", await b.evaluate("!timeTicket.disabled && !showLabelBtn.disabled"));
   await b.click("#takeSendBtn");
-  check("tickets disabled while uploading", await b.waitFor("timeTicket.disabled && prepTicket.disabled", 3000));
+  check("tickets disabled while uploading", await b.waitFor("timeTicket.disabled && prepTicket.disabled && showLabelBtn.disabled", 3000));
   check("intermission shows", await b.waitFor("intermissionOn && !intermission.hidden", 5000));
   check("tickets disabled during Intermission", await b.evaluate("timeTicket.disabled && appRoot.inert"));
   await b.waitFor("window.__calls.some(u => u.includes('/upload-url'))", 8000);
@@ -366,8 +362,8 @@ if (!only || only === "e2e") {
   await b.click("#backToStageBtn");
   await b.waitFor("currentView === 'stage' && !document.body.classList.contains('curtains-closed')", 5000);
   await sleep(900);
-  check("tickets enabled again after the result", await b.evaluate("!timeTicket.disabled && !prepTicket.disabled"));
-  check("choices still remembered", (await b.evaluate(`localStorage.getItem("speakreview.settings.v1")`)) === '{"time":"60","prep":"30"}');
+  check("tickets enabled again after the result", await b.evaluate("!timeTicket.disabled && !prepTicket.disabled && !showLabelBtn.disabled"));
+  check("choices still remembered", (await stored(b)) === '{"time":"60","prep":"30","name":""}', await stored(b));
   await done(b);
 }
 

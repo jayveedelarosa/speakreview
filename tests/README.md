@@ -53,9 +53,9 @@ Everything goes into `tests/.output/`, which git ignores. Nothing in it is ever 
 | `flow` | Recording: mic permission, timers, prep time, playback, sending |
 | `wall` | Wall of Fame: what is saved, validation of stored entries, playbills, clearing |
 | `trophies` | Trophy shelf: earning, locked rules, storage |
-| `stage1-stubs` | The Speaking time and Prep time stubs: opening, choosing, keyboard, saved choices (including bad stored values), no mic, end to end |
+| `stage1-stubs` | The Speaking time and Prep time stubs: opening Tonight's programme, keyboard, closing, saved choices (including bad stored values and the stage name), no mic, end to end |
 | `stage1b-ticket` | Curtains, the topic ticket and the look of the stubs |
-| `stage1b-menu` | The dressed settings menu and the topic buttons |
+| `stage1b-menu` | The topic buttons, and the programme opening inside the window at every size |
 | `stage2-nav` | Arrow signs, the bottom bar, moving between rooms |
 | `tap-highlight` | No blue tap highlight on phones |
 | `stage3-upload` | Uploading any recording or video, converting it on the device, limits and warnings |
@@ -68,6 +68,7 @@ Everything goes into `tests/.output/`, which git ignores. Nothing in it is ever 
 | `phone-scroll` | Phone heights that don't move when the toolbar slides, scenery under the scene, no overscroll, top fades |
 | `security` | Hostile text (HTML, scripts, quotes, very long strings) from the API, storage, typing and file names shows as plain text, runs nothing and keeps the layout |
 | `throttle` | Throttling (429): the wait for a result keeps going quietly and checks less often; sending tries again, then shows a calm busy message and keeps the take or file; the daily limit messages are unchanged |
+| `programme` | The stage name and Tonight's programme: opening from the show label, RUNTIME and CURTAIN IN, the red highlight, No limit, − and +, typed times, the exact seconds on the stopwatch and in the upload, name rules and hostile names (never sent), stored values, the phone sheet and on-screen keyboard, laptop sizes, contrast, 44px targets, focus rings |
 
 Most suites take an optional part name to run only part of them, for example `node suites/security.mjs wall`. Run a suite directly like this only while `npm test` isn't running, and after starting the two servers yourself:
 
