@@ -5725,7 +5725,7 @@ body.curtains-closed .drape {
     }
 
     .eyebrow {
-        font-size: 10px;
+        font-size: 11px;
     }
 
     .backstage-empty h2 {
@@ -6025,7 +6025,7 @@ body.curtains-closed .drape {
 
     :where(.backstage) .note-heading {
         margin: 14px 0 6px;
-        font-size: 10px;
+        font-size: 11px;
     }
 
     :where(.backstage) .note-item {
@@ -6136,7 +6136,7 @@ body.curtains-closed .drape {
 
     .note-heading {
         margin: 14px 0 6px;
-        font-size: 10px;
+        font-size: 11px;
     }
 
     .note-item {

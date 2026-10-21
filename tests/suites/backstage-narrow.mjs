@@ -1,5 +1,5 @@
 // One-column Backstage below 990px
-import { launch, sleep, LIVE, BASE, only, check, finish, longWords, open, done, shot } from "../lib/page.mjs";
+import { launch, sleep, LIVE, BASE, only, check, finish, longWords, open, done, shot, COLOR_CONTRAST, contrastOk } from "../lib/page.mjs";
 // ================================================================ One-column Backstage on narrow windows
 const BREAK = 990;                              // two columns from here up
 const REVIEW = {
@@ -148,6 +148,61 @@ if (!only || only === "same") {
   for (const [w, h, how, name] of CASES) {
     const d = await diff(await pic(BASE, w, h, how), await pic(LIVE, w, h, how), w, h);
     check(`${w}x${h} ${name}: pixel-identical to the previous commit`, d.n === 0, `${d.n} px differ, first ${JSON.stringify(d.first)}`);
+  }
+}
+
+// ---------------------------------------------------------------- small headings: 11px minimum
+// "Tonight's performance" and the coach's notes headings were 10px on narrow layouts; they are 11px now
+// (12px on laptops, unchanged). Each stays on one line, uncut, and the layout around them holds.
+const SECTIONS = ["Strengths", "Weaknesses", "Improvement tips", "Staying on topic", "Time management"];
+const ALL_NOTES = { wpm: 132, filler_word_total: 3, filler_word_breakdown: { um: 2, uh: 1 }, avg_confidence: 0.86, speaking_seconds: 185, time_limit_seconds: 180,
+  source: "recording", topic: "What makes a good apology?", topic_type: "reflect",
+  ai_feedback: SECTIONS.map(h => `${h}:\n1. A full sentence of feedback about this part of the speech, long enough to wrap.\n2. Another point.`).join("\n") };
+const HEADINGS = scope => `(() => {
+  const scroller = e => { for (let p = e.parentElement; p; p = p.parentElement) { const o = getComputedStyle(p).overflowY; if (o === "auto" || o === "scroll" || p.classList.contains("mirror-glass") || p.classList.contains("pb-paper")) return p; } return document.body; };
+  const items = [...document.querySelectorAll(${JSON.stringify(scope)})].filter(e => e.getClientRects().length);
+  return items.map(e => { const cs = getComputedStyle(e), r = e.getBoundingClientRect(), box = scroller(e).getBoundingClientRect();
+    return { text: e.textContent, size: parseFloat(cs.fontSize), oneLine: r.height <= parseFloat(cs.lineHeight === "normal" ? cs.fontSize * 1.5 : cs.lineHeight) * 1.5,
+      uncut: e.scrollWidth <= e.clientWidth + 1, inside: r.left >= box.left - 0.5 && r.right <= box.right + 0.5, spacing: cs.letterSpacing }; });
+})()`;
+const buttonsVisible = `(() => { const g = document.querySelector(".mirror-glass").getBoundingClientRect();
+  return [backToStageBtn, tryAgainBtn].every(e => { const r = e.getBoundingClientRect(); return r.height > 30 && r.top >= g.top - 0.5 && r.bottom <= g.bottom + 0.5 && r.left >= g.left - 0.5 && r.right <= g.right + 0.5; }); })()`;
+if (!only || only === "headings") {
+  console.log("\n== small headings at 11px or more");
+  for (const [w, h] of [[1366, 641], [1280, 800], [1920, 1080], [683, 768], [390, 780], [360, 740]]) {
+    // "Tonight's performance" was 10px only on phones (12px from 601px); the notes headings below 990px
+    const tag = `${w}x${h}`, wide = w >= BREAK, eyeSize = w <= 600 ? 11 : 12;
+    const b = await open({ width: w, height: h });
+    await b.show(ALL_NOTES);
+    const eyebrow = await b.evaluate(HEADINGS("#perfSummary .eyebrow"));
+    check(`${tag}: "Tonight's performance" ${eyeSize}px, one line, uncut`, eyebrow.length === 1 && eyebrow[0].size === eyeSize && eyebrow[0].oneLine && eyebrow[0].uncut && eyebrow[0].inside, JSON.stringify(eyebrow));
+    const heads = await b.evaluate(HEADINGS("#coachNotesBody .note-heading"));
+    check(`${tag}: all five notes headings, ${wide ? "12px" : "11px"}, each on one line, uncut`, heads.length === 5 && heads.every(x => x.size === (wide ? 12 : 11) && x.oneLine && x.uncut && x.inside)
+      && heads.map(x => x.text.toLowerCase()).join() === SECTIONS.map(x => x.toLowerCase()).join(), JSON.stringify(heads.map(x => [x.text, x.size, x.oneLine, x.uncut, x.inside])));
+    // The letter-spacing is in em (0.2em and 0.18em), so it stays in proportion
+    check(`${tag}: letter-spacing kept (0.2em, 0.18em)`, Math.abs(parseFloat(eyebrow[0].spacing) - eyebrow[0].size * 0.2) < 0.01 && heads.every(x => Math.abs(parseFloat(x.spacing) - x.size * 0.18) < 0.01), eyebrow[0].spacing + " / " + heads[0].spacing);
+    check(`${tag}: no sideways scroll, buttons still fully visible`, (await b.evaluate("document.documentElement.scrollWidth <= innerWidth")) && (await b.evaluate(buttonsVisible)));
+    contrastOk(await b.evaluate(COLOR_CONTRAST(["#perfSummary .eyebrow", "#coachNotesBody .note-heading"])), `${tag} headings`);
+    await shot(b, `headings-${tag}`);
+    await done(b);
+  }
+  // The playbill (phone and laptop): the same headings on paper
+  for (const [w, h] of [[390, 780], [1280, 800]]) {
+    const tag = `${w}x${h} playbill`, wide = w > 600;
+    const b = await open({ width: w, height: h });
+    const entry = { id: "headings-1", savedAt: new Date().toISOString(), ...ALL_NOTES };
+    await b.evaluate(`localStorage.setItem("speakreview.wall.v1", ${JSON.stringify(JSON.stringify([entry]))})`);
+    await b.evaluate(`document.querySelector('.main-nav [data-view="wall"]').click()`);
+    await sleep(300); await b.settled();
+    await b.evaluate(`document.querySelector(".wall-row .playbill").click()`);
+    await sleep(500);
+    const heads = await b.evaluate(HEADINGS("#pbNotes .note-heading"));
+    check(`${tag}: all five notes headings, ${wide ? "12px" : "11px"}, each on one line, uncut`, heads.length === 5 && heads.every(x => x.size === (wide ? 12 : 11) && x.oneLine && x.uncut && x.inside),
+      JSON.stringify(heads.map(x => [x.text, x.size, x.oneLine, x.uncut, x.inside])));
+    check(`${tag}: no sideways scroll`, await b.evaluate("document.documentElement.scrollWidth <= innerWidth"));
+    contrastOk(await b.evaluate(COLOR_CONTRAST(["#pbNotes .note-heading"])), `${tag} headings`);
+    await shot(b, `headings-${w}x${h}-playbill`);
+    await done(b);
   }
 }
 
