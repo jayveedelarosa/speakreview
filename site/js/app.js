@@ -5,6 +5,12 @@ const MAX_FILE_MB = 25;
 const MAX_DURATION_MINUTES = 10;
 const MAX_POLL_ATTEMPTS = 75;          // 75 × 4 s ≈ 5 minutes
 const POLL_INTERVAL_MS = 4000;
+const POLL_TIMEOUT_MS = MAX_POLL_ATTEMPTS * POLL_INTERVAL_MS;   // longer gaps after a 429 never stretch the wait
+const POLL_BACKOFF_MAX_MS = 10000;     // after a 429 on /result the gap doubles, up to this
+// API Gateway throttling (a 429 that isn't one of our daily limits): GET /upload-url is tried again after these gaps
+const UPLOAD_URL_RETRY_DELAYS_MS = [1000, 2000];
+const DAILY_LIMIT_ERRORS = ["visitor_limit", "daily_limit"];
+const BUSY_TEXT = "SpeakReview is busy right now. Please try again in a moment.";
 const DURATION_CHECK_TIMEOUT_MS = 5000;
 const MAX_TOPIC_LENGTH = 120;
 const MIN_TIME_LIMIT_SECONDS = 30;
@@ -894,12 +900,23 @@ async function upload(take) {
         params.set("source", isRecording ? "recording" : "upload");
         const query = params.toString();
 
-        const response = await fetch(`${API_BASE}/upload-url${query ? "?" + query : ""}`);
-
-        if(response.status === 429) {
-            const limit = await response.json().catch(() => ({}));
-            failUpload(limit.message || "Upload limit reached. Please try again later.");
-            return;
+        let response;
+        for(let retry = 0; ; retry++) {
+            // API Gateway's own 429 may come without CORS headers, so the browser reports a network error instead
+            response = await fetch(`${API_BASE}/upload-url${query ? "?" + query : ""}`).catch(() => null);
+            if(response && response.status !== 429) break;
+            const limit = response ? await response.json().catch(() => null) : null;
+            // Our own daily limits: the server's message, exactly as before
+            if(limit && DAILY_LIMIT_ERRORS.includes(limit.error)) {
+                failUpload(limit.message || "Upload limit reached. Please try again later.");
+                return;
+            }
+            // Anything else is throttling: try again a little later, then a calm message (the take or file is kept)
+            if(retry >= UPLOAD_URL_RETRY_DELAYS_MS.length) {
+                failUpload(BUSY_TEXT);
+                return;
+            }
+            await wait(UPLOAD_URL_RETRY_DELAYS_MS[retry]);
         }
 
         if(response.status === 400) {
@@ -949,24 +966,37 @@ async function pollResult(speechId) {
     let attempts = 0;
     let stopped = false;   // ignores replies that arrive after we've finished
     let showingResult = false;   // true once a result arrived and is being shown
-    const interval = setInterval(async () => {
+    let gap = POLL_INTERVAL_MS;  // time until the next check: longer after a 429, back to normal after any other reply
+    const giveUp = () => {
+        if(stopped) return;
+        stopped = true;
+        endIntermission("stage");   // curtains open back on the Stage before the message shows
+        waitNote.hidden = true;
+        statusText.innerText = "This is taking longer than expected. Please try again in a few minutes.";
+        uploadBtn.disabled = false;
+        setOptionsDisabled(false);
+    };
+    // The overall timeout, even if a check never gets an answer
+    setTimeout(giveUp, POLL_TIMEOUT_MS + POLL_INTERVAL_MS);
+    const tick = async () => {
         if(stopped) return;
         attempts++;
 
         // Checked before the request so a failing connection still gives up
         if(attempts > MAX_POLL_ATTEMPTS) {
-            stopped = true;
-            clearInterval(interval);
-            endIntermission("stage");   // curtains open back on the Stage before the message shows
-            waitNote.hidden = true;
-            statusText.innerText = "This is taking longer than expected. Please try again in a few minutes.";
-            uploadBtn.disabled = false;
-            setOptionsDisabled(false);
+            giveUp();
             return;
         }
 
         try {
             const res = await fetch(`${API_BASE}/result?speech_id=${speechId}`);
+            if(stopped) return;
+            // Throttled: keep waiting quietly, a little longer before the next check. The body is never read.
+            if(res.status === 429) {
+                gap = Math.min(gap * 2, POLL_BACKOFF_MAX_MS);
+                return;
+            }
+            gap = POLL_INTERVAL_MS;
             const result = await res.json();
 
             if(stopped) return;
@@ -975,7 +1005,6 @@ async function pollResult(speechId) {
             if(result && (result.wpm || result.too_short === true)) {
                 stopped = true;
                 showingResult = true;
-                clearInterval(interval);
                 waitNote.hidden = true;
                 uploadBtn.disabled = false;
                 setOptionsDisabled(false);
@@ -1002,8 +1031,12 @@ async function pollResult(speechId) {
                 uploadBtn.disabled = false;
                 setOptionsDisabled(false);
             }
+        } finally {
+            // Anything that isn't a finished result just waits for the next check
+            if(!stopped) setTimeout(tick, gap);
         }
-    }, POLL_INTERVAL_MS);
+    };
+    setTimeout(tick, gap);
 }
 
 // Makes text safe to put inside HTML by turning special characters into harmless codes

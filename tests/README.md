@@ -64,6 +64,7 @@ Everything goes into `tests/.output/`, which git ignores. Nothing in it is ever 
 | `backstage-column` | The Backstage left column scrolls while the buttons stay visible; tab focus |
 | `phone-scroll` | Phone heights that don't move when the toolbar slides, scenery under the scene, no overscroll, top fades |
 | `security` | Hostile text (HTML, scripts, quotes, very long strings) from the API, storage, typing and file names shows as plain text, runs nothing and keeps the layout |
+| `throttle` | Throttling (429): the wait for a result keeps going quietly and checks less often; sending tries again, then shows a calm busy message and keeps the take or file; the daily limit messages are unchanged |
 
 Most suites take an optional part name to run only part of them, for example `node suites/security.mjs wall`. Run a suite directly like this only while `npm test` isn't running, and after starting the two servers yourself:
 

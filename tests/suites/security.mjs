@@ -128,9 +128,9 @@ if (!only || only === "upload") {
   const NAME = `${IMG}${LONG(300)}.wav`;
   const ERRORS = [
     ["400 with a hostile message", 400, JSON.stringify({ message: `${IMG} ${LONG(2000)}` }), `${IMG} ${LONG(2000)}`],
-    ["429 with a script message", 429, JSON.stringify({ message: SCRIPT }), SCRIPT],
+    ["429 daily limit with a script message", 429, JSON.stringify({ error: "visitor_limit", message: SCRIPT }), SCRIPT],
     ["400 with broken JSON", 400, `{"message": "<img src=x onerror=1>`, "Please check your topic and time limit."],
-    ["429 with a message that isn't text", 429, JSON.stringify({ message: { html: IMG } }), null]
+    ["429 daily limit with a message that isn't text", 429, JSON.stringify({ error: "daily_limit", message: { html: IMG } }), null]
   ];
   for (const [w, h] of SIZES) {
     const tag = `${w}x${h}`;

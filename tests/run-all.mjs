@@ -28,7 +28,8 @@ const SUITES = [
   ["backstage-narrow", "One-column Backstage below 990px"],
   ["backstage-column", "Backstage left column and tab focus"],
   ["phone-scroll", "Phone scrolling and the Stage 7 polish"],
-  ["security", "Hostile text from outside the page"]
+  ["security", "Hostile text from outside the page"],
+  ["throttle", "Throttling: quiet waiting, retries, a calm busy message"]
 ];
 const SUITE_TIMEOUT = 30 * 60 * 1000;
 
