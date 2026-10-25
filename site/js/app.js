@@ -3,10 +3,16 @@ const API_BASE = "https://jhfndh1s03.execute-api.us-east-1.amazonaws.com";
 // Upload limits (keep in sync with the backend)
 const MAX_FILE_MB = 25;
 const MAX_DURATION_MINUTES = 10;
-const MAX_POLL_ATTEMPTS = 75;          // 75 × 4 s ≈ 5 minutes
+// Checking GET /result: every 4 s, every 2 s once the coach is writing the notes (Act III), for at most 5 minutes
+// after the upload (a time, not a number of checks, since the gap changes)
 const POLL_INTERVAL_MS = 4000;
-const POLL_TIMEOUT_MS = MAX_POLL_ATTEMPTS * POLL_INTERVAL_MS;   // longer gaps after a 429 never stretch the wait
+const POLL_GAP_COACH_MS = 2000;
+const POLL_TIMEOUT_MS = 5 * 60 * 1000;
 const POLL_BACKOFF_MAX_MS = 10000;     // after a 429 on /result the gap doubles, up to this
+const RESULT_GONE_STATUSES = [400, 404, 410];   // the server has no record of the speech
+// The tab title while the visitor is away and the notes arrive
+const PAGE_TITLE = document.title;
+const NOTES_READY_TITLE = "Your notes are ready · SpeakReview";
 // API Gateway throttling (a 429 that isn't one of our daily limits): GET /upload-url is tried again after these gaps
 const UPLOAD_URL_RETRY_DELAYS_MS = [1000, 2000];
 const DAILY_LIMIT_ERRORS = ["visitor_limit", "daily_limit"];
@@ -123,9 +129,9 @@ const coachNotesTitle = document.getElementById("coachNotesTitle");
 const backstageEmptyTitle = document.getElementById("backstageEmptyTitle");
 const mirror = document.getElementById("mirror");
 const intermission = document.getElementById("intermission");
-const intermissionText = document.getElementById("intermissionText");
-const intermissionDots = document.getElementById("intermissionDots");
-const intermissionNote = document.getElementById("intermissionNote");
+const ibActItems = document.querySelectorAll("#ibActs .ib-act");
+const ibKeep = document.getElementById("ibKeep");
+const ibWait = document.getElementById("ibWait");
 const sceneAnnounce = document.getElementById("sceneAnnounce");
 const appRoot = document.querySelector(".app");
 // Every topic and time control, so they can be locked while a speech is being analyzed
@@ -1032,8 +1038,8 @@ async function upload(take) {
         // The take reached the server, so leaving the page no longer loses it
         if(isRecording) markTakeSent(take);
 
-        // Uploaded: Intermission now says the coach is reviewing the speech
-        setIntermissionPhase("review");
+        // Uploaded: Act I is done (the coach has it) and Act II begins
+        setAct(2);
         statusText.innerText = "Analyzing Performance Patterns...";
         waitNote.hidden = false;
         pollResult(data.fileId);
@@ -1044,49 +1050,112 @@ async function upload(take) {
     }
 }
 
-async function pollResult(speechId) {
-    let attempts = 0;
-    let stopped = false;   // ignores replies that arrive after we've finished
-    let showingResult = false;   // true once a result arrived and is being shown
-    let gap = POLL_INTERVAL_MS;  // time until the next check: longer after a 429, back to normal after any other reply
-    const giveUp = () => {
-        if(stopped) return;
+// Checks GET /result for one speech until it is finished, the server has no record of it, or the deadline
+// passes. Every 4 s, and every 2 s once a reply says the coach has started (progress "coach"). After a 429 the
+// gap doubles (up to 10 s, the reply is never read or shown) and goes back to normal after any other reply.
+// Network errors and replies that aren't finished just wait for the next check. Returns { stop, checkNow }.
+const resultWatchers = new Set();
+
+function watchResult(speechId, { deadline, firstDelay, onProgress, onResult, onGiveUp, onGone }) {
+    let stopped = false;
+    let checking = false;        // a check is waiting for its reply
+    let coachStarted = false;
+    let gap = POLL_INTERVAL_MS;
+    let timer = null;
+    let deadlineTimer = null;
+    const normalGap = () => (coachStarted ? POLL_GAP_COACH_MS : POLL_INTERVAL_MS);
+    const stop = () => {
         stopped = true;
+        clearTimeout(timer);
+        clearTimeout(deadlineTimer);
+        resultWatchers.delete(watcher);
+    };
+    const giveUp = () => {
+        if (stopped) return;
+        stop();
+        onGiveUp();
+    };
+
+    const check = async () => {
+        if (stopped || checking) return;
+        clearTimeout(timer);
+        checking = true;
+        let finished = null;
+        try {
+            const res = await fetch(`${API_BASE}/result?speech_id=${encodeURIComponent(speechId)}`);
+            if (stopped) return;
+            // Throttled: keep waiting quietly, a little longer before the next check. The body is never read.
+            if (res.status === 429) {
+                gap = Math.min(gap * 2, POLL_BACKOFF_MAX_MS);
+                return;
+            }
+            gap = normalGap();
+            if (RESULT_GONE_STATUSES.includes(res.status)) {
+                stop();
+                onGone();
+                return;
+            }
+            const result = await res.json();
+            if (stopped) return;
+            // A too-short speech is finished too, even with no words per minute
+            if (result && (result.wpm || result.too_short === true)) {
+                stop();
+                finished = result;          // shown below, once this check has tidied up
+            } else if (result && result.progress === "coach" && !coachStarted) {
+                coachStarted = true;
+                gap = normalGap();
+                onProgress();
+            }
+        } catch (err) {
+            console.error("Polling...", err);
+        } finally {
+            checking = false;
+            if (!stopped) {
+                // Past the deadline (the first check of an old speech, or timers paused in the background)
+                if (Date.now() >= deadline) giveUp();
+                else timer = setTimeout(check, gap);
+            }
+        }
+        if (finished) onResult(finished);
+    };
+
+    const watcher = { stop, checkNow: check };
+    resultWatchers.add(watcher);
+    if (deadline > Date.now()) deadlineTimer = setTimeout(giveUp, deadline - Date.now());
+    timer = setTimeout(check, firstDelay);
+    return watcher;
+}
+
+// Coming back to the page checks straight away: phones can pause timers while the page is in the background
+function checkResultsNow() {
+    resultWatchers.forEach(watcher => watcher.checkNow());
+}
+
+// The notes arrived while the visitor was away: the tab says so until they come back
+function markNotesReady() {
+    if (document.hidden) document.title = NOTES_READY_TITLE;
+}
+
+// The speech that was just sent: Intermission follows it act by act, and Backstage opens on the result
+let liveWatcher = null;
+
+function pollResult(speechId) {
+    if (liveWatcher) liveWatcher.stop();
+    const giveUp = () => {
         endIntermission("stage");   // curtains open back on the Stage before the message shows
         waitNote.hidden = true;
         statusText.innerText = "This is taking longer than expected. Please try again in a few minutes.";
         uploadBtn.disabled = false;
         setOptionsDisabled(false);
     };
-    // The overall timeout, even if a check never gets an answer
-    setTimeout(giveUp, POLL_TIMEOUT_MS + POLL_INTERVAL_MS);
-    const tick = async () => {
-        if(stopped) return;
-        attempts++;
-
-        // Checked before the request so a failing connection still gives up
-        if(attempts > MAX_POLL_ATTEMPTS) {
-            giveUp();
-            return;
-        }
-
-        try {
-            const res = await fetch(`${API_BASE}/result?speech_id=${speechId}`);
-            if(stopped) return;
-            // Throttled: keep waiting quietly, a little longer before the next check. The body is never read.
-            if(res.status === 429) {
-                gap = Math.min(gap * 2, POLL_BACKOFF_MAX_MS);
-                return;
-            }
-            gap = POLL_INTERVAL_MS;
-            const result = await res.json();
-
-            if(stopped) return;
-
-            // A too-short speech is finished too, even with no words per minute
-            if(result && (result.wpm || result.too_short === true)) {
-                stopped = true;
-                showingResult = true;
+    liveWatcher = watchResult(speechId, {
+        deadline: Date.now() + POLL_TIMEOUT_MS,
+        firstDelay: POLL_INTERVAL_MS,
+        onProgress: () => setAct(3),
+        onGiveUp: giveUp,
+        onGone: giveUp,
+        onResult: result => {
+            try {
                 waitNote.hidden = true;
                 uploadBtn.disabled = false;
                 setOptionsDisabled(false);
@@ -1098,27 +1167,19 @@ async function pollResult(speechId) {
                 const unlocked = isNew && result.too_short !== true ? recordTrophies(result) : [];
                 displayResult(result);      // fills Backstage and opens the curtains on it
                 showTrophyBanner(unlocked);
-                return;
-            }
-        } catch(err) {
-            console.error("Polling...", err);
-            // A network or server error while still polling just tries again on the next tick (as before),
-            // and the timeout above opens the curtains if it never succeeds. But if a result arrived and
-            // showing it failed, nothing will try again, so open the curtains on the Stage and show the
-            // existing error message.
-            if(showingResult) {
+                markNotesReady();
+            } catch (err) {
+                // Showing the result failed and nothing will try again, so open the curtains on the Stage
+                // and show the existing error message
+                console.error("Polling...", err);
                 endIntermission("stage");
                 waitNote.hidden = true;
                 statusText.innerText = "Technical error occurred.";
                 uploadBtn.disabled = false;
                 setOptionsDisabled(false);
             }
-        } finally {
-            // Anything that isn't a finished result just waits for the next check
-            if(!stopped) setTimeout(tick, gap);
         }
-    };
-    setTimeout(tick, gap);
+    });
 }
 
 // Makes text safe to put inside HTML by turning special characters into harmless codes
@@ -1832,30 +1893,43 @@ function layoutSignBulbs() {
     });
 }
 
-// What Intermission says while the speech uploads, then while the coach reviews it
-const INTERMISSION_PHASES = {
-    upload: {
-        text: "Taking your speech backstage...",
-        dots: false,
-        announce: "Taking your speech backstage."
-    },
-    review: {
-        text: "Your coach is reviewing your speech",
-        dots: true,
-        announce: "Your coach is reviewing your speech. Longer speeches can take a few minutes to analyze. Please keep this page open."
-    }
+// The three acts on Intermission's marquee board: Act I while the speech is sent, Act II while its words are
+// written down, Act III while the coach writes the notes. They only ever move forward. Only Act I asks the
+// visitor to keep the page open: once the recording has arrived, the notes wait for them.
+const ACTS = {
+    1: { title: "Sending", sub: "Sending your recording to your coach",
+        announce: "Act I, Sending. Sending your recording to your coach. Keep this page open until your recording is sent." },
+    2: { announce: "Your recording arrived. Act II, Transcribing. Writing down every word." },
+    3: { announce: "Act III, Coach's notes. Reading and writing your feedback." }
 };
-let intermissionPhase = "upload";
+const ACT_ONE_ARRIVED = { title: "Arrived", sub: "Your coach has it" };
+const ACT_STATE_WORDS = { done: "Done", now: "Now playing", next: "Next" };
+let intermissionAct = 1;
 
-// Changes the Intermission text. It is announced once, only if Intermission is already showing
-// (otherwise startIntermission announces it when the curtains finish closing).
-function setIntermissionPhase(phase) {
-    intermissionPhase = phase;
-    const info = INTERMISSION_PHASES[phase];
-    intermissionText.textContent = info.text;
-    intermissionDots.hidden = !info.dots;
-    intermissionNote.hidden = !info.dots;
-    if (!intermission.hidden) announceScene(info.announce);
+// Shows each act as done, now playing or next, the lines between them, and the right line under the board
+function renderActs() {
+    ibActItems.forEach((item, index) => {
+        const act = index + 1;
+        const state = act < intermissionAct ? "done" : act === intermissionAct ? "now" : "next";
+        item.dataset.state = state;
+        item.querySelector(".ib-state").textContent = ACT_STATE_WORDS[state];
+        const link = item.querySelector(".ib-link");
+        if (link) link.dataset.reached = String(intermissionAct > act);
+    });
+    const first = intermissionAct > 1 ? ACT_ONE_ARRIVED : ACTS[1];
+    ibActItems[0].querySelector(".ib-title").textContent = first.title;
+    ibActItems[0].querySelector(".ib-sub").textContent = first.sub;
+    ibKeep.hidden = intermissionAct > 1;
+    ibWait.hidden = intermissionAct === 1;
+}
+
+// Moves on to a later act (never back). Each new act is announced once, only if Intermission is already
+// showing (otherwise startIntermission announces the current act when the curtains finish closing).
+function setAct(act) {
+    if (act <= intermissionAct) return;
+    intermissionAct = act;
+    renderActs();
+    if (!intermission.hidden) announceScene(ACTS[act].announce);
 }
 
 // The curtains close and Intermission shows over them while the speech uploads and the coach reviews it
@@ -1863,14 +1937,15 @@ function startIntermission() {
     if (intermissionOn) return;
     intermissionOn = true;
     setPrivacyOpen(false);
-    setIntermissionPhase("upload");
+    intermissionAct = 1;
+    renderActs();
     // inert: everything behind the closed curtains is unclickable and hidden from keyboards and screen readers
     appRoot.inert = true;
     queueScene(async () => {
         await setCurtains(true);
         if (!intermissionOn) return;         // it already ended while the curtains were closing
         intermission.hidden = false;
-        announceScene("Intermission. " + INTERMISSION_PHASES[intermissionPhase].announce);
+        announceScene("Intermission. " + ACTS[intermissionAct].announce);
     });
 }
 
@@ -3665,6 +3740,10 @@ function isTouchDevice() {
 }
 
 document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+        document.title = PAGE_TITLE;            // "Your notes are ready" has been seen
+        checkResultsNow();                      // timers may have been paused while the page was away
+    }
     if (document.hidden) {
         // Phones pause or cut the mic when the page is hidden, so stop and keep what was recorded
         if (recState === "recording" && isTouchDevice()) onMicInterrupted();

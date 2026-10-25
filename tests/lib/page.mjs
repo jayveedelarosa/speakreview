@@ -53,6 +53,9 @@ export const STUB = `
 (() => {
   window.__calls = [];
   window.__result = null;
+  // /result can reply in steps before the result: each step is a reply body (for example {} then
+  // {"progress": "coach"}), or { status: 404 } for a bare status
+  window.__resultSteps = [];
   window.alert = () => { window.__alerted = true; };
   const realFetch = window.fetch.bind(window);
   window.fetch = async (url, opts = {}) => {
@@ -61,7 +64,11 @@ export const STUB = `
     const json = obj => new Response(JSON.stringify(obj), { status: 200, headers: { "Content-Type": "application/json" } });
     if (url.includes("/upload-url")) return json({ fileId: "f" + window.__calls.length, upload: { url: "https://public-speaking-coach-jayvee.s3.amazonaws.com/", fields: { key: "k" } } });
     if (url === "https://public-speaking-coach-jayvee.s3.amazonaws.com/") return new Response(null, { status: 204 });
-    if (url.includes("/result")) return json(window.__result);
+    if (url.includes("/result")) {
+      const step = window.__resultSteps.shift();
+      if (step && typeof step.status === "number") return new Response("{}", { status: step.status, headers: { "Content-Type": "application/json" } });
+      return json(step !== undefined ? step : window.__result);
+    }
     return realFetch(url, opts);
   };
 })();`;

@@ -5000,28 +5000,216 @@ body.curtains-closed .drape {
     color: #F6E4CC;
 }
 
-.intermission-note {
-    max-width: 460px;
+/* The marquee board: three acts on a lit wooden frame (Act I sending, Act II transcribing, Act III the coach's
+   notes). app.js sets each act's data-state ("done", "now" or "next") and moves them forward only. */
+.ib-board {
+    position: relative;
+    width: min(786px, 100%);
+    margin-top: 12px;
+    padding: 14px;
+    border-radius: 14px;
+    background: linear-gradient(160deg, #8A5A2E, #4A2A14 55%, #6E4522);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(240, 207, 134, 0.35);
+}
+
+/* Small marquee bulbs along the top and bottom edges of the frame (17 a row; 9 on phones) */
+.ib-bulbs {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.ib-bulbs-top {
+    top: 2.5px;
+}
+
+.ib-bulbs-bottom {
+    bottom: 2.5px;
+}
+
+.ib-bulb {
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    background: radial-gradient(circle at 40% 35%, #FFFFFF, #FFDFA0 60%);
+    box-shadow: 0 0 6px 2px rgba(255, 200, 120, 0.6);
+}
+
+/* The dark inner panel holding the acts, side by side */
+.ib-acts {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 64px;
+    margin: 0;
+    padding: 22px 30px 18px;
+    border-radius: 6px;
+    list-style: none;
+    background:
+        radial-gradient(ellipse 80% 70% at 50% 0%, rgba(255, 220, 170, 0.08), rgba(0, 0, 0, 0) 70%),
+        linear-gradient(180deg, #1C0E0B, #0F0705);
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.7);
+}
+
+.ib-act {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    width: 200px;
+}
+
+.ib-mark {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Each act's bulb, with a small brass base under it */
+.ib-bulb-big {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+}
+
+.ib-tick {
+    display: none;
+}
+
+.ib-base {
+    width: 14px;
+    height: 5px;
+    margin-top: -3px;
+    border-radius: 0 0 3px 3px;
+    background: linear-gradient(180deg, #B8893A, #6E4A1E);
+}
+
+/* The line to the next act: 64px across the gap, from the middle of this bulb's side */
+.ib-link {
+    position: absolute;
+    top: 16px;
+    left: calc(100% + 83px);
+    width: 64px;
+    border-top: 2px dashed rgba(246, 234, 211, 0.3);
+}
+
+.ib-link[data-reached="true"] {
+    border-top-style: solid;
+    border-top-color: #D9AE52;
+}
+
+.ib-words {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.ib-kicker {
+    order: 1;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
+
+.ib-title {
+    order: 2;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.ib-sub {
+    order: 3;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.ib-state {
+    order: 4;
+    margin-top: 2px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+/* Done: a lit bulb with a dark tick */
+.ib-act[data-state="done"] .ib-bulb-big {
+    background: radial-gradient(circle at 40% 35%, #FFF3D6, #F0CF86 55%, #C9963E);
+    box-shadow: 0 0 10px 3px rgba(255, 200, 120, 0.5);
+}
+
+.ib-act[data-state="done"] .ib-tick {
+    display: block;
+}
+
+/* Now playing: the brightest bulb, with a slow glow pulse */
+.ib-act[data-state="now"] .ib-bulb-big {
+    background: radial-gradient(circle at 40% 35%, #FFFFFF, #FFE7B0 45%, #E8A84A);
+    animation: ibGlow 1.8s ease-in-out infinite;
+}
+
+@keyframes ibGlow {
+    0%, 100% { box-shadow: 0 0 10px 3px rgba(255, 200, 120, 0.45); }
+    50% { box-shadow: 0 0 24px 9px rgba(255, 210, 130, 0.85); }
+}
+
+/* Next: an unlit bulb */
+.ib-act[data-state="next"] .ib-bulb-big {
+    border-color: rgba(246, 234, 211, 0.22);
+    background: radial-gradient(circle at 40% 35%, #8A6A4A, #3A2416 70%);
+}
+
+.ib-act[data-state="done"] .ib-kicker,
+.ib-act[data-state="now"] .ib-kicker,
+.ib-act[data-state="done"] .ib-state {
+    color: #F0CF86;
+}
+
+.ib-act[data-state="now"] .ib-title {
+    color: #FFF6E3;
+}
+
+.ib-act[data-state="done"] .ib-title {
+    color: #EFE2CF;
+}
+
+.ib-act[data-state="done"] .ib-sub,
+.ib-act[data-state="now"] .ib-sub {
+    color: #D8C6AE;
+}
+
+.ib-act[data-state="now"] .ib-state {
+    color: #FFE7B0;
+}
+
+.ib-act[data-state="next"] .ib-kicker,
+.ib-act[data-state="next"] .ib-sub,
+.ib-act[data-state="next"] .ib-state {
+    color: #A8977F;
+}
+
+.ib-act[data-state="next"] .ib-title {
+    color: #BCA992;
+}
+
+/* Under the board: "Keep this page open..." during Act I, then "Usually under a minute..." */
+.ib-footer {
+    max-width: 786px;
+    margin-top: 6px;
     font-size: 14px;
-    color: #E6CFB4;
-}
-
-/* The three dots pulse gently, one after another */
-@keyframes dotPulse {
-    0%, 100% { opacity: 0.2; }
-    50% { opacity: 1; }
-}
-
-.intermission .dot {
-    animation: dotPulse 1.4s ease-in-out infinite;
-}
-
-.intermission .dot:nth-child(2) {
-    animation-delay: 0.2s;
-}
-
-.intermission .dot:nth-child(3) {
-    animation-delay: 0.4s;
+    line-height: 1.45;
+    color: #F1E2CC;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85);
 }
 
 /* Short laptop windows: a more compact Backstage */
@@ -6740,8 +6928,115 @@ body.curtains-closed .drape {
         font-size: 15px;
     }
 
-    .intermission-note {
-        font-size: 12px;
+    /* The board on phones: full width less 18px each side, the acts stacked with short lines between them */
+    .intermission {
+        gap: 10px;
+        padding: 24px 18px;
+    }
+
+    .ib-board {
+        margin-top: 8px;
+        padding: 13px;
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(240, 207, 134, 0.35);
+    }
+
+    .ib-bulb {
+        width: 8px;
+        height: 8px;
+        box-shadow: 0 0 5px 2px rgba(255, 200, 120, 0.6);
+    }
+
+    /* 9 bulbs a row: every other one of the 17 */
+    .ib-bulb:nth-child(even) {
+        display: none;
+    }
+
+    .ib-acts {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        padding: 16px 16px 6px;
+        text-align: left;
+    }
+
+    .ib-act {
+        flex-direction: row;
+        align-items: stretch;
+        gap: 14px;
+        width: auto;
+    }
+
+    .ib-mark {
+        flex: none;
+        width: 32px;
+    }
+
+    .ib-bulb-big {
+        flex: none;
+        width: 30px;
+        height: 30px;
+    }
+
+    .ib-tick {
+        width: 14px;
+        height: 14px;
+    }
+
+    .ib-base {
+        flex: none;
+        width: 12px;
+        height: 4px;
+        margin-top: -2px;
+    }
+
+    /* The line to the next act runs down the bulb column */
+    .ib-link {
+        position: static;
+        flex: 1;
+        width: 0;
+        min-height: 14px;
+        margin: 4px 0;
+        border-top: 0;
+        border-left: 2px dashed rgba(246, 234, 211, 0.3);
+    }
+
+    .ib-link[data-reached="true"] {
+        border-left-style: solid;
+        border-left-color: #D9AE52;
+    }
+
+    /* Kicker with the state word on its right, then the title and the line */
+    .ib-words {
+        flex: 1;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: baseline;
+        gap: 2px 8px;
+        padding-bottom: 12px;
+    }
+
+    .ib-kicker {
+        grid-area: 1 / 1;
+        letter-spacing: 0.2em;
+    }
+
+    .ib-state {
+        grid-area: 1 / 2;
+        margin-top: 0;
+        letter-spacing: 0.12em;
+    }
+
+    .ib-title {
+        grid-area: 2 / 1 / 3 / 3;
+    }
+
+    .ib-sub {
+        grid-area: 3 / 1 / 4 / 3;
+    }
+
+    .ib-footer {
+        margin-top: 4px;
+        font-size: 13px;
     }
 }
 

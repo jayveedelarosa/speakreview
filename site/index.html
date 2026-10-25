@@ -576,12 +576,47 @@
 <div class="drape drape-left" aria-hidden="true"></div>
 <div class="drape drape-right" aria-hidden="true"></div>
 
-<!-- Shown over the closed curtains while the coach reviews the speech (announced through #sceneAnnounce) -->
+<!-- Shown over the closed curtains while the speech is sent and the coach reviews it. The marquee board shows
+     the three acts; app.js moves them forward and announces each new act once through #sceneAnnounce. -->
 <div id="intermission" class="intermission" aria-hidden="true" hidden>
     <p class="intermission-brand">SpeakReview</p>
     <p class="intermission-title">Intermission</p>
-    <p class="intermission-text"><span id="intermissionText">Your coach is reviewing your speech</span><span id="intermissionDots"><span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span></p>
-    <p id="intermissionNote" class="intermission-note">Longer speeches can take a few minutes to analyze. Please keep this page open.</p>
+    <p class="intermission-text">Your coach is reviewing your speech.</p>
+    <div class="ib-board">
+        <span class="ib-bulbs ib-bulbs-top"><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span></span>
+        <span class="ib-bulbs ib-bulbs-bottom"><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span><span class="ib-bulb"></span></span>
+        <ol id="ibActs" class="ib-acts">
+            <li class="ib-act" data-act="1" data-state="now">
+                <span class="ib-mark"><span class="ib-bulb-big"><svg class="ib-tick" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3A1E08" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span><span class="ib-base"></span><span class="ib-link"></span></span>
+                <span class="ib-words">
+                    <span class="ib-kicker">Act I</span>
+                    <span class="ib-state">Now playing</span>
+                    <span class="ib-title">Sending</span>
+                    <span class="ib-sub">Sending your recording to your coach</span>
+                </span>
+            </li>
+            <li class="ib-act" data-act="2" data-state="next">
+                <span class="ib-mark"><span class="ib-bulb-big"><svg class="ib-tick" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3A1E08" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span><span class="ib-base"></span><span class="ib-link"></span></span>
+                <span class="ib-words">
+                    <span class="ib-kicker">Act II</span>
+                    <span class="ib-state">Next</span>
+                    <span class="ib-title">Transcribing</span>
+                    <span class="ib-sub">Writing down every word</span>
+                </span>
+            </li>
+            <li class="ib-act" data-act="3" data-state="next">
+                <span class="ib-mark"><span class="ib-bulb-big"><svg class="ib-tick" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3A1E08" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span><span class="ib-base"></span></span>
+                <span class="ib-words">
+                    <span class="ib-kicker">Act III</span>
+                    <span class="ib-state">Next</span>
+                    <span class="ib-title">Coach's notes</span>
+                    <span class="ib-sub">Reading and writing your feedback</span>
+                </span>
+            </li>
+        </ol>
+    </div>
+    <p id="ibKeep" class="ib-footer">Keep this page open until your recording is sent.</p>
+    <p id="ibWait" class="ib-footer" hidden><span class="long-label">Usually under a minute. You can switch tabs or close the page: your notes will be waiting.</span><span class="short-label">Usually under a minute. You can switch apps or close the page: your notes will be waiting.</span></p>
 </div>
 
 <!-- An open playbill from the Wall of Fame. Filled by openPlaybill() with textContent; the notes use the

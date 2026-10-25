@@ -69,6 +69,7 @@ Everything goes into `tests/.output/`, which git ignores. Nothing in it is ever 
 | `security` | Hostile text (HTML, scripts, quotes, very long strings) from the API, storage, typing and file names shows as plain text, runs nothing and keeps the layout |
 | `throttle` | Throttling (429): the wait for a result keeps going quietly and checks less often; sending tries again, then shows a calm busy message and keeps the take or file; the daily limit messages are unchanged |
 | `programme` | The stage name and Tonight's programme: opening from the show label, RUNTIME and CURTAIN IN, the red highlight, No limit, − and +, typed times, the exact seconds on the stopwatch and in the upload, name rules and hostile names (never sent), stored values, the phone sheet and on-screen keyboard, laptop sizes, contrast, 44px targets, focus rings |
+| `intermission` | Intermission's three acts (order, wording, never moving back, laptop and phone layout, contrast, announcements, glow), checking `/result` every 4 s then every 2 s in Act III, the tab title when the notes arrive while away, checking straight away on return, giving up after 5 minutes (with a fake clock, so it runs in seconds), and the Coming back note |
 
 Most suites take an optional part name to run only part of them, for example `node suites/security.mjs wall`. Run a suite directly like this only while `npm test` isn't running, and after starting the two servers yourself:
 
