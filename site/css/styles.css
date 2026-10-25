@@ -7073,6 +7073,217 @@ body.curtains-closed .drape {
     }
 }
 
+/* ---------- Coming back: the note when a performance finished while the visitor was away ---------- */
+/* A pinned paper card like Tonight's programme, over a dimmed Stage */
+.cb-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(8, 3, 2, 0.55);
+}
+
+.cb-card {
+    position: relative;
+    width: min(450px, 100%);
+    padding: 20px;
+    border-radius: 2px;
+    color: #2A1A0E;
+    font-family: var(--sans);
+    text-align: left;
+    transform: rotate(-0.8deg);
+    background:
+        repeating-linear-gradient(0deg, rgba(110, 80, 40, 0.03) 0 1px, rgba(0, 0, 0, 0) 1px 4px),
+        linear-gradient(180deg, #F7ECD3, #EAD9B6);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7), inset 0 0 30px rgba(120, 80, 30, 0.18);
+}
+
+.cb-pin {
+    position: absolute;
+    top: -7px;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin-left: -8px;
+    border-radius: 999px;
+    background: radial-gradient(circle at 35% 35%, #F5D891, #8C6224);
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.45);
+}
+
+.cb-box {
+    border: 1.5px solid #2A1A0E;
+}
+
+.cb-box p {
+    margin: 0;
+}
+
+.cb-head {
+    padding: 12px 16px 10px;
+    border-bottom: 1.5px solid #2A1A0E;
+    background: rgba(42, 26, 14, 0.05);
+}
+
+.cb-kicker {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #7A1222;
+}
+
+.cb-title {
+    margin: 2px 0 0;
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #2A1A0E;
+}
+
+.cb-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 16px 14px;
+    border-bottom: 1px solid #2A1A0E;
+}
+
+.cb-line {
+    font-size: 13px;
+    color: #5A4330;
+}
+
+.cb-label {
+    margin-top: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #5A4330;
+}
+
+.cb-topic {
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.cb-meta {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: #5A4330;
+}
+
+.cb-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+}
+
+.cb-not-now,
+.cb-see {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 0 4px;
+    border: 0;
+    background: transparent;
+    font-family: var(--sans);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    cursor: pointer;
+}
+
+.cb-not-now {
+    font-size: 14px;
+    font-weight: 600;
+    color: #5A4330;
+}
+
+.cb-see {
+    font-size: 15px;
+    font-weight: 800;
+    color: #7A1222;
+}
+
+.cb-not-now:focus-visible,
+.cb-see:focus-visible {
+    outline: 2px solid #7A1222;
+    outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+    .cb-overlay {
+        padding: 18px;
+        background: rgba(8, 3, 2, 0.62);
+    }
+
+    .cb-card {
+        width: 100%;
+        padding: 16px;
+    }
+
+    .cb-pin {
+        width: 14px;
+        height: 14px;
+        margin-left: -7px;
+    }
+
+    .cb-head {
+        padding: 10px 12px 8px;
+    }
+
+    .cb-kicker {
+        letter-spacing: 0.16em;
+    }
+
+    .cb-title {
+        font-size: 19px;
+    }
+
+    .cb-body {
+        gap: 3px;
+        padding: 10px 12px 12px;
+    }
+
+    .cb-line {
+        font-size: 12px;
+    }
+
+    .cb-label {
+        letter-spacing: 0.14em;
+    }
+
+    .cb-topic {
+        font-size: 16px;
+    }
+
+    .cb-meta {
+        font-size: 11px;
+    }
+
+    .cb-buttons {
+        padding: 8px 12px;
+    }
+
+    .cb-not-now {
+        font-size: 13px;
+    }
+
+    .cb-see {
+        font-size: 14px;
+    }
+}
+
 /* ---------- Reduced motion: no animation at all ---------- */
 @media (prefers-reduced-motion: reduce) {
     *,
@@ -7096,7 +7307,8 @@ body.curtains-closed .drape {
     .ticket-wrap,
     .review,
     .programme,
-    .prog-done {
+    .prog-done,
+    .cb-card {
         transform: none !important;
     }
 }

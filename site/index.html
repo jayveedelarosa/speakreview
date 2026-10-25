@@ -686,6 +686,30 @@
     </div>
 </div>
 
+<!-- Coming back: a performance that finished while the visitor was away. Filled by app.js with textContent;
+     while it is open the rest of the page is inert and focus stays inside. -->
+<div id="comebackDialog" class="cb-overlay" hidden>
+    <div class="cb-card" role="dialog" aria-modal="true" aria-labelledby="cbTitle" aria-describedby="cbLine">
+        <span class="cb-pin" aria-hidden="true"></span>
+        <div class="cb-box">
+            <div class="cb-head">
+                <p class="cb-kicker">A note from backstage</p>
+                <h2 id="cbTitle" class="cb-title">Your last performance is ready.</h2>
+            </div>
+            <div class="cb-body">
+                <p id="cbLine" class="cb-line">The coach finished your notes while you were away.</p>
+                <p class="cb-label">Topic</p>
+                <p id="cbTopic" class="cb-topic"></p>
+                <p id="cbMeta" class="cb-meta"></p>
+            </div>
+            <div class="cb-buttons">
+                <button type="button" id="cbNotNow" class="cb-not-now">Not now</button>
+                <button type="button" id="cbSee" class="cb-see">See your notes<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- "Clear the wall" asks first -->
 <div id="clearWallDialog" class="pb-overlay" hidden>
     <div class="pb-frame pb-frame-small" role="dialog" aria-modal="true" aria-labelledby="clearWallQuestion">

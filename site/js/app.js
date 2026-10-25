@@ -1038,8 +1038,10 @@ async function upload(take) {
         // The take reached the server, so leaving the page no longer loses it
         if(isRecording) markTakeSent(take);
 
-        // Uploaded: Act I is done (the coach has it) and Act II begins
+        // Uploaded: Act I is done (the coach has it) and Act II begins. From now on the speech is kept on this
+        // device, so a visitor who leaves can still see the notes when they come back.
         setAct(2);
+        savePending(data.fileId, topic, speakFreely);
         statusText.innerText = "Analyzing Performance Patterns...";
         waitNote.hidden = false;
         pollResult(data.fileId);
@@ -1160,6 +1162,7 @@ function pollResult(speechId) {
                 uploadBtn.disabled = false;
                 setOptionsDisabled(false);
                 statusText.innerText = "Spotlight Ready.";
+                clearPending(speechId);     // shown now, so it never comes back as a note
                 // Never throw; only real results get here, not console tests. A performance already
                 // on the wall is never counted toward trophies twice.
                 const isNew = saveToWall(speechId, result);
@@ -4723,6 +4726,174 @@ function loadSettings() {
     if (saved.migrated) saveSettings();     // the old 2 minutes is stored as 1 minute from now on
 }
 
+// ---------------------------
+// Coming back: a performance that finished while the visitor was away
+// ---------------------------
+// Once a speech has arrived (Act II) a small pending entry is kept on this device: its id, when it was sent and
+// its topic. If the visitor leaves before the notes show, the next visit checks /result once (and keeps checking
+// quietly until 5 minutes after the upload), saves the performance to the Wall of Fame, counts its trophies the
+// same way as always, and shows a short note. There is only ever one entry. It is untrusted when read back, so
+// every field is checked, and it never lasts more than 30 days (results are kept 30 days on the server).
+const PENDING_KEY = "speakreview.pending.v1";
+const PENDING_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const PENDING_ID_PATTERN = /^[A-Za-z0-9._-]{1,200}$/;
+const comebackDialog = document.getElementById("comebackDialog");
+const cbTopic = document.getElementById("cbTopic");
+const cbMeta = document.getElementById("cbMeta");
+const cbSee = document.getElementById("cbSee");
+const cbNotNow = document.getElementById("cbNotNow");
+let pendingWatcher = null;     // the quiet background check for a pending entry
+let comebackWaiting = null;    // { entry, result, unlocked } waiting for a calm moment on the Stage
+let comebackOpen = null;       // the same, while the note is open
+let comebackTimer = null;
+
+function dropPending() {
+    try {
+        localStorage.removeItem(PENDING_KEY);
+    } catch (err) {
+        // Storage is blocked: nothing was kept
+    }
+}
+
+// Starts keeping the speech that just arrived. It replaces any older entry, and stops checking for that one.
+function savePending(id, topic, freely) {
+    if (pendingWatcher) pendingWatcher.stop();
+    pendingWatcher = null;
+    try {
+        localStorage.setItem(PENDING_KEY, JSON.stringify({ id: String(id), at: Date.now(), topic, freely }));
+    } catch (err) {
+        // Storage is blocked or full: coming back just won't show a note
+    }
+}
+
+// Reads the pending entry back. Anything that isn't exactly what savePending writes (or is 30 days old, or
+// from the future) is removed and ignored. Returns { id, at, topic, freely } or null.
+function readPending() {
+    let text = null;
+    try {
+        text = localStorage.getItem(PENDING_KEY);
+    } catch (err) {
+        return null;
+    }
+    if (text === null) return null;
+    let data = null;
+    try {
+        data = JSON.parse(text);
+    } catch (err) {
+        data = null;
+    }
+    const now = Date.now();
+    const valid = data !== null && typeof data === "object" && !Array.isArray(data)
+        && typeof data.id === "string" && PENDING_ID_PATTERN.test(data.id)
+        && typeof data.at === "number" && Number.isFinite(data.at) && data.at <= now + 60 * 1000 && now - data.at < PENDING_MAX_AGE_MS
+        && typeof data.topic === "string" && data.topic.length <= MAX_TOPIC_LENGTH
+        && typeof data.freely === "boolean";
+    if (!valid) {
+        dropPending();
+        return null;
+    }
+    return { id: data.id, at: data.at, topic: data.topic.replace(/[\r\n]+/g, " ").trim(), freely: data.freely };
+}
+
+// The result for this speech has been shown or saved: it no longer needs keeping (a newer entry stays)
+function clearPending(id) {
+    const entry = readPending();
+    if (entry && entry.id === String(id)) dropPending();
+}
+
+// "Today", "Yesterday", or a short date like "Oct 20" (with the year if it isn't this year)
+function noteDayLabel(date) {
+    const today = new Date();
+    const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+    if (wallDayKey(date) === wallDayKey(today)) return "Today";
+    if (wallDayKey(date) === wallDayKey(yesterday)) return "Yesterday";
+    const options = { month: "short", day: "numeric" };
+    if (date.getFullYear() !== today.getFullYear()) options.year = "numeric";
+    return date.toLocaleDateString("en-US", options);
+}
+
+// The note only opens on a calm Stage: nothing being recorded, sent or shown on top
+function calmForNote() {
+    return currentView === "stage" && recState === "idle" && !isBusy && !isRolling && !intermissionOn
+        && !openOverlay && !programmeOpen && !appRoot.inert && !document.body.classList.contains("curtains-closed");
+}
+
+function waitForCalm() {
+    clearTimeout(comebackTimer);
+    if (!comebackWaiting) return;
+    if (!calmForNote()) {
+        comebackTimer = setTimeout(waitForCalm, 1000);
+        return;
+    }
+    const note = comebackWaiting;
+    comebackWaiting = null;
+    showComebackNote(note);
+}
+
+// Fills the note with textContent only (the topic comes from the server or from storage) and opens it
+function showComebackNote(note) {
+    const { entry, result } = note;
+    comebackOpen = note;
+    const serverTopic = typeof result.topic === "string" ? result.topic.replace(/[\r\n]+/g, " ").trim() : "";
+    cbTopic.textContent = (serverTopic || entry.topic || "Spoke freely").slice(0, WALL_MAX_TOPIC);
+    const when = new Date(entry.at);
+    let meta = `${noteDayLabel(when)}, ${wallClockTime(when).toLowerCase()}`;
+    const seconds = result.speaking_seconds;
+    if (typeof seconds === "number" && Number.isFinite(seconds) && seconds >= 0 && seconds <= WALL_MAX_SECONDS) {
+        meta += ` · ${formatTime(seconds)}`;
+    }
+    cbMeta.textContent = meta;
+    openDialog(comebackDialog, cbSee, document.activeElement);
+}
+
+cbNotNow.addEventListener("click", () => {
+    comebackOpen = null;
+    closeDialog();
+});
+
+// Backstage opens on that performance (already saved on the Wall of Fame), with its trophy banner
+cbSee.addEventListener("click", () => {
+    const note = comebackOpen;
+    comebackOpen = null;
+    closeDialog(false);
+    if (!note) return;
+    displayResult(note.result);
+    showTrophyBanner(note.unlocked);
+});
+
+// On load: a speech that arrived before the visitor left. If it is already on the Wall it was seen, so the
+// entry just goes. Otherwise check now, then quietly every few seconds until 5 minutes after the upload.
+function checkPendingOnLoad() {
+    const entry = readPending();
+    if (!entry) return;
+    loadWall();
+    if (wallEntries.some(saved => saved.id === entry.id)) {
+        dropPending();
+        return;
+    }
+    const forget = () => {
+        pendingWatcher = null;
+        clearPending(entry.id);
+    };
+    pendingWatcher = watchResult(entry.id, {
+        deadline: entry.at + POLL_TIMEOUT_MS,
+        firstDelay: 0,
+        onProgress: () => {},
+        onGiveUp: forget,
+        onGone: forget,
+        onResult: result => {
+            forget();
+            const isNew = saveToWall(entry.id, result);
+            if (!isNew) return;            // already on the wall: seen before, and never counted twice
+            // Too-short speeches go on the wall but never count toward trophies
+            const unlocked = result.too_short !== true ? recordTrophies(result) : [];
+            markNotesReady();
+            comebackWaiting = { entry, result, unlocked };
+            waitForCalm();
+        }
+    });
+}
+
 // Browsers that can't record keep the upload-first layout
 if (micSupported) {
     updateActionText();
@@ -4735,3 +4906,4 @@ if (micSupported) {
 }
 updateTakeButtons();
 loadSettings();
+checkPendingOnLoad();

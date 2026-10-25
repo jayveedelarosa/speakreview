@@ -46,7 +46,8 @@ async function open({ width = 1280, height = 800, dpr = 1, pre = [], motion = "n
   const b = await launch({ width, height, flags: FAKE, mobile });
   if (dpr !== 1) await b.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: dpr, mobile });
   await b.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: motion }] });
-  await b.goto(LIVE, [...pre, STUB, HOOKS]);
+  // pre-scripts run after the fake API, so they can set its replies before the page's own first check
+  await b.goto(LIVE, [STUB, HOOKS, ...pre]);
   b.waitFor = async (expr, ms = 15000) => {
     const end = Date.now() + ms;
     while (Date.now() < end) { if (await b.evaluate(expr).catch(() => false)) return true; await sleep(50); }
@@ -232,8 +233,189 @@ if (!only || only === "giveup") {
   check("after 5 minutes: the curtains open on the Stage with the message", !end.on && end.view === "stage" && end.status === "This is taking longer than expected. Please try again in a few minutes." && !end.busy, JSON.stringify(end));
   for (let t = 0; t < 30; t++) await b.evaluate("__clock.tick(1000)");
   check("and the checks stop", (await b.evaluate("window.__resultTimes.length")) === end.calls);
+  check("the pending entry stays after giving up (a later visit can still show the note)", (await b.evaluate(`localStorage.getItem("speakreview.pending.v1")`)) !== null);
   await shot(b, "ib-giveup");
   await done(b);
+}
+
+// ---------------------------------------------------------------- Coming back
+const PENDING = "speakreview.pending.v1";
+const XSS = "<img src=x onerror=window.__xss=1>";
+// Puts a pending entry in storage once (a reload keeps what the page did with it). at is "now minus ago ms".
+const seedPending = (entry, ago) => `if (!sessionStorage.getItem("__seeded")) { sessionStorage.setItem("__seeded", "1");
+  localStorage.setItem(${JSON.stringify(PENDING)}, typeof ${JSON.stringify(entry)} === "string" ? ${JSON.stringify(entry)} : JSON.stringify(Object.assign(${JSON.stringify(entry)}, ${ago === null ? "{}" : `{ at: Date.now() - ${ago} }`}))); }`;
+const note = b => b.evaluate(`({ open: !comebackDialog.hidden, topic: cbTopic.textContent, meta: cbMeta.textContent, focus: document.activeElement && document.activeElement.id,
+  pending: localStorage.getItem(${JSON.stringify(PENDING)}), wall: JSON.parse(localStorage.getItem("speakreview.wall.v1") || "[]").map(e => e.id),
+  trophies: localStorage.getItem("speakreview.trophies.v1"), calls: window.__resultTimes.length, view: currentView, inter: intermissionOn, xss: !!window.__xss })`);
+const reload = async b => {
+  await b.send("Page.reload");
+  await sleep(500);
+  await b.waitFor("document.readyState === 'complete' && typeof micSupported !== 'undefined'", 15000);
+  await sleep(300);
+};
+const TOPIC = "Is failure a better teacher than success?";
+const META_TODAY = /^Today, \d{1,2}:\d{2}\s[ap]m · 2:47$/;
+
+if (!only || only === "comeback") {
+  for (const [w, h] of [[1280, 800], [390, 780]]) {
+    const tag = w <= 600 ? "phone" : "laptop";
+    console.log(`\n== Coming back: the notes are ready (${tag})`);
+    const b = await open({ width: w, height: h, pre: [seedPending({ id: "cb-1", topic: TOPIC, freely: false }, 90 * 1000), `window.__result = ${JSON.stringify({ ...RESULT, topic: TOPIC, speaking_seconds: 167 })};`] });
+    check(`${tag} the note opens on load`, await b.waitFor("!comebackDialog.hidden", 8000));
+    let n = await note(b);
+    check(`${tag} the topic and "Today, h:mm pm · 2:47"`, n.topic === TOPIC && META_TODAY.test(n.meta), `${n.topic} / ${n.meta}`);
+    check(`${tag} saved on the Wall once, the entry cleared, Intermission never shown`, n.wall.filter(id => id === "cb-1").length === 1 && n.pending === null && !n.inter && n.calls === 1, JSON.stringify(n));
+    check(`${tag} a dialog with focus on See your notes`, n.focus === "cbSee" && await b.evaluate(`comebackDialog.querySelector("[role=dialog]").getAttribute("aria-modal") === "true" && appRoot.inert`));
+    check(`${tag} the words`, await b.evaluate(`[...comebackDialog.querySelectorAll(".cb-kicker, .cb-title, .cb-line, .cb-label, .cb-not-now, .cb-see")].map(e => e.textContent.trim()).join("|")`)
+      === "A note from backstage|Your last performance is ready.|The coach finished your notes while you were away.|Topic|Not now|See your notes");
+    const sizes = await b.evaluate(`[cbNotNow, cbSee].map(e => e.getBoundingClientRect().height)`);
+    check(`${tag} both buttons at least 44px tall`, sizes.every(x => x >= 44), JSON.stringify(sizes));
+    const box = await b.evaluate(`(() => { const r = comebackDialog.querySelector(".cb-card").getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, w: comebackDialog.querySelector(".cb-card").offsetWidth }; })()`);
+    check(`${tag} the card inside the window, ${w <= 600 ? "full width less 18px each side" : "450px wide"}`, box.left >= 0 && box.right <= w && box.top >= 0 && box.bottom <= h && box.w === (w <= 600 ? w - 36 : 450), JSON.stringify(box));
+    let escaped = false;
+    for (let i = 0; i < 6; i++) {
+      await b.send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9, modifiers: i % 2 ? 8 : 0 });
+      await b.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+      await sleep(60);
+      if (!(await b.evaluate("comebackDialog.contains(document.activeElement)"))) escaped = true;
+    }
+    check(`${tag} Tab stays inside the note`, !escaped);
+    await shot(b, `cb-${tag}`);
+    const trophiesBefore = n.trophies;
+    check(`${tag} trophies counted for it`, trophiesBefore !== null && trophiesBefore.length > 2);
+    await b.evaluate("cbSee.click()");
+    check(`${tag} See your notes opens Backstage on that performance`, await b.waitFor("currentView === 'backstage' && !resultBox.hidden && !document.body.classList.contains('curtains-closed') && !appRoot.inert", 8000)
+      && (await b.evaluate("comebackDialog.hidden && !appRoot.inert")));
+    check(`${tag} with its trophy banner`, await b.evaluate("!trophyBanner.hidden"));
+    // Never twice: a reload shows nothing and counts nothing
+    await reload(b);
+    await sleep(1500);
+    n = await note(b);
+    check(`${tag} after a reload: no note, no check, the Wall and trophies unchanged`, !n.open && n.calls === 0 && n.wall.filter(id => id === "cb-1").length === 1 && n.trophies === trophiesBefore, JSON.stringify(n));
+    // The same speech again (already on the Wall): dropped, no note, no check, no trophies
+    await b.evaluate(`localStorage.setItem(${JSON.stringify(PENDING)}, JSON.stringify({ id: "cb-1", at: Date.now() - 60000, topic: "", freely: true })); true`);
+    await reload(b);
+    await sleep(1500);
+    n = await note(b);
+    check(`${tag} an entry already on the Wall: dropped quietly, trophies not counted twice`, !n.open && n.calls === 0 && n.pending === null && n.trophies === trophiesBefore, JSON.stringify(n));
+    await done(b);
+  }
+
+  console.log("\n== Coming back: still in progress on load");
+  let b = await open({ pre: [seedPending({ id: "cb-2", topic: "", freely: true }, 30 * 1000), `window.__resultSteps = [{}, { progress: "coach" }]; window.__result = ${JSON.stringify({ ...RESULT, topic: undefined, speaking_seconds: 75 })};`] });
+  await b.evaluate(`randomTopicBtn.focus(); true`);
+  await sleep(1000);
+  check("no note while it isn't ready", !(await note(b)).open);
+  check("the note opens once the result arrives in the background", await b.waitFor("!comebackDialog.hidden", 15000));
+  let n = await note(b);
+  check("no topic: Spoke freely; 1:15 from speaking_seconds", n.topic === "Spoke freely" && /^Today, .* · 1:15$/.test(n.meta) && !n.inter && n.calls === 3, JSON.stringify(n));
+  await b.send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await b.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await sleep(200);
+  n = await note(b);
+  check("Escape closes it, focus back on Roll a new topic, the Stage usable", !n.open && n.focus === "randomTopicBtn" && n.view === "stage" && !(await b.evaluate("appRoot.inert")), JSON.stringify(n));
+  await done(b);
+
+  console.log("\n== Coming back: Not now");
+  b = await open({ pre: [seedPending({ id: "cb-3", topic: "Why I love Sundays", freely: false }, 2 * 24 * 3600 * 1000), `window.__result = ${JSON.stringify({ ...RESULT, topic: undefined, speaking_seconds: 30 })};`] });
+  check("an entry from 2 days ago shows when its result is ready at the first check", await b.waitFor("!comebackDialog.hidden", 10000));
+  n = await note(b);
+  const shortDate = await b.evaluate(`new Date(Date.now() - 2 * 24 * 3600 * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" })`);
+  check(`the entry's topic and a short date ("${shortDate}")`, n.topic === "Why I love Sundays" && n.meta.startsWith(shortDate + ", ") && /^[A-Z][a-z]{2} \d{1,2}, /.test(n.meta), n.meta);
+  await b.evaluate("cbNotNow.click()");
+  n = await note(b);
+  check("Not now closes it, focus back where it was (the page, as it opened on load), still on the Stage, saved on the Wall", !n.open && (await b.evaluate("document.activeElement === document.body")) && n.view === "stage" && n.wall.includes("cb-3"), JSON.stringify(n));
+  await done(b);
+
+  console.log("\n== Coming back: yesterday");
+  b = await open({ pre: [seedPending({ id: "cb-4", topic: TOPIC, freely: false }, 24 * 3600 * 1000), `window.__result = ${JSON.stringify({ ...RESULT, topic: TOPIC, speaking_seconds: 167 })};`] });
+  await b.waitFor("!comebackDialog.hidden", 8000);
+  check("Yesterday", /^Yesterday, \d{1,2}:\d{2}\s[ap]m · 2:47$/.test((await note(b)).meta), (await note(b)).meta);
+  await done(b);
+
+  console.log("\n== Coming back: the note waits while a recording runs");
+  b = await open({ pre: [seedPending({ id: "cb-5", topic: TOPIC, freely: false }, 20 * 1000), `window.__resultSteps = [{}]; window.__result = ${JSON.stringify(RESULT)};`] });
+  await b.evaluate(`micBtn.click(); true`);
+  check("recording", await b.waitFor("recState === 'recording'", 10000));
+  check("the result arrives and is saved on the Wall", await b.waitFor(`JSON.parse(localStorage.getItem("speakreview.wall.v1") || "[]").some(e => e.id === "cb-5")`, 10000));
+  await sleep(1500);
+  check("no note while recording", !(await note(b)).open);
+  await b.evaluate("finishBtn.click()");
+  await b.waitFor("recState === 'review'", 5000);
+  await sleep(1500);
+  check("no note while a take waits in review", !(await note(b)).open);
+  await b.evaluate("discardBtn.click()");
+  check("the note opens once the Stage is calm again", await b.waitFor("!comebackDialog.hidden", 5000));
+  await done(b);
+
+  console.log("\n== Coming back: the live flow keeps and clears the entry");
+  b = await open();
+  await b.evaluate(`topicInput.value = "My own topic"; topicInput.dispatchEvent(new Event("input")); window.__resultSteps = [{}]; window.__result = ${JSON.stringify(RESULT)}; true`);
+  await b.evaluate(SEND);
+  await b.waitFor("intermissionAct === 2", 5000);
+  let saved = JSON.parse(await b.evaluate(`localStorage.getItem(${JSON.stringify(PENDING)})`));
+  check("kept at the start of Act II: id, time, topic", saved && typeof saved.id === "string" && saved.topic === "My own topic" && saved.freely === false && Math.abs(saved.at - (await b.evaluate("Date.now()"))) < 5000, JSON.stringify(saved));
+  await b.waitFor("currentView === 'backstage' && !intermissionOn", 15000);
+  check("cleared when the result shows", (await b.evaluate(`localStorage.getItem(${JSON.stringify(PENDING)})`)) === null);
+  await b.evaluate("goToView('stage')");
+  await b.waitFor("currentView === 'stage' && !document.body.classList.contains('curtains-closed')", 5000);
+  await sleep(500);
+  await b.evaluate(`clearTopicBtn.click(); window.__resultSteps = [{}]; true`);
+  await b.evaluate(SEND);
+  await b.waitFor("intermissionAct === 2", 5000);
+  saved = JSON.parse(await b.evaluate(`localStorage.getItem(${JSON.stringify(PENDING)})`));
+  check("Speak freely: kept with no topic", saved && saved.topic === "" && saved.freely === true, JSON.stringify(saved));
+  await b.waitFor("currentView === 'backstage' && !intermissionOn", 15000);
+  await done(b);
+}
+
+if (!only || only === "broken") {
+  console.log("\n== Coming back: entries that are dropped");
+  for (const [name, entry, ago, steps] of [
+    ["the server has no record (404)", { id: "gone-1", topic: "", freely: true }, 30 * 1000, [{ status: 404 }]],
+    ["past 5 minutes and still not ready", { id: "late-1", topic: "", freely: true }, 6 * 60 * 1000, [{}]]
+  ]) {
+    const b = await open({ pre: [seedPending(entry, ago), `window.__resultSteps = ${JSON.stringify(steps)}; window.__result = {};`] });
+    await sleep(2500);
+    const n = await note(b);
+    check(`${name}: one check, then dropped quietly`, !n.open && n.calls === 1 && n.pending === null && !n.wall.includes(entry.id), JSON.stringify(n));
+    await sleep(4500);
+    check(`${name}: no more checks`, (await note(b)).calls === 1);
+    await done(b);
+  }
+
+  console.log("\n== broken or old entries: ignored and removed, no check");
+  const day = 24 * 3600 * 1000;
+  for (const [name, entry, ago] of [
+    ["not JSON", "{oops", null],
+    ["an array", "[]", null],
+    ["null", "null", null],
+    ["an id that isn't text", { id: 5, topic: "", freely: true }, 1000],
+    ["an id with a slash", { id: "a/b", topic: "", freely: true }, 1000],
+    ["an id with a query", { id: "a?speech_id=b", topic: "", freely: true }, 1000],
+    ["an empty id", { id: "", topic: "", freely: true }, 1000],
+    ["a time in the future", { id: "f-1", topic: "", freely: true }, -3600 * 1000],
+    ["31 days old", { id: "o-1", topic: "", freely: true }, 31 * day],
+    ["a time that isn't a number", JSON.stringify({ id: "t-1", at: "yesterday", topic: "", freely: true }), null],
+    ["a topic that isn't text", { id: "t-2", topic: 7, freely: false }, 1000],
+    ["a 500-character topic", { id: "t-3", topic: "x".repeat(500), freely: false }, 1000],
+    ["freely that isn't true or false", { id: "t-4", topic: "", freely: "yes" }, 1000]
+  ]) {
+    const b = await open({ pre: [seedPending(entry, ago)] });
+    await sleep(1200);
+    const n = await note(b);
+    check(`${name}: no check, no note, removed`, n.calls === 0 && !n.open && n.pending === null && n.wall.length === 0, JSON.stringify(n));
+    await b.close();
+  }
+
+  console.log("\n== hostile topics");
+  for (const [name, entryTopic, resultTopic] of [["from storage", XSS, undefined], ["from the server", "", XSS]]) {
+    const b = await open({ pre: [seedPending({ id: "x-1", topic: entryTopic, freely: false }, 30 * 1000), "window.__xss = 0;", `window.__result = ${JSON.stringify({ ...RESULT, topic: resultTopic })};`] });
+    await b.waitFor("!comebackDialog.hidden", 8000);
+    const n = await note(b);
+    check(`a hostile topic ${name}: shown as text, nothing made or run`, n.open && n.topic === XSS && !n.xss && (await b.evaluate("!comebackDialog.querySelector('img') && cbTopic.children.length === 0")), JSON.stringify(n));
+    await done(b);
+  }
 }
 
 finish();
