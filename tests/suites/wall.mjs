@@ -414,5 +414,5 @@ await test("layouts and screenshots", async () => {
   }
 });
 
-console.log(`\n${failures === 0 ? "ALL PASSED" : failures + " FAILURE(S)"}`);
-process.exit(0);
+console.log(`\n${failures === 0 ? "ALL PASSED" : failures + " FAILED"}`);
+process.exit(failures ? 1 : 0);
