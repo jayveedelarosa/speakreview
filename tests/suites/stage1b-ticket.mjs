@@ -198,14 +198,14 @@ if (!only || only === "ticket") {
     }
     await b.key("Escape");
     check(`${tag} Escape returns focus to the stub button`, await b.evaluate("document.activeElement === timeTicket"));
-    // The show label is a button too: dashed at rest, solid burgundy while the programme is open on Cast
+    // The show label is a button too, with no box in any state (stage 3 fix): plain text and a pen
     const lb = await b.evaluate(`(() => { const c = getComputedStyle(showLabelBtn), r = showLabelBtn.getBoundingClientRect();
       return { tag: showLabelBtn.tagName, style: c.borderTopStyle, color: c.borderTopColor, h: showLabelBtn.offsetHeight, radius: c.borderTopLeftRadius, pen: !!showLabelBtn.querySelector("svg.show-pen[aria-hidden=true]") }; })()`);
-    check(`${tag} show label: a button, 28px, 1px dashed rgba(122,18,34,0.42), 4px corners, pen icon`, lb.tag === "BUTTON" && lb.style === "dashed" && lb.color === "rgba(122, 18, 34, 0.42)" && lb.h === 28 && lb.radius === "4px" && lb.pen, JSON.stringify(lb));
+    check(`${tag} show label: a button, 28px, no border, pen icon`, lb.tag === "BUTTON" && lb.style === "none" && lb.h === 28 && lb.pen, JSON.stringify(lb));
     await b.mouse("#showLabelBtn");
     await sleep(300);
     const lo = await b.evaluate(`(() => { const c = getComputedStyle(showLabelBtn); return { style: c.borderTopStyle, color: c.borderTopColor, ring: c.boxShadow, exp: showLabelBtn.getAttribute("aria-expanded"), section: programme.dataset.section }; })()`);
-    check(`${tag} show label opens Cast: solid burgundy with a ring`, lo.style === "solid" && lo.color === "rgb(122, 18, 34)" && lo.ring.includes("rgba(122, 18, 34, 0.16)") && lo.exp === "true" && lo.section === "cast", JSON.stringify(lo));
+    check(`${tag} show label opens Cast, still no border or ring`, lo.style === "none" && lo.ring === "none" && lo.exp === "true" && lo.section === "cast", JSON.stringify(lo));
     await b.key("Escape");
     check(`${tag} Escape returns focus to the show label`, await b.evaluate("document.activeElement === showLabelBtn"));
     await b.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });

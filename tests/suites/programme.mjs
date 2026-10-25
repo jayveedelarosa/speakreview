@@ -473,6 +473,19 @@ if (!only || only === "look") {
     const b = await open({ width: w, height: h });
     const hit = await b.evaluate(`(() => { const r = showLabelBtn.getBoundingClientRect(), x = r.left + 20, y = r.top + r.height / 2; return [-21, 21].every(d => showLabelBtn.contains(document.elementFromPoint(x, y + d))); })()`);
     check(`${tag} the 28px show label answers taps across 44px`, hit);
+    // The show label has no box in either state; RUNTIME and CURTAIN IN keep their dashed boxes
+    const boxes = () => b.evaluate(`[showLabelBtn, timeTicket, prepTicket].map(e => { const c = getComputedStyle(e); return [c.borderTopStyle, c.borderLeftStyle, c.boxShadow].join(" "); })`);
+    let bx = await boxes();
+    check(`${tag} show label closed: no border, no ring; the stubs dashed`, bx[0] === "none none none" && bx[1].startsWith("dashed dashed") && bx[2].startsWith("dashed dashed"), JSON.stringify(bx));
+    await b.mouse("#showLabelBtn");
+    await b.still("#programme");
+    bx = await boxes();
+    check(`${tag} show label open on Cast: still no border or ring; the stubs dashed`, (await b.evaluate("showLabelBtn.getAttribute('aria-expanded')")) === "true" && bx[0] === "none none none" && bx[1].startsWith("dashed dashed") && bx[2].startsWith("dashed dashed"), JSON.stringify(bx));
+    await b.key("Shift");
+    await b.evaluate("showLabelBtn.focus()");
+    check(`${tag} the show label keeps its keyboard focus outline`, await b.evaluate(`showLabelBtn.matches(":focus-visible") && getComputedStyle(showLabelBtn).outlineStyle === "solid" && getComputedStyle(showLabelBtn).outlineColor === "rgb(122, 18, 34)"`));
+    await b.key("Escape");
+    await shot(b, `prog-${tag}-show-label`);
     await b.mouse("#timeTicket");
     await b.still("#programme");
     await b.evaluate(`progTimeError.textContent = ${JSON.stringify(ERROR)}; true`);   // so the error line is measured too

@@ -1216,17 +1216,17 @@ html.settings-lock {
     overflow: hidden;
 }
 
-/* The show label on the ticket is a button: the label's own text style, a pen, and a dashed outline.
-   The negative margins keep the ticket's rows exactly as they were. */
+/* The show label on the ticket is a button: plain text in the label's own style with a small pen, and no box
+   in any state (the pen shows it can be tapped). The negative margins keep the ticket's rows exactly as they were. */
 .show-btn {
     position: relative;
     display: inline-flex;
     align-items: center;
     gap: 6px;
     height: 28px;
-    margin: -8px 0 -8px -7px;
-    padding: 0 7px;
-    border: 1px dashed rgba(122, 18, 34, 0.42);
+    margin: -8px 0;
+    padding: 0;
+    border: 0;
     border-radius: 4px;
     background: transparent;
     font-family: var(--sans);
@@ -1234,21 +1234,15 @@ html.settings-lock {
     cursor: pointer;
 }
 
-/* It looks 28px tall, but answers to taps across 44px */
+/* It answers to taps across 44px, and a little past each side of the text */
 .show-btn::before {
     content: "";
     position: absolute;
-    inset: -8px -4px;
+    inset: -8px -8px;
 }
 
 .show-pen {
     flex: none;
-}
-
-/* The programme is open on Cast */
-.show-btn[aria-expanded="true"] {
-    border: 1px solid #7A1222;
-    box-shadow: 0 0 0 2px rgba(122, 18, 34, 0.16);
 }
 
 .show-btn:focus-visible {
