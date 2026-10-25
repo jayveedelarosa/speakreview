@@ -29,6 +29,6 @@
 ## Workflow
 - Always show a plan with line numbers before editing.
 - For small changes, run only the suites related to the change before committing (`cd tests && npm run test:only -- <suites>`), and add `security` when the change touches text from outside the page (API replies, storage, typed text, file names). Update or add tests for the change.
-- Run the full run (`cd tests && npm test`) once at the end of each stage, before that stage's last push.
+- Run the full run (`cd tests && npm test`) only once, at feature set 3 stage 7 (the launch check). Every other stage runs only its related suites.
 - Make one commit per change.
 - Never push.
