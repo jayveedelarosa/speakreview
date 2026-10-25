@@ -374,5 +374,5 @@ await test("privacy text", async () => {
   check("privacy sentence", await b.evaluate(`privacyNote.textContent.includes("results after 30 days. Your Wall of Fame and trophies are saved only in this browser on this device.") && privacyNote.textContent.includes("saved on this device for your latest 30 performances.") && privacyNote.textContent.endsWith("An optional stage name can be saved on this device, and it is never sent anywhere.")`));
 });
 
-console.log(`\n${failures === 0 ? "ALL PASSED" : failures + " FAILURE(S)"}`);
-process.exit(0);
+console.log(`\n${failures === 0 ? "ALL PASSED" : failures + " FAILED"}`);
+process.exit(failures ? 1 : 0);
