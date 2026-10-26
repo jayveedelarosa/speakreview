@@ -230,6 +230,7 @@ uploadBtn.addEventListener("click", () => {
 // ---------------------------
 // Show the chosen file name, then convert it
 // ---------------------------
+let replayReady = false;        // true once the replay player exists (see "Replay in Your words")
 let preparedUpload = null;     // { blob, seconds, source: "upload" } once the picked file is converted
 let prepareRequest = 0;        // counts picks, so a slow old conversion can't replace a newer one
 
@@ -1170,7 +1171,7 @@ function pollResult(speechId) {
                 const isNew = saveToWall(speechId, result);
                 // Too-short speeches go on the wall but never count toward trophies
                 const unlocked = isNew && result.too_short !== true ? recordTrophies(result) : [];
-                displayResult(result);      // fills Backstage and opens the curtains on it
+                displayResult(result, speechId);   // fills Backstage and opens the curtains on it
                 showTrophyBanner(unlocked);
                 markNotesReady();
             } catch (err) {
@@ -1197,7 +1198,9 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
-function displayResult(data) {
+// speechId (optional): the speech these notes belong to, so its kept recording can be replayed. Without one
+// (or for any other speech) Your words shows the note for past shows instead.
+function displayResult(data, speechId = null) {
     resultBox.hidden = false;
     resultPlaceholder.hidden = true;
 
@@ -1294,6 +1297,7 @@ function displayResult(data) {
     // Your words (too-short speeches show theirs too), with the coach's dotted fillers when it judged them
     const transcript = cleanTranscript(data.words, data.filler_flags, data.fillers_judged);
     wordsPanel.replaceChildren(buildWordsView(transcript.words, transcript.flags));
+    setupReplay(speechId, Array.isArray(transcript.words) && transcript.words.length > 0);
     // The Nightly Review: in the left column with two columns, in the Review tab with one column (phones and
     // windows below 990px). Hidden without a valid review.
     const review = cleanReview(data.review);
@@ -1666,7 +1670,10 @@ const wordsPanel = document.getElementById("wordsPanel");
 const reviewPanel = document.getElementById("reviewPanel");
 const tabReview = document.getElementById("tabReview");
 const perfReview = document.getElementById("perfReview");
-const backstageTabs = setupTabs(document.getElementById("backstageTabs"), () => updateNotesHint());
+const backstageTabs = setupTabs(document.getElementById("backstageTabs"), id => {
+    updateNotesHint();
+    if (id !== "tabWords") pauseReplay();      // replay only plays beside the words
+});
 const hintObserver = new ResizeObserver(() => updateNotesHint());
 [coachNotesBody, wordsPanel, reviewPanel].forEach(panel => hintObserver.observe(panel));
 
@@ -1751,6 +1758,7 @@ function showView(name) {
         pausePlayers();                // nothing keeps playing behind the curtains
         closeProgramme(false);
     }
+    if (name !== "backstage") pauseReplay();
     currentView = name;
     dropZone.hidden = !isStage;
     backstageView.hidden = name !== "backstage";
@@ -3404,7 +3412,10 @@ function setRecState(name) {
     micBtn.setAttribute("aria-label", name === "recording" ? "Stop recording" : "Start recording");
 
     // Topic, time and prep controls, the menu and the file picker can't change while preparing or recording
-    if (locked) closeProgramme(false);
+    if (locked) {
+        closeProgramme(false);
+        pauseReplay();
+    }
     optionControls.forEach(control => {
         control.disabled = locked || isBusy;
     });
@@ -3980,10 +3991,14 @@ let replayRecording = null;      // { id, blob, seconds, url, peaks }
 function keepRecording(id, blob, seconds) {
     forgetRecording();
     replayRecording = { id: String(id), blob, seconds, url: URL.createObjectURL(blob), peaks: null };
+    refreshReplay();       // Backstage may still show the older speech: its replay becomes the note
 }
 
 function forgetRecording() {
-    if (replayRecording) URL.revokeObjectURL(replayRecording.url);
+    if (replayRecording) {
+        unloadReplay();
+        URL.revokeObjectURL(replayRecording.url);
+    }
     replayRecording = null;
 }
 
@@ -4033,7 +4048,15 @@ function isLowMemoryDevice() {
         || (typeof navigator.deviceMemory === "number" && navigator.deviceMemory < 4);
 }
 
-function setupPlayer({ audio, playBtn, backBtn, fwdBtn, seek, time, name, getDuration, ownsUrl }) {
+// Optional settings, used by replay: playBtns (several buttons that always show the same state), colors
+// ({ played, rest, playhead, glow }), stayAtEnd (stop at the end instead of going back to the start), label(playing)
+// (the buttons' names) and onPlaying(playing) (anything else that follows the play state).
+function setupPlayer({ audio, playBtn, playBtns, backBtn, fwdBtn, seek, time, name, getDuration, ownsUrl,
+                       colors = {}, stayAtEnd = false, label = null, onPlaying = null }) {
+    const buttons = playBtns || [playBtn];
+    const played = colors.played || WAVE_PLAYED;
+    const rest = colors.rest || WAVE_REST;
+    const playhead = colors.playhead || WAVE_PLAYHEAD;
     let url = null;
     let dragging = false;
     let peaks = null;              // null: a flat line
@@ -4051,8 +4074,8 @@ function setupPlayer({ audio, playBtn, backBtn, fwdBtn, seek, time, name, getDur
     // Draws the waveform: bars from the loudness values, gold up to the playhead, muted after it
     function draw() {
         if (plain) return;
-        const width = waveBox.clientWidth;
-        const height = waveBox.clientHeight;
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
         if (width === 0 || height === 0) return;            // hidden: drawn when it appears
         const ratio = window.devicePixelRatio || 1;
         if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
@@ -4077,14 +4100,19 @@ function setupPlayer({ audio, playBtn, backBtn, fwdBtn, seek, time, name, getDur
                 for (let j = from; j < to; j++) level = Math.max(level, peaks[j]);
             }
             const barHeight = Math.max(2, level * (height - 4));      // silence: a flat line
-            ctx.fillStyle = (i + 0.5) * slot <= playX ? WAVE_PLAYED : WAVE_REST;
+            const isPlayed = (i + 0.5) * slot <= playX;
+            ctx.fillStyle = isPlayed ? played : rest;
+            ctx.shadowColor = played;
+            ctx.shadowBlur = colors.glow && isPlayed ? 5 : 0;
             // Whole device pixels keep the bars crisp, with a clean gap between them
             const left = Math.round((i * slot + (slot - barWidth) / 2) * ratio) / ratio;
             const top = Math.round(((height - barHeight) / 2) * ratio) / ratio;
             ctx.fillRect(left, top, Math.max(1, Math.round(barWidth * ratio)) / ratio, Math.max(1, Math.round(barHeight * ratio)) / ratio);
         }
         // A thin playhead at the current position
-        ctx.fillStyle = WAVE_PLAYHEAD;
+        ctx.fillStyle = playhead;
+        ctx.shadowColor = playhead;
+        ctx.shadowBlur = colors.glow ? 6 : 0;
         ctx.fillRect(Math.round(Math.min(Math.max(playX - 1, 0), width - 2) * ratio) / ratio, 0, 2, height);
     }
 
@@ -4111,17 +4139,20 @@ function setupPlayer({ audio, playBtn, backBtn, fwdBtn, seek, time, name, getDur
 
     // Seeks to the point under the pointer
     function seekAt(clientX) {
-        const box = waveBox.getBoundingClientRect();
+        const box = canvas.getBoundingClientRect();
         const share = Math.min(Math.max((clientX - box.left) / box.width, 0), 1);
         seekTo(share * duration());
     }
 
     function showPlaying(playing) {
-        playBtn.classList.toggle("playing", playing);
-        playBtn.setAttribute("aria-label", `${playing ? "Pause" : "Play"} ${name}`);
+        buttons.forEach(button => {
+            button.classList.toggle("playing", playing);
+            button.setAttribute("aria-label", label ? label(playing) : `${playing ? "Pause" : "Play"} ${name}`);
+        });
+        if (onPlaying) onPlaying(playing);
     }
 
-    playBtn.addEventListener("click", () => {
+    function togglePlay() {
         if (!url) return;
         if (audio.paused) {
             if (audio.currentTime >= duration() - 0.05) audio.currentTime = 0;   // at the end: play from the start
@@ -4132,7 +4163,8 @@ function setupPlayer({ audio, playBtn, backBtn, fwdBtn, seek, time, name, getDur
         } else {
             audio.pause();
         }
-    });
+    }
+    buttons.forEach(button => button.addEventListener("click", togglePlay));
     backBtn.addEventListener("click", () => seekTo(audio.currentTime - SKIP_SECONDS));
     fwdBtn.addEventListener("click", () => seekTo(audio.currentTime + SKIP_SECONDS));
 
@@ -4211,6 +4243,10 @@ function setupPlayer({ audio, playBtn, backBtn, fwdBtn, seek, time, name, getDur
     audio.addEventListener("loadedmetadata", () => show(audio.currentTime));
     audio.addEventListener("ended", () => {
         showPlaying(false);
+        if (stayAtEnd) {
+            show(duration());                // the needle stays at the end; the next Play starts from 0
+            return;
+        }
         audio.currentTime = 0;
         show(0);
     });
@@ -4244,6 +4280,11 @@ function setupPlayer({ audio, playBtn, backBtn, fwdBtn, seek, time, name, getDur
         clear,
         pause() {
             audio.pause();
+        },
+        seekTo,
+        // Shows the current position again (between the audio's own time updates)
+        refresh() {
+            if (!dragging) show(audio.currentTime);
         },
         // Loudness values from 0 to 1 (null draws a flat line)
         setPeaks(values) {
@@ -4279,9 +4320,115 @@ const filePlayer = setupPlayer({
     ownsUrl: true           // freed when the picked file changes or is cleared
 });
 
+// ---- Replay in Your words ----
+// The console radio at the top of Your words plays the speech just sent, from its kept recording (see
+// keepRecording). It only shows when Backstage shows that speech; any other result gets the note for past shows.
+// The knob and the Play key are one player's two play buttons, so they always show the same state.
+const REPLAY_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+const replayBox = document.getElementById("replay");
+const replayGone = document.getElementById("replayGone");
+const replayAudio = document.getElementById("replayAudio");
+const replaySpeedBtn = document.getElementById("replaySpeedBtn");
+const replaySpeedLabel = document.getElementById("replaySpeedLabel");
+const replayPlayLabel = document.getElementById("replayPlayLabel");
+const replayPlayKey = document.getElementById("replayPlayKey");
+let replaySpeed = 1;             // starts at 1× each visit
+let replayLoadedId = null;       // the speech whose recording is in the player
+let backstageSpeech = null;      // { id, hasWords } for the result Backstage shows
+
+replayAudio.preservesPitch = true;   // a faster or slower voice keeps its normal pitch
+
+const replayPlayer = setupPlayer({
+    audio: replayAudio,
+    playBtns: [document.getElementById("replayPlayKnob"), replayPlayKey],
+    backBtn: document.getElementById("replayBackBtn"),
+    fwdBtn: document.getElementById("replayFwdBtn"),
+    seek: document.getElementById("replaySeek"),
+    time: document.getElementById("replayTime"),
+    name: "your speech",
+    getDuration: () => (replayRecording ? replayRecording.seconds : 0),
+    ownsUrl: false,          // the kept recording owns its URL (keepRecording / forgetRecording)
+    stayAtEnd: true,
+    colors: { played: "#FFC46B", rest: "rgba(255, 196, 107, 0.22)", playhead: "#FF5A3C", glow: true },
+    label: playing => (playing ? "Pause" : "Play your speech"),
+    onPlaying: playing => {
+        replayBox.classList.toggle("is-playing", playing);    // the speaker cloth glows
+        replayPlayLabel.textContent = playing ? "Pause" : "Play";
+        replayPlayKey.textContent = playing ? "Pause" : "Play";
+    }
+});
+replayReady = true;
+
+function pauseReplay() {
+    if (replayReady) replayPlayer.pause();
+}
+
+// 0.5×, 0.75×, 1× ... 2×, then back to 0.5×. The knob's pointer turns 40 degrees a step.
+function setReplaySpeed(speed) {
+    replaySpeed = speed;
+    replayAudio.defaultPlaybackRate = speed;    // kept when the recording is loaded again
+    replayAudio.playbackRate = speed;
+    const shown = `${speed}×`;
+    replaySpeedBtn.setAttribute("aria-label", `Playback speed, ${shown}`);
+    replaySpeedLabel.textContent = `Speed ${shown}`;
+    replaySpeedBtn.querySelector(".replay-pointer").style.setProperty("--turn", `${-120 + REPLAY_SPEEDS.indexOf(speed) * 40}deg`);
+}
+
+replaySpeedBtn.addEventListener("click", () => {
+    setReplaySpeed(REPLAY_SPEEDS[(REPLAY_SPEEDS.indexOf(replaySpeed) + 1) % REPLAY_SPEEDS.length]);
+});
+
+// The dial's waveform, from the kept WAV itself (16-bit samples after its 44-byte header), once per speech
+async function recordingPeaks(recording) {
+    if (!recording.peaks) {
+        const buffer = await recording.blob.arrayBuffer();
+        const samples = new Int16Array(buffer, 44, Math.max(0, Math.floor((buffer.byteLength - 44) / 2)));
+        recording.peaks = peaksFromChunks([samples]);
+    }
+    return recording.peaks;
+}
+
+function unloadReplay() {
+    if (!replayReady || replayLoadedId === null) return;
+    replayPlayer.clear();
+    replayLoadedId = null;
+}
+
+// Puts the radio (the speech just sent) or the note (any other speech) at the top of Your words, above the
+// legend and outside the part that scrolls. Without words, neither shows.
+function setupReplay(speechId, hasWords) {
+    backstageSpeech = { id: speechId === null || speechId === undefined ? null : String(speechId), hasWords };
+    refreshReplay();
+}
+
+function refreshReplay() {
+    if (!replayReady || !backstageSpeech) return;
+    pauseReplay();
+    const { id, hasWords } = backstageSpeech;
+    const live = hasWords && id !== null && replayRecording !== null && replayRecording.id === id;
+    replayBox.hidden = !live;
+    replayGone.hidden = !hasWords || live;
+    if (!live) replayBox.remove();
+    if (!hasWords || live) replayGone.remove();
+    if (hasWords) wordsPanel.prepend(live ? replayBox : replayGone);
+    if (!live) return;
+    if (replayLoadedId !== replayRecording.id) {
+        const recording = replayRecording;
+        replayLoadedId = recording.id;
+        replayPlayer.load(recording.url);
+        setReplaySpeed(replaySpeed);
+        recordingPeaks(recording)
+            .then(peaks => {
+                if (replayRecording === recording) replayPlayer.setPeaks(peaks);
+            })
+            .catch(err => console.error(err));
+    }
+}
+
 function pausePlayers() {
     takePlayer.pause();
     filePlayer.pause();
+    pauseReplay();
 }
 
 // ---- Live view while recording: stopwatch and sound wave ----
@@ -4529,6 +4676,7 @@ function placeProgramme() {
 
 function openProgramme(section, opener) {
     const phone = phoneQuery.matches;
+    pauseReplay();
     setPrivacyOpen(false);
     programmeOpen = true;
     programmeOpener = opener;
@@ -4875,7 +5023,7 @@ cbSee.addEventListener("click", () => {
     comebackOpen = null;
     closeDialog(false);
     if (!note) return;
-    displayResult(note.result);
+    displayResult(note.result, note.entry.id);
     showTrophyBanner(note.unlocked);
 });
 
