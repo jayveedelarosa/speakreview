@@ -3842,6 +3842,67 @@ html.settings-lock {
     color: #FFF6E3;
 }
 
+/* Backstage's Your words: an "i" button at the end of the legend opens a small card over the transcript with what
+   the marks mean (instead of a note under the words). It overlays the words; it doesn't push them down. */
+.words-legend {
+    position: relative;
+}
+
+.words-info-btn {
+    position: relative;
+    z-index: 1;              /* its tap area lies over the start of the transcript on phones */
+    flex: none;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid rgba(217, 174, 82, 0.7);
+    border-radius: 999px;
+    background: transparent;
+    font: italic 700 12px var(--serif);
+    line-height: 1;
+    color: #D9AE52;
+    cursor: pointer;
+}
+
+.words-info-btn[aria-expanded="true"] {
+    background: rgba(217, 174, 82, 0.16);
+}
+
+.words-info-btn:focus-visible {
+    outline: 2px solid #F0CF86;
+    outline-offset: 2px;
+}
+
+.words-info {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 5;
+    width: 340px;
+    padding: 10px 12px;
+    border: 1px solid rgba(217, 174, 82, 0.55);
+    border-radius: 8px;
+    background: #2A1712;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6);
+    font-size: 12px;
+    line-height: 1.45;
+    color: #E8D8C0;
+}
+
+.words-info-tip {
+    display: block;
+    margin-bottom: 6px;
+    color: #FFF6E3;
+}
+
+.words-info ul {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+    padding-left: 18px;
+}
+
 /* Past shows: the note instead of the radio */
 .replay-gone {
     flex: none;
@@ -3868,6 +3929,18 @@ html.settings-lock {
 
     .replay-wordmark {
         font-size: 14px;
+    }
+
+    /* The info card: full width on phones; the "i" answers to taps across 44px (inside its 1px border: 20 + 2 x 12) */
+    .words-info {
+        left: 0;
+        width: auto;
+    }
+
+    .words-info-btn::before {
+        content: "";
+        position: absolute;
+        inset: -12px;
     }
 
     /* The skip keys answer to taps across 44px (measured inside their 1px border: 28 + 2 x 8) */

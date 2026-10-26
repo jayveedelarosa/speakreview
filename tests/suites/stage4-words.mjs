@@ -15,14 +15,16 @@ if (!only || only === "render") {
   check("one 3.4s pause pill with icon; 2.9s gap shows none", r.pauses.length === 1 && r.pauses[0][0] === "3.4s" && r.pauses[0][1] === "Long pause, 3.4 seconds" && r.pauses[0][2] === "img" && r.pauses[0][3], JSON.stringify(r.pauses));
   check("screen readers hear (filler) and (unclear); unclear has a title", r.srFiller.every(t => t === " (filler)") && r.srFiller.length === 4 && r.srUnclear.length === 2 && r.title === "The transcription was unsure about this word");
   check("legend counts: Filler 4, Long pause 1, Unclear 2", JSON.stringify(r.legend) === JSON.stringify(["Filler, 4", "Long pause, 1", "Unclear, 2"]), JSON.stringify(r.legend));
-  check("note under the words", r.note === "Long pauses are 3 seconds or more, and are not a mistake: pausing is often better than saying um. Unclear words are ones the transcription was unsure about.");
+  // Since the stage 4 update, Backstage has no note under the words: an "i" card says what the marks mean (playback.mjs)
+  check("no grey note under the Backstage words; the \"i\" button and its card instead", r.note === undefined && !(await b.evaluate(`!!wordsPanel.querySelector(".words-note")`))
+    && (await b.evaluate(`!!wordsPanel.querySelector(".words-legend > .words-info-btn") && wordsPanel.querySelector(".words-info").hidden`)));
   check("<img onerror> word is text: no img, nothing ran", r.img === 0 && !r.xss && r.visible.includes(XSS));
   check("malformed items skipped", (await b.evaluate(`cleanWords(${JSON.stringify(WORDS)}).length`)) === 18);
   const marks = await b.evaluate(`(() => { const s = e => getComputedStyle(e); const f = s(document.querySelector("#wordsPanel .words-text .w-filler")), u = s(document.querySelector("#wordsPanel .words-text .w-unclear")), p = s(document.querySelector("#wordsPanel .words-text .w-pause"));
     return { filler: [f.borderBottomStyle, f.borderBottomWidth, f.backgroundColor], unclear: [u.fontStyle, u.borderBottomStyle], pause: [p.borderTopStyle, p.borderRadius] }; })()`);
   check("not color alone: filler solid underline + highlight, unclear italic + dashed, pause dashed pill", marks.filler[0] === "solid" && marks.filler[1] === "2px" && marks.unclear[0] === "italic" && marks.unclear[1] === "dashed" && marks.pause[0] === "dashed", JSON.stringify(marks));
   if (SHOTS) await shot(b, "words-1280");
-  contrastOk(await contrast(b, 1280, 800, [".feedback-tab", "#wordsPanel .words-key", "#wordsPanel > .words-note"]), "words view (dark): tabs, legend, note");
+  contrastOk(await contrast(b, 1280, 800, [".feedback-tab", "#wordsPanel .words-key"]), "words view (dark): tabs, legend");
   contrastOk(await b.evaluate(COLOR_CONTRAST(MARKS("#wordsPanel"))), "words view (dark): text and marks");
 
   // Empty, missing, too short
@@ -105,9 +107,12 @@ if (!only || only === "tabs") {
   await b.key("End"); s = await state();
   check("End: last tab", s.sel === "false,true" && s.focus === "tabWords");
   await b.key("Tab");
-  check("Tab from the tabs goes into the words (scrollable, focusable)", await b.evaluate(`document.activeElement.classList.contains("words-body")`));
+  check("Tab from the tabs goes to the \"i\" button at the end of the legend", await b.evaluate(`document.activeElement.classList.contains("words-info-btn")`));
+  await b.key("Tab");
+  check("then into the words (scrollable, focusable)", await b.evaluate(`document.activeElement.classList.contains("words-body")`));
   await b.key("Tab", true);
-  check("Shift+Tab back to the selected tab", (await b.evaluate("document.activeElement.id")) === "tabWords");
+  await b.key("Tab", true);
+  check("Shift+Tab twice (past the \"i\" button) back to the selected tab", (await b.evaluate("document.activeElement.id")) === "tabWords");
   await b.show({ ...RESULT, words: WORDS });
   s = await state();
   check("a new result opens on Coach's notes again", s.sel === "true,false" && !s.notes && s.words);
@@ -222,7 +227,7 @@ if (!only || only === "layout") {
       check(`${tag}: each tab label on one line and not cut off`, await b.evaluate(`[...document.querySelectorAll("#backstageTabs .feedback-tab")].every(t => t.getBoundingClientRect().height <= 36 && t.scrollWidth <= t.clientWidth)`));
       await b.evaluate(`wordsPanel.querySelector(".words-body").scrollTop = 1e9`);
       await sleep(200);
-      check(`${tag}: the note comes at the end of the words`, await b.evaluate(`(() => { const n = wordsPanel.querySelector(".words-note-inline"); const r = n.getBoundingClientRect(), body = wordsPanel.querySelector(".words-body").getBoundingClientRect(); return getComputedStyle(n).display === "block" && getComputedStyle(wordsPanel.querySelector(":scope > .words-note")).display === "none" && r.bottom <= body.bottom; })()`));
+      check(`${tag}: no note at the end of the Backstage words (the "i" card instead)`, await b.evaluate(`!wordsPanel.querySelector(".words-note, .words-note-inline") && !!wordsPanel.querySelector(".words-info-btn")`));
       await shot(b, `layout-${tag}-words-end`);
     }
     await done(b);

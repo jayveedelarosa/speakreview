@@ -1296,7 +1296,7 @@ function displayResult(data, speechId = null) {
     perfScroll.scrollTop = 0;
     // Your words (too-short speeches show theirs too), with the coach's dotted fillers when it judged them
     const transcript = cleanTranscript(data.words, data.filler_flags, data.fillers_judged);
-    wordsPanel.replaceChildren(buildWordsView(transcript.words, transcript.flags, { playable: true }));
+    wordsPanel.replaceChildren(buildWordsView(transcript.words, transcript.flags, { playable: true, info: true }));
     setupReplay(speechId, Array.isArray(transcript.words) && transcript.words.length > 0);
     // The Nightly Review: in the left column with two columns, in the Review tab with one column (phones and
     // windows below 990px). Hidden without a valid review.
@@ -1450,7 +1450,9 @@ function legendItem(sample, long, short, count) {
 // as filler (a Set), or null when the coach didn't judge. Returns a fragment for a panel.
 // playable (Backstage only): every word becomes its own element with its start time (data-t, in hundredths of a
 // second) and its sentence (data-s), and long pauses get the time they start, so replay can follow and jump.
-function buildWordsView(words, flags = null, { playable = false } = {}) {
+// info (Backstage only): no note under the words; a small "i" button at the end of the legend opens a card
+// with what the marks mean instead (the playbill keeps its note).
+function buildWordsView(words, flags = null, { playable = false, info = false } = {}) {
     const view = document.createDocumentFragment();
     if (!words || words.length === 0) {
         const empty = document.createElement("p");
@@ -1535,7 +1537,7 @@ function buildWordsView(words, flags = null, { playable = false } = {}) {
     [sampleFiller, samplePause, sampleUnclear, sampleMaybe].forEach(sample => sample.setAttribute("aria-hidden", "true"));
 
     // The design's order: Filler, Used as filler (only when the coach judged), Long pause, Unclear
-    const legend = document.createElement("p");
+    const legend = document.createElement(info ? "div" : "p");      // the info card can't sit inside a <p>
     legend.className = "words-legend";
     legend.append(legendItem(sampleFiller, "Filler", "Filler", fillers));
     if (flags !== null) legend.append(legendItem(sampleMaybe, "Used as filler", "As filler", judged));
@@ -1551,6 +1553,12 @@ function buildWordsView(words, flags = null, { playable = false } = {}) {
     body.setAttribute("aria-label", "Your words, scrollable");
     body.append(text);
 
+    if (info) {
+        legend.append(...wordsInfo(flags !== null));
+        view.append(legend, body);
+        return view;
+    }
+
     // The note sits under the words on laptops, and at the end of the words on phones (CSS shows one of the two)
     const NOTE = (flags !== null ? "Dotted words are only marked when used as filler. " : "")
         + "Long pauses are 3 seconds or more, and are not a mistake: pausing is often better than saying um. Unclear words are ones the transcription was unsure about.";
@@ -1565,6 +1573,73 @@ function buildWordsView(words, flags = null, { playable = false } = {}) {
     view.append(legend, body, note);
     return view;
 }
+
+// The "i" button and its card (closed). The bold tip is only shown while replay is there (refreshReplay).
+function wordsInfo(judged) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "words-info-btn";
+    button.textContent = "i";
+    button.setAttribute("aria-label", "What the marks mean");
+    button.setAttribute("aria-expanded", "false");
+    button.setAttribute("aria-controls", "wordsInfo");
+    const card = document.createElement("div");
+    card.id = "wordsInfo";
+    card.className = "words-info";
+    card.setAttribute("role", "note");
+    card.hidden = true;
+    const tip = document.createElement("strong");
+    tip.className = "words-info-tip";
+    tip.hidden = true;
+    const list = document.createElement("ul");
+    const lines = [
+        ...(judged ? ["Dotted words are marked only when used as filler."] : []),
+        "Pauses of 3 seconds or more are shown, but they're not mistakes. A pause is better than saying \"um\".",
+        "Unclear words are ones the transcription wasn't sure about."
+    ];
+    lines.forEach(line => {
+        const item = document.createElement("li");
+        item.textContent = line;
+        list.append(item);
+    });
+    card.append(tip, list);
+    return [button, card];
+}
+
+// Opens or closes the card (it starts closed every time Backstage opens). Closing with Escape puts focus back
+// on the "i" button.
+function setWordsInfo(open, focusButton = false) {
+    const button = wordsPanel.querySelector(".words-info-btn");
+    const card = wordsPanel.querySelector(".words-info");
+    if (!button || !card) return;
+    card.hidden = !open;
+    button.setAttribute("aria-expanded", String(open));
+    // When Your words is short (phones, short windows) the panel scrolls: bring the whole card into view
+    if (open) card.scrollIntoView({ block: "nearest", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    if (!open && focusButton) button.focus();
+}
+
+// (listened for on the document: this part of the script runs before wordsPanel is defined)
+document.addEventListener("click", e => {
+    const button = e.target.closest("#wordsPanel .words-info-btn");
+    if (button) setWordsInfo(button.getAttribute("aria-expanded") !== "true");
+});
+
+document.addEventListener("keydown", e => {
+    if (e.key !== "Escape") return;
+    const card = wordsPanel.querySelector(".words-info");
+    if (!card || card.hidden) return;
+    e.preventDefault();
+    setWordsInfo(false, true);
+});
+
+// A click or tap anywhere outside the card and its button closes it
+document.addEventListener("pointerdown", e => {
+    const card = wordsPanel.querySelector(".words-info");
+    if (!card || card.hidden) return;
+    if (card.contains(e.target) || e.target.closest(".words-info-btn")) return;
+    setWordsInfo(false);
+});
 
 // ---------------------------
 // The Nightly Review: the coach's rating as a newspaper clipping
@@ -1776,6 +1851,7 @@ function showView(name) {
         closeProgramme(false);
     }
     if (name !== "backstage") pauseReplay();
+    if (name === "backstage") setWordsInfo(false);      // the info card starts closed each time
     currentView = name;
     dropZone.hidden = !isStage;
     backstageView.hidden = name !== "backstage";
@@ -4423,6 +4499,18 @@ function setupReplay(speechId, hasWords) {
     refreshReplay();
 }
 
+// The card's bold tip, only with a replay: "Click any word..." on laptops, "Tap any word..." on phones
+function updateInfoTip(live) {
+    const tip = wordsPanel.querySelector(".words-info-tip");
+    if (!tip) return;
+    tip.hidden = !live;
+    tip.textContent = `${phoneQuery.matches ? "Tap" : "Click"} any word to jump there in the replay.`;
+}
+phoneQuery.addEventListener("change", () => {
+    const tip = wordsPanel.querySelector(".words-info-tip");
+    if (tip) updateInfoTip(!tip.hidden);
+});
+
 function refreshReplay() {
     if (!replayReady || !backstageSpeech) return;
     pauseReplay();
@@ -4430,6 +4518,7 @@ function refreshReplay() {
     const live = hasWords && id !== null && replayRecording !== null && replayRecording.id === id;
     replayBox.hidden = !live;
     replayGone.hidden = !hasWords || live;
+    updateInfoTip(live);
     if (!live) unbindReplayWords();
     if (!live) replayBox.remove();
     if (!hasWords || live) replayGone.remove();

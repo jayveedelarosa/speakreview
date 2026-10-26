@@ -42,11 +42,11 @@ const WORDS_READ = scope => `(() => {
     fillers: [...t.querySelectorAll(".w-filler")].map(e => e.firstChild.textContent),
     unclear: [...t.querySelectorAll(".w-unclear")].map(e => e.firstChild.textContent),
     legend: [...document.querySelectorAll(${JSON.stringify(scope)} + " .words-key .long-label")].map(e => e.textContent),
-    note: document.querySelector(${JSON.stringify(scope)} + " > .words-note").textContent,
+    note: document.querySelector(${JSON.stringify(scope)} + " > .words-note")?.textContent ?? null,
+    info: [...document.querySelectorAll(${JSON.stringify(scope)} + " .words-info li")].map(e => e.textContent),
     style: (() => { const e = t.querySelector(".w-maybe"); if (!e) return null; const cs = getComputedStyle(e); return [cs.borderBottomStyle, cs.borderBottomWidth, cs.borderBottomColor, cs.backgroundColor]; })()
   };
 })()`;
-const NOTE4 = "Long pauses are 3 seconds or more, and are not a mistake: pausing is often better than saying um. Unclear words are ones the transcription was unsure about.";
 
 if (!only || only === "review") {
   console.log("\n== The Nightly Review (laptop)");
@@ -115,7 +115,8 @@ if (!only || only === "fillers") {
   check("dotted wins over unclear (basically, 40)", !w.unclear.includes("basically") && JSON.stringify(w.unclear) === JSON.stringify(["failure"]));
   check("screen readers hear (used as filler)", w.maybeSr.length === 6 && w.maybeSr.every(t => t === " (used as filler)"));
   check("legend: Filler, Used as filler, Long pause, Unclear (with counts)", JSON.stringify(w.legend) === JSON.stringify(["Filler, 1", "Used as filler, 6", "Long pause, 0", "Unclear, 1"]), JSON.stringify(w.legend));
-  check("note starts with the dotted words sentence", w.note === "Dotted words are only marked when used as filler. " + NOTE4);
+  // Backstage: no note under the words since the stage 4 update; the "i" card lists the marks instead
+  check("the info card starts with the dotted words line (no note under the words)", w.note === null && w.info.length === 3 && w.info[0] === "Dotted words are marked only when used as filler.", JSON.stringify(w.info));
   check("dotted look: 2px dotted gold, no highlight", w.style[0] === "dotted" && w.style[1] === "2px" && w.style[2] === "rgb(217, 174, 82)" && w.style[3] === "rgba(0, 0, 0, 0)", JSON.stringify(w.style));
   check("you know counts once: 6 marks for 7 flagged words (know not flagged at the end stays plain)", (await b.evaluate(`[...wordsPanel.querySelectorAll(".words-text .w-maybe")].length`)) === 6 && !w.maybe.includes("know"));
   contrastOk(await b.evaluate(COLOR_CONTRAST(["#wordsPanel .w-maybe"])), "dotted words (dark)");
@@ -125,7 +126,7 @@ if (!only || only === "fillers") {
     await b.show({ ...BASE_RESULT, ...extra });
     await b.mouse("#tabWords");
     w = await b.evaluate(WORDS_READ("#wordsPanel"));
-    check(`${name}: no dotted marks, Stage 4 legend and note`, w.maybe.length === 0 && JSON.stringify(w.legend) === JSON.stringify(["Filler, 1", "Long pause, 0", "Unclear, 2"]) && w.note === NOTE4, JSON.stringify(w.legend));
+    check(`${name}: no dotted marks, Stage 4 legend, and no dotted line in the info card`, w.maybe.length === 0 && JSON.stringify(w.legend) === JSON.stringify(["Filler, 1", "Long pause, 0", "Unclear, 2"]) && w.note === null && w.info.length === 2 && !w.info.some(t => t.startsWith("Dotted")), JSON.stringify(w.info));
   }
   // Judged with no flags: the legend says 0
   await b.show({ ...BASE_RESULT, filler_flags: [] });

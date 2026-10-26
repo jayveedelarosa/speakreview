@@ -3,6 +3,7 @@
 //   radio    the console radio: where it shows, play and pause, speed, the dial, the end, pausing, sizes
 //   words    the boxed word follows the time, the sentence stays bright, clicking a word, auto-scroll
 //   always   no Hide replay or hint any more; an old stored choice is cleared and the radio shows
+//   info     the "i" card in Backstage's Your words: what it says, opening and closing, sizes
 // Every API call is answered by the fake API stub; nothing reaches AWS.
 import { launch, sleep, LIVE, STUB, RESULT as BASE_RESULT, WORDS, check, finish, only, shot } from "../lib/page.mjs";
 
@@ -352,6 +353,85 @@ if (!only || only === "always") {
     text: /Hide replay|Show replay|any word to hear it/.test(document.body.textContent) })`);
   check("the radio shows; no hint row and no Hide replay / Show replay anywhere", r.radio && !r.hint && !r.text, JSON.stringify(r));
   await done(b);
+}
+
+// ---------------------------------------------------------------- the "i" card
+const INFO = `(() => { const btn = wordsPanel.querySelector(".words-info-btn"), card = wordsPanel.querySelector(".words-info"), tip = card.querySelector(".words-info-tip");
+  const legend = wordsPanel.querySelector(".words-legend"), kids = [...legend.children];
+  return { open: !card.hidden, expanded: btn.getAttribute("aria-expanded"), name: btn.getAttribute("aria-label"), lastItem: kids[kids.length - 2] === btn && kids[kids.length - 1] === card,
+    tip: tip.hidden ? null : tip.textContent, items: [...card.querySelectorAll("li")].map(e => e.textContent), focus: document.activeElement === btn,
+    textTop: Math.round(wordsPanel.querySelector(".words-text").getBoundingClientRect().top), note: !!wordsPanel.querySelector(".words-note") }; })()`;
+const BULLETS = ["Dotted words are marked only when used as filler.", "Pauses of 3 seconds or more are shown, but they're not mistakes. A pause is better than saying \"um\".",
+  "Unclear words are ones the transcription wasn't sure about."];
+
+if (!only || only === "info") {
+  for (const [w, h] of [[1280, 800], [390, 780]]) {
+    const phone = w <= 600;
+    const tag = phone ? "phone" : "laptop";
+    console.log(`
+== the "i" card (${tag})`);
+    const b = await open({ width: w, height: h, pre: [`window.__result = ${JSON.stringify({ ...RESULT, fillers_judged: true, filler_flags: [] })};`] });
+    await sendAndShow(b, 6);
+    await openWords(b);
+    let r = await b.evaluate(INFO);
+    check(`${tag} the "i" button at the end of the legend, named "What the marks mean"; the card starts closed; no grey note`, r.lastItem && !r.open && r.expanded === "false" && r.name === "What the marks mean" && !r.note, JSON.stringify(r));
+    const top = await b.evaluate(`Math.round(wordsPanel.querySelector(".words-text").getBoundingClientRect().top - wordsPanel.querySelector(".words-legend").getBoundingClientRect().bottom)`);
+    const click = async sel => { const [x, y] = await b.evaluate(`(() => { const r = document.querySelector(${JSON.stringify(sel)}).getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()`);
+      if (phone) { await b.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] }); await b.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] }); }
+      else { await b.send("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 }); await b.send("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 }); }
+      await sleep(200); };
+    await click(".words-info-btn");
+    r = await b.evaluate(INFO);
+    check(`${tag} opened: the bold tip "${phone ? "Tap" : "Click"} any word to jump there in the replay." and the three lines`, r.open && r.expanded === "true"
+      && r.tip === `${phone ? "Tap" : "Click"} any word to jump there in the replay.` && JSON.stringify(r.items) === JSON.stringify(BULLETS), JSON.stringify(r));
+    // It lies over the words (they don't move inside the panel), and the whole card can be seen
+    await sleep(500);
+    const box = await b.evaluate(`(() => { const c = wordsPanel.querySelector(".words-info").getBoundingClientRect(), l = wordsPanel.querySelector(".words-legend").getBoundingClientRect(), p = wordsPanel.getBoundingClientRect();
+      const t = wordsPanel.querySelector(".words-text").getBoundingClientRect(), lg = l;
+      return { w: Math.round(c.width), left: Math.round(c.left - l.left), right: Math.round(l.right - c.right), inside: c.left >= 0 && c.right <= innerWidth && c.top >= p.top - 0.5 && c.bottom <= p.bottom + 0.5,
+        textUnderLegend: Math.round(t.top - lg.bottom) }; })()`);
+    check(`${tag} the card lies over the words without pushing them down`, box.textUnderLegend === top, `${top} -> ${box.textUnderLegend}`);
+    check(`${tag} ${phone ? "full width" : "340px wide, on the right"}, all of it in view`, box.inside && (phone ? box.left === 0 && box.right === 0 : box.w === 340 && box.right === 0), JSON.stringify(box));
+    await shot(b, `info-${tag}`);
+    // The colours on the card
+    const ratio = await b.evaluate(`(() => { const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+      const L = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]); const bg = [42, 23, 18];
+      return [".words-info li", ".words-info-tip"].map(sel => { const c = getComputedStyle(wordsPanel.querySelector(sel)).color.match(/[\\d.]+/g).map(Number); return +((L(c) + 0.05) / (L(bg) + 0.05)).toFixed(2); }); })()`);
+    check(`${tag} the card's text at least 4.5:1`, ratio.every(x => x >= 4.5), JSON.stringify(ratio));
+    // Closing: the button again, Escape, outside
+    await click(".words-info-btn");
+    check(`${tag} the button closes it`, !(await b.evaluate(INFO)).open);
+    await click(".words-info-btn");
+    await b.send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+    await b.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+    await sleep(150);
+    r = await b.evaluate(INFO);
+    check(`${tag} Escape closes it and focus goes back to the button`, !r.open && r.expanded === "false" && r.focus, JSON.stringify(r));
+    await click(".words-info-btn");
+    await click(".perf-summary");
+    check(`${tag} a ${phone ? "tap" : "click"} outside closes it`, !(await b.evaluate(INFO)).open);
+    // Starts closed each time Backstage opens
+    await click(".words-info-btn");
+    await b.evaluate("goToView('stage')");
+    await b.waitFor("currentView === 'stage' && !appRoot.inert", 5000);
+    await b.evaluate("goToView('backstage')");
+    await b.waitFor("currentView === 'backstage' && !appRoot.inert", 5000);
+    check(`${tag} closed again when Backstage opens again`, !(await b.evaluate(INFO)).open);
+    if (phone) {
+      const hit = await b.evaluate(`(() => { const btn = wordsPanel.querySelector(".words-info-btn"), r = btn.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+        return [[-21, 0], [21, 0], [0, -21], [0, 21]].every(([dx, dy]) => btn === document.elementFromPoint(x + dx, y + dy)); })()`);
+      check("phone: the 22px button answers to taps across 44px", hit);
+    } else {
+      // A past show: the card has no tip
+      await b.evaluate(`displayResult(${JSON.stringify({ ...RESULT, fillers_judged: true, filler_flags: [] })}, "an-older-speech"); true`);
+      await b.waitFor("!appRoot.inert", 5000);
+      await openWords(b);
+      await click(".words-info-btn");
+      r = await b.evaluate(INFO);
+      check("a past show: the card opens without the replay tip", r.open && r.tip === null && r.items.length === 3, JSON.stringify(r));
+    }
+    await done(b);
+  }
 }
 
 finish();
