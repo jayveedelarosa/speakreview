@@ -1,6 +1,7 @@
 // Feature set 3, stage 4: replay in Your words.
 //   keep     the exact WAV that was sent stays in memory for the latest speech only, and nothing else frees it
 //   radio    the console radio: where it shows, play and pause, speed, the dial, the end, pausing, sizes
+//   words    the boxed word follows the time, the sentence stays bright, clicking a word, auto-scroll
 // Every API call is answered by the fake API stub; nothing reaches AWS.
 import { launch, sleep, LIVE, STUB, RESULT as BASE_RESULT, WORDS, check, finish, only, shot } from "../lib/page.mjs";
 
@@ -215,6 +216,107 @@ if (!only || only === "radio") {
     }
     await done(b);
   }
+}
+
+// ---------------------------------------------------------------- the words follow the replay
+// What is boxed and bright now
+const HEARD = `(() => { const t = wordsPanel.querySelector(".words-text"); const heard = t.querySelectorAll(".is-heard");
+  const dim = [...t.querySelectorAll(".w:not(.is-sentence)")].map(e => getComputedStyle(e).color);
+  const bright = [...t.querySelectorAll(".w.is-sentence:not(.is-heard)")].map(e => getComputedStyle(e).color);
+  return { live: t.classList.contains("is-live"), count: heard.length, word: heard[0] ? heard[0].firstChild.textContent : null, box: heard[0] ? getComputedStyle(heard[0]).boxShadow : "",
+    dim: [...new Set(dim)], bright: [...new Set(bright)], sentence: [...t.querySelectorAll(".is-sentence")].map(e => e.firstChild.textContent).join(" ") }; })()`;
+
+if (!only || only === "words") {
+  for (const [w, h] of [[1280, 800], [390, 780]]) {
+    const phone = w <= 600;
+    const tag = phone ? "phone" : "laptop";
+    console.log(`\n== the words follow the replay (${tag})`);
+    const b = await open({ width: w, height: h });
+    await sendAndShow(b, 14);
+    await openWords(b);
+    let r = await b.evaluate(HEARD);
+    check(`${tag} before playing: the first word boxed, the first sentence bright, other plain words dimmed`, r.live && r.count === 1 && r.word === "So" && r.box.includes("rgb(217, 174, 82)")
+      && r.sentence === "So um, I think failure is a better teacher." && r.dim.join() === "rgb(184, 164, 140)" && r.bright.join() === "rgb(232, 216, 192)", JSON.stringify(r));
+    check(`${tag} the hint: "${phone ? "Tap" : "Click"} any word to hear it"`, await b.evaluate(`[...wordsPanel.querySelectorAll(".replay-hint > span")].filter(e => getComputedStyle(e).display !== "none" && getComputedStyle(e).position !== "absolute").map(e => e.textContent).join("")`) === (phone ? "Tap any word to hear it" : "Click any word to hear it"));
+    if (!phone) {
+      // The dimmed colour on the lightest part of the panel (#1E0F0C under a 5% white sheen)
+      const ratio = await b.evaluate(`(() => { const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+        const L = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]); const bg = [30, 15, 12].map(v => 255 * 0.05 + v * 0.95), fg = [184, 164, 140];
+        return +((L(fg) + 0.05) / (L(bg) + 0.05)).toFixed(2); })()`);
+      check(`the dimmed words (#B8A48C) pass 4.5:1 on the panel`, ratio >= 4.5, ratio);
+      // The box follows the time
+      for (const [at, word] of [[0.85, "I"], [2.7, "teacher."], [6.7, "Umm"], [9.45, "<img src=x onerror=window.__xss=1>"], [12.7, "end."]]) {
+        await b.evaluate(`replayPlayer.seekTo(${at}); true`);
+        await sleep(150);
+        r = await b.evaluate(HEARD);
+        check(`at ${at} s the box is on "${word}"`, r.count === 1 && r.word === word, r.word);
+      }
+      await b.evaluate("replayPlayer.seekTo(6.7); true");
+      await sleep(150);
+      check("marks keep their own look under the box", await b.evaluate(`(() => { const m = wordsPanel.querySelector("mark.is-heard"); return !!m && getComputedStyle(m).backgroundColor !== "rgba(217, 174, 82, 0.3)" && getComputedStyle(m).boxShadow.includes("rgb(217, 174, 82)"); })()`));
+      check("the hostile word stays text", await b.evaluate("!window.__xss && !wordsPanel.querySelector('.words-text img')"));
+      // Playing at 2×: the box is always on the word whose time has come
+      await b.evaluate(`replaySpeedBtn.click(); replaySpeedBtn.click(); replaySpeedBtn.click(); replaySpeedBtn.click(); replayPlayer.seekTo(6.6); replayPlayKey.click(); true`);
+      await sleep(900);
+      const follow = await b.evaluate(`(() => { const t = replayAudio.currentTime * 100; const items = [...wordsPanel.querySelectorAll(".words-text [data-s]")];
+        const want = items.filter(e => Number(e.dataset.t) <= t).pop(); return { rate: replayAudio.playbackRate, t: Math.round(t), heard: wordsPanel.querySelector(".is-heard") === want || Math.abs(Number(want.dataset.t) - t) < 30 }; })()`);
+      check("at 2× the box keeps up with the time", follow.rate === 2 && follow.t > 700 && follow.heard, JSON.stringify(follow));
+      await b.evaluate("replayPlayKey.click(); replaySpeedBtn.click(); replaySpeedBtn.click(); replaySpeedBtn.click(); true");
+      // Clicking a word jumps there; it keeps the play state
+      const clickWord = word => b.evaluate(`(() => { const e = [...wordsPanel.querySelectorAll(".words-text [data-t]")].find(x => x.firstChild && x.firstChild.textContent === ${JSON.stringify(word)});
+        const r = e.getBoundingClientRect(); return [r.left + 4, r.top + r.height / 2]; })()`);
+      let [x, y] = await clickWord("better");
+      await b.send("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
+      await b.send("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
+      await sleep(200);
+      r = await b.evaluate(HEARD);
+      check("paused: a click on a word jumps there and stays paused", r.word === "better" && await b.evaluate("replayAudio.paused && Math.abs(replayAudio.currentTime - 2.2) < 0.05"), JSON.stringify(r));
+      await b.evaluate("replayPlayKey.click()");
+      await b.waitFor("!replayAudio.paused", 3000);
+      [x, y] = await b.evaluate(`(() => { const r = wordsPanel.querySelector(".words-text .w-pause").getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()`);
+      await b.send("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
+      await b.send("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
+      await sleep(150);
+      check("playing: a click on the long pause jumps to where it starts and keeps playing", await b.evaluate("!replayAudio.paused && replayAudio.currentTime >= 3.2 && replayAudio.currentTime < 3.9"), await b.evaluate("replayAudio.currentTime"));
+      await b.evaluate("replayPlayKey.click()");
+      check("the words are not Tab stops", await b.evaluate(`[...wordsPanel.querySelectorAll(".words-text [data-t]")].every(e => e.tabIndex < 0 && !e.matches("button, a, [tabindex]"))`));
+    }
+    await done(b);
+  }
+
+  console.log("\n== scrolling: only when the boxed word would leave view, and not after scrolling by hand");
+  const b = await open({ width: 1280, height: 800 });
+  // A long speech: 300 words over about 100 s, so the transcript must scroll
+  const long = Array.from({ length: 300 }, (_, i) => [i % 12 === 11 ? "end." : "word", i * 33, i * 33 + 25, 95]);
+  await b.evaluate(`window.__result = ${JSON.stringify({ ...RESULT, words: long })}; true`);
+  await sendAndShow(b, 100);
+  await openWords(b);
+  const scroll = () => b.evaluate("wordsPanel.querySelector('.words-body').scrollTop");
+  const inView = () => b.evaluate(`(() => { const v = wordsPanel.querySelector(".words-body").getBoundingClientRect(), e = wordsPanel.querySelector(".is-heard").getBoundingClientRect(); return e.top >= v.top && e.bottom <= v.bottom - 40; })()`);
+  await b.evaluate("replayPlayer.seekTo(1); replayPlayKey.click(); true");
+  await sleep(600);
+  check("near the top: no scrolling while the boxed word is in view", (await scroll()) === 0);
+  await b.evaluate("replayPlayer.seekTo(60); true");
+  await sleep(1200);
+  const s1 = await scroll();
+  check("the boxed word leaves view: the transcript scrolls to show it", s1 > 0 && await inView(), s1);
+  // Scrolling by hand (the mouse wheel) while it plays
+  const [wx, wy] = await b.evaluate(`(() => { const r = wordsPanel.querySelector(".words-body").getBoundingClientRect(); return [r.left + 40, r.top + 20]; })()`);
+  await b.send("Input.dispatchMouseEvent", { type: "mouseWheel", x: wx, y: wy, deltaX: 0, deltaY: -2000 });
+  await sleep(400);
+  const s2 = await scroll();
+  await b.evaluate("replayPlayer.seekTo(90); true");
+  await sleep(1200);
+  check("after scrolling by hand, auto-scrolling waits (the transcript stays where it was put)", s2 < s1 && Math.abs((await scroll()) - s2) < 2, `${s1} > ${s2}, now ${await scroll()}`);
+  // A word click brings it back
+  const [cx, cy] = await b.evaluate(`(() => { const r = wordsPanel.querySelector(".words-text [data-t]").getBoundingClientRect(); return [r.left + 4, r.top + r.height / 2]; })()`);
+  await b.send("Input.dispatchMouseEvent", { type: "mousePressed", x: cx, y: cy, button: "left", clickCount: 1 });
+  await b.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: cx, y: cy, button: "left", clickCount: 1 });
+  await b.evaluate("replayPlayer.seekTo(80); true");
+  await sleep(1200);
+  check("a word click starts auto-scrolling again", await inView());
+  await b.evaluate("replayPlayKey.click()");
+  await done(b);
 }
 
 finish();

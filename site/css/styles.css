@@ -3830,6 +3830,36 @@ html.settings-lock {
     }
 }
 
+/* The words follow the replay: the word being heard in a gold box, its sentence bright, plain words in the other
+   sentences dimmed. Marks keep their own look under the box. Every word can be clicked or tapped. */
+.words-text.is-live [data-t] {
+    cursor: pointer;
+}
+
+.words-text.is-live .w {
+    color: #B8A48C;
+}
+
+.words-text.is-live .w.is-sentence {
+    color: inherit;
+}
+
+.words-text.is-live .is-heard {
+    border-radius: 3px;
+    box-shadow: 0 0 0 2px #D9AE52;
+}
+
+.words-text.is-live .w.is-heard {
+    background: rgba(217, 174, 82, 0.3);
+    color: #FFF6E3;
+}
+
+.replay-hint {
+    margin-left: auto;
+    font-size: 12px;
+    color: #BCA992;
+}
+
 /* Past shows: the note instead of the radio */
 .replay-gone {
     flex: none;
@@ -3873,6 +3903,12 @@ html.settings-lock {
 
     .replay-time {
         font-size: 10px;
+    }
+
+    .replay-hint {
+        flex-basis: 100%;
+        margin-left: 0;
+        font-size: 11px;
     }
 
     .replay-gone {

@@ -1296,7 +1296,7 @@ function displayResult(data, speechId = null) {
     perfScroll.scrollTop = 0;
     // Your words (too-short speeches show theirs too), with the coach's dotted fillers when it judged them
     const transcript = cleanTranscript(data.words, data.filler_flags, data.fillers_judged);
-    wordsPanel.replaceChildren(buildWordsView(transcript.words, transcript.flags));
+    wordsPanel.replaceChildren(buildWordsView(transcript.words, transcript.flags, { playable: true }));
     setupReplay(speechId, Array.isArray(transcript.words) && transcript.words.length > 0);
     // The Nightly Review: in the left column with two columns, in the Review tab with one column (phones and
     // windows below 990px). Hidden without a valid review.
@@ -1448,7 +1448,9 @@ function legendItem(sample, long, short, count) {
 
 // Builds the Your words view for a list of words (or null). flags: the positions the coach judged as used
 // as filler (a Set), or null when the coach didn't judge. Returns a fragment for a panel.
-function buildWordsView(words, flags = null) {
+// playable (Backstage only): every word becomes its own element with its start time (data-t, in hundredths of a
+// second) and its sentence (data-s), and long pauses get the time they start, so replay can follow and jump.
+function buildWordsView(words, flags = null, { playable = false } = {}) {
     const view = document.createDocumentFragment();
     if (!words || words.length === 0) {
         const empty = document.createElement("p");
@@ -1468,6 +1470,13 @@ function buildWordsView(words, flags = null) {
     let fillers = 0, pauses = 0, unclear = 0, judged = 0;
     const flagged = i => flags !== null && flags.has(i);
     let skipNext = false;              // the "know" of a "you know" already shown with its "you"
+    let sentence = 0;                  // a sentence ends at a word ending in . ! or ?
+    const timed = (element, start) => {
+        if (!playable) return element;
+        element.dataset.t = String(start);
+        element.dataset.s = String(sentence);
+        return element;
+    };
     words.forEach(([word, start, , confidence], i) => {
         if (skipNext) {
             skipNext = false;
@@ -1476,7 +1485,9 @@ function buildWordsView(words, flags = null) {
         const gap = i > 0 ? start - words[i - 1][2] : 0;
         if (gap >= LONG_PAUSE_HUNDREDTHS) {
             flush();
-            text.append(document.createTextNode(" "), pausePill(gap / 100));
+            const pill = pausePill(gap / 100);
+            if (playable) pill.dataset.t = String(words[i - 1][2]);    // the pause starts where the last word ended
+            text.append(document.createTextNode(" "), pill);
             pauses++;
         }
         const space = i > 0 ? " " : "";
@@ -1484,7 +1495,7 @@ function buildWordsView(words, flags = null) {
         if (isFillerSound(word)) {             // a filler wins over unclear (the transcription is often unsure about "um")
             plain += space;
             flush();
-            text.append(markedWord("filler", word));
+            text.append(timed(markedWord("filler", word), start));
             fillers++;
         } else if (flagged(i)) {
             // "you know" is one filler: both words go in one dotted mark (unless a long pause splits them)
@@ -1496,16 +1507,22 @@ function buildWordsView(words, flags = null) {
             }
             plain += space;
             flush();
-            text.append(markedWord("maybe", shown));
+            text.append(timed(markedWord("maybe", shown), start));
             judged++;
         } else if (confidence < UNCLEAR_CONFIDENCE) {
             plain += space;
             flush();
-            text.append(markedWord("unclear", word));
+            text.append(timed(markedWord("unclear", word), start));
             unclear++;
+        } else if (playable) {
+            plain += space;
+            flush();
+            text.append(timed(makeSpan("w", word), start));
         } else {
             plain += space + word;
         }
+        const last = skipNext ? words[i + 1][0] : word;
+        if (/[.!?]["'”’)\]]*$/.test(last)) sentence++;
     });
     flush();
 
@@ -4408,6 +4425,7 @@ function refreshReplay() {
     const live = hasWords && id !== null && replayRecording !== null && replayRecording.id === id;
     replayBox.hidden = !live;
     replayGone.hidden = !hasWords || live;
+    if (!live) unbindReplayWords();
     if (!live) replayBox.remove();
     if (!hasWords || live) replayGone.remove();
     if (hasWords) wordsPanel.prepend(live ? replayBox : replayGone);
@@ -4423,7 +4441,137 @@ function refreshReplay() {
             })
             .catch(err => console.error(err));
     }
+    bindReplayWords();
 }
+
+// ---- The words follow the replay ----
+// While the radio is there, the word being heard gets a gold box and its sentence stays bright (plain words in
+// the others dim). The transcript scrolls by itself only when the boxed word would leave view. Scrolling by
+// hand while it plays pauses that, until a word is clicked, Play is pressed, or the boxed word comes back on its
+// own. A click or tap on a word (or a long pause) jumps there; the words are not separate Tab stops.
+let replayWords = null;          // { text, body, items: [{ el, t, s }], heard, sentence }
+let replayAutoScroll = true;
+let replayWordLeftView = false;  // since scrolling by hand, the boxed word has been out of view
+let replayFrame = null;
+const REPLAY_SCROLL_KEYS = ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "];
+
+function unbindReplayWords() {
+    if (!replayWords) return;
+    replayWords.text.classList.remove("is-live");
+    replayWords.text.querySelectorAll(".is-heard, .is-sentence").forEach(el => el.classList.remove("is-heard", "is-sentence"));
+    const hint = wordsPanel.querySelector(".replay-hint");
+    if (hint) hint.remove();
+    replayWords = null;
+}
+
+function bindReplayWords() {
+    const text = wordsPanel.querySelector(".words-text");
+    if (replayWords && replayWords.text === text) return;
+    unbindReplayWords();
+    if (!text) return;
+    const items = [...text.querySelectorAll("[data-t][data-s]")].map(el => ({ el, t: Number(el.dataset.t), s: Number(el.dataset.s) }));
+    if (items.length === 0) return;
+    replayWords = { text, body: wordsPanel.querySelector(".words-body"), items, heard: -1, sentence: -1 };
+    text.classList.add("is-live");
+    // "Click any word to hear it" (laptop) / "Tap any word to hear it" (phone), at the end of the legend row
+    const legend = wordsPanel.querySelector(".words-legend");
+    if (legend) {
+        const hint = document.createElement("span");
+        hint.className = "replay-hint";
+        hint.setAttribute("aria-hidden", "true");
+        hint.append(makeSpan("long-label", "Click any word to hear it"), makeSpan("short-label", "Tap any word to hear it"));
+        legend.append(hint);
+    }
+    replayAutoScroll = true;
+    markHeard(replayAudio.currentTime);
+}
+
+// The fade at the bottom of the transcript (40px, less when the transcript is very short)
+const wordsFade = view => Math.min(40, view.height / 4);
+
+// Is the word inside the part of the transcript that can be seen (above the fade at the bottom)?
+function inWordsView(el) {
+    const view = replayWords.body.getBoundingClientRect();
+    const box = el.getBoundingClientRect();
+    return box.top >= view.top && box.bottom <= view.bottom - wordsFade(view);
+}
+
+// Boxes the word being heard at `seconds` (the last word that has started), and brightens its sentence
+function markHeard(seconds) {
+    if (!replayWords) return;
+    const { items } = replayWords;
+    const at = seconds * 100;
+    let low = 0;
+    let high = items.length - 1;
+    while (low < high) {
+        const middle = Math.ceil((low + high) / 2);
+        if (items[middle].t <= at) low = middle;
+        else high = middle - 1;
+    }
+    if (low !== replayWords.heard) {
+        if (replayWords.heard >= 0) items[replayWords.heard].el.classList.remove("is-heard");
+        items[low].el.classList.add("is-heard");
+        replayWords.heard = low;
+    }
+    const sentence = items[low].s;
+    if (sentence !== replayWords.sentence) {
+        items.forEach(item => {
+            if (item.s === replayWords.sentence) item.el.classList.remove("is-sentence");
+            if (item.s === sentence) item.el.classList.add("is-sentence");
+        });
+        replayWords.sentence = sentence;
+    }
+    if (!replayAudio.paused) keepHeardInView();
+}
+
+function keepHeardInView() {
+    const el = replayWords.items[replayWords.heard].el;
+    const visible = inWordsView(el);
+    if (!replayAutoScroll) {
+        // Scrolled away by hand: only the word coming back into view by itself starts auto-scrolling again
+        if (!visible) replayWordLeftView = true;
+        else if (replayWordLeftView) replayAutoScroll = true;
+        return;
+    }
+    if (visible) return;
+    const body = replayWords.body;
+    const view = body.getBoundingClientRect();
+    const offset = el.getBoundingClientRect().top - view.top;
+    body.scrollTo({ top: body.scrollTop + offset - (view.height - wordsFade(view)) / 3, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+}
+
+function followReplay() {
+    replayPlayer.refresh();
+    markHeard(replayAudio.currentTime);
+    replayFrame = replayAudio.paused ? null : requestAnimationFrame(followReplay);
+}
+
+replayAudio.addEventListener("play", () => {
+    replayAutoScroll = true;               // pressing Play follows the words again
+    if (replayFrame === null) replayFrame = requestAnimationFrame(followReplay);
+});
+replayAudio.addEventListener("seeked", () => markHeard(replayAudio.currentTime));
+replayAudio.addEventListener("timeupdate", () => markHeard(replayAudio.currentTime));
+
+// One listener for every word: a click or tap jumps there (playing on, or staying paused)
+wordsPanel.addEventListener("click", e => {
+    if (!replayWords) return;
+    const word = e.target.closest("[data-t]");
+    if (!word || !replayWords.text.contains(word)) return;
+    replayAutoScroll = true;
+    replayPlayer.seekTo(Number(word.dataset.t) / 100);
+    markHeard(replayAudio.currentTime);
+});
+
+// Scrolling the transcript by hand while it plays pauses auto-scrolling (scrolling done by the page never
+// fires these events)
+function scrolledByHand(e) {
+    if (!replayWords || replayAudio.paused || !replayWords.body.contains(e.target)) return;
+    if (e.type === "keydown" && !REPLAY_SCROLL_KEYS.includes(e.key)) return;
+    replayAutoScroll = false;
+    replayWordLeftView = false;
+}
+["wheel", "touchmove", "keydown"].forEach(type => wordsPanel.addEventListener(type, scrolledByHand, { passive: true }));
 
 function pausePlayers() {
     takePlayer.pause();
