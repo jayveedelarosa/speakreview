@@ -3,8 +3,9 @@
 //   node run-all.mjs wall security     only these suites
 //   node run-all.mjs --only <suites>   the same, but at least one suite must be named (npm run test:only)
 //   node run-all.mjs --shots           save every screenshot to .output/shots (a few are always saved)
+//   node run-all.mjs --timeout=20      give each suite up to 20 minutes (15 by default)
 // Nothing here talks to AWS: the suites answer every API call with a fake response inside the page.
-import { spawn, execFileSync } from "node:child_process";
+import { spawn, execFile, execFileSync } from "node:child_process";
 import { createWriteStream, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { startServer } from "./lib/server.mjs";
@@ -35,9 +36,16 @@ const SUITES = [
   ["intermission", "Intermission acts, checking /result, the tab title, Coming back"],
   ["playback", "Replay in Your words"]
 ];
-const SUITE_TIMEOUT = 30 * 60 * 1000;
-
 const args = process.argv.slice(2);
+// Each suite gets at most this long (--timeout=<minutes> changes it). A suite that runs over, for example
+// because Chrome stalled while starting, is stopped (with its Chrome windows) and counted as failed.
+const timeoutArg = args.find(a => a.startsWith("--timeout="));
+const SUITE_MINUTES = timeoutArg ? Number(timeoutArg.slice("--timeout=".length)) : 15;
+if (!(SUITE_MINUTES > 0)) {
+  console.error("--timeout needs a number of minutes, for example --timeout=15");
+  process.exit(2);
+}
+const SUITE_TIMEOUT = SUITE_MINUTES * 60 * 1000;
 const wanted = args.filter(a => !a.startsWith("--"));
 // npm run test:only -- <suites>: a targeted run, never the full run by mistake
 if (args.includes("--only") && !wanted.length) {
@@ -93,8 +101,26 @@ function node(script, scriptArgs, logName, timeout = SUITE_TIMEOUT) {
     };
     child.stdout.on("data", read);
     child.stderr.on("data", chunk => { read(chunk); process.stderr.write(chunk); });
-    const timer = setTimeout(() => { child.kill(); log.write("\nTIMED OUT\n"); }, timeout);
-    child.on("close", code => { clearTimeout(timer); log.end(); resolve({ code: code ?? 1, passes, fails }); });
+    let finished = false;
+    const finish = code => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      log.end();
+      resolve({ code, passes, fails });
+    };
+    // Over the limit: end the suite and everything it started (its Chrome windows too), and stop waiting
+    // shortly after even if its output never closes
+    const timer = setTimeout(() => {
+      const message = `TIMED OUT after ${Math.round(timeout / 60000)} min (a Chrome start-up stall?)`;
+      console.log("    " + message);
+      log.write(`\n${message}\n`);
+      fails++;
+      if (process.platform === "win32") execFile("taskkill", ["/T", "/F", "/PID", String(child.pid)], () => {});
+      else child.kill("SIGKILL");
+      setTimeout(() => finish(1), 5000);
+    }, timeout);
+    child.on("close", code => finish(code ?? 1));
   });
 }
 

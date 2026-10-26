@@ -83,7 +83,8 @@ export async function launch({ width = 1280, height = 800, flags = [], mobile = 
   let target;
   for (let i = 0; i < 150; i++) {
     try {
-      const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
+      // Never wait long on one try: a stalled Chrome must fail the suite, not hang it
+      const list = await (await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(2000) })).json();
       target = list.find(t => t.type === "page");
       if (target) break;
     } catch {}
@@ -91,7 +92,12 @@ export async function launch({ width = 1280, height = 800, flags = [], mobile = 
   }
   if (!target) { proc.kill(); throw new Error(`Chrome didn't start (${CHROME})`); }
   const ws = new WebSocket(target.webSocketDebuggerUrl);
-  await new Promise(r => ws.addEventListener("open", r, { once: true }));
+  const opened = await new Promise(r => {
+    ws.addEventListener("open", () => r(true), { once: true });
+    ws.addEventListener("error", () => r(false), { once: true });
+    setTimeout(() => r(false), 15000);
+  });
+  if (!opened) { proc.kill(); throw new Error(`Chrome didn't start (${CHROME}): its DevTools connection didn't open`); }
   let id = 0;
   const pending = new Map();
   const listeners = [];

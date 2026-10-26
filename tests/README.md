@@ -33,7 +33,7 @@ From the `tests` folder:
 
 Which to run: for small changes, only the suites related to the change, plus `security` when the change touches text from outside the page (API replies, storage, typed text, file names). Each stage runs only its related suites; the full run (`npm test`) runs only once, at feature set 3 stage 7 (the launch check).
 
-The whole run takes about an hour. Keep the computer awake. Ports 8765 and 8766 must be free: close any other test run first.
+The whole run takes about an hour. Keep the computer awake. Each suite gets at most 15 minutes (`--timeout=<minutes>` changes it): a suite that runs over, for example because Chrome stalled while starting, is stopped with its Chrome windows, reported as `TIMED OUT`, and counted as failed. Ports 8765 and 8766 must be free: close any other test run first.
 
 Each suite's full output goes to `.output/logs/<suite>.log`. Failures are also printed as they happen. `npm test` exits with code 1 if any check fails.
 
