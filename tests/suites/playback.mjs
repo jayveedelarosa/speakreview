@@ -535,11 +535,23 @@ if (!only || only === "space") {
     await done(b);
   }
 
-  console.log("\n== laptop keeps two columns");
-  const b = await open({ width: 1280, height: 800, pre: [`window.__result = ${JSON.stringify(SPACE_RESULT)};`] });
-  await sendAndShow(b, 60);
-  check("1280x800: the scrolling area has no box of its own, and Clarity keeps its line", await b.evaluate(`getComputedStyle(backstageScroll).display === "contents" && [...perfSummary.querySelectorAll(".stat-hint")].some(e => getComputedStyle(e).display !== "none" && e.getClientRects().length > 0)`));
-  await done(b);
+  for (const [w, h] of [[1280, 800], [1093, 526]]) {
+    console.log(`\n== laptop keeps two columns, legend on one line (${w}x${h})`);
+    const b = await open({ width: w, height: h, pre: [`window.__result = ${JSON.stringify(SPACE_RESULT)};`] });
+    await sendAndShow(b, 60);
+    check(`${w}x${h}: the scrolling area has no box of its own, and Clarity keeps its line`, await b.evaluate(`getComputedStyle(backstageScroll).display === "contents" && [...perfSummary.querySelectorAll(".stat-hint")].some(e => getComputedStyle(e).display !== "none" && e.getClientRects().length > 0)`));
+    await b.evaluate(`document.getElementById("tabWords").click(); true`);
+    await sleep(250);
+    const l = await b.evaluate(`(() => { const legend = wordsPanel.querySelector(".words-legend"), keys = [...legend.querySelectorAll(".words-key")], info = legend.querySelector(".words-info-btn");
+      const mid = e => { const r = e.getBoundingClientRect(); return r.top + r.height / 2; }, rows = [...keys, info].map(mid);
+      return { oneRow: Math.max(...rows) - Math.min(...rows) <= 4, shown: keys.map(k => k.querySelector(".short-label").getClientRects().length ? k.querySelector(".short-label").textContent : null),
+        long: keys.map(k => { const e = k.querySelector(".long-label"); return [e.textContent, e.getBoundingClientRect().width <= 1]; }), gap: getComputedStyle(legend).gap }; })()`);
+    check(`${w}x${h}: legend items and the "i" on one row`, l.oneRow, JSON.stringify(l));
+    check(`${w}x${h}: short labels shown, like "Filler 5", with 6px 12px gaps`, l.shown.every(t => t && /^[A-Za-z ]+ \d+$/.test(t)) && l.gap === "6px 12px", JSON.stringify(l.shown) + " " + l.gap);
+    check(`${w}x${h}: the long labels stay for screen readers only`, l.long.every(([t, hidden]) => /, \d+$/.test(t) && hidden), JSON.stringify(l.long));
+    await shot(b, `space-legend-${w}x${h}`);
+    await done(b);
+  }
 }
 
 finish();

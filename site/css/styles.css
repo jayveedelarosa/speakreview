@@ -3853,6 +3853,28 @@ html.settings-lock {
     position: relative;
 }
 
+/* Backstage on laptops: the phone's short labels ("Filler 5") so the "i" stays on the legend row.
+   The long labels stay for screen readers; the playbill keeps its own legend. */
+@media (min-width: 990px) {
+    #wordsPanel .words-legend {
+        gap: 6px 12px;
+    }
+
+    #wordsPanel .words-legend .short-label {
+        display: inline;
+    }
+
+    #wordsPanel .words-legend .long-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+    }
+}
+
 .words-info-btn {
     position: relative;
     z-index: 1;              /* its tap area lies over the start of the transcript on phones */
