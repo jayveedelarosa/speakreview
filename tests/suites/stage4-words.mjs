@@ -206,7 +206,8 @@ if (!only || only === "layout") {
       const m = await b.evaluate(`(() => {
         const g = document.querySelector(".mirror-glass").getBoundingClientRect();
         const inside = r => r.top >= g.top - 0.5 && r.bottom <= g.bottom + 0.5 && r.left >= g.left - 0.5 && r.right <= g.right + 0.5;
-        const panel = (${JSON.stringify(tab)} === "tabWords" ? wordsPanel : coachNotesBody).getBoundingClientRect();
+        // (below 990px the panel scrolls with the summary and tabs, so the shared area is what must fit)
+        const panel = (backstageOneColumn.matches ? backstageScroll : ${JSON.stringify(tab)} === "tabWords" ? wordsPanel : coachNotesBody).getBoundingClientRect();
         const tabs = document.getElementById("backstageTabs").getBoundingClientRect();
         const perf = document.querySelector(".perf");
         const buttons = [backToStageBtn, tryAgainBtn].map(e => e.getBoundingClientRect());

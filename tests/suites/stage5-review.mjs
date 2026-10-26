@@ -53,7 +53,7 @@ if (!only || only === "review") {
   const b = await open();
   await b.show(BASE_RESULT);
   const r = await b.evaluate(REVIEW_READ("#perfReview"));
-  check("left column: clipping under the numbers", r && (await b.evaluate(`!perfReview.hidden && perfSummary.nextElementSibling === perfReview && perfReview.parentElement === perfScroll && perfScroll.nextElementSibling === perfHint && document.querySelector(".notes").nextElementSibling.classList.contains("perf-buttons")`)));
+  check("left column: clipping under the numbers", r && (await b.evaluate(`!perfReview.hidden && perfSummary.nextElementSibling === perfReview && perfReview.parentElement === perfScroll && perfScroll.nextElementSibling === perfHint && document.querySelector(".notes").parentElement === backstageScroll && backstageScroll.nextElementSibling.classList.contains("perf-buttons")`)));
   check("masthead THE NIGHTLY REVIEW and subtitle", r.title === "The Nightly Review" && r.titleShown === "uppercase" && r.sub === "Your coach's rating. A rough guide, not a grade." && r.label === "The Nightly Review");
   const want = [["Structure", "Strong", 3, REVIEW.structure.reason], ["Clarity of message", "Solid", 2, REVIEW.clarity.reason], ["Staying on topic", "Outstanding", 4, REVIEW.on_topic.reason], ["Word choice", "Developing", 1, REVIEW.word_choice.reason]];
   check("four rows: names, level words, lit segments, reasons", JSON.stringify(r.rows.map(x => x.slice(0, 4))) === JSON.stringify(want), JSON.stringify(r.rows.map(x => x.slice(0, 3))));
@@ -273,7 +273,8 @@ if (!only || only === "layout") {
       const m = await b.evaluate(`(() => {
         const g = document.querySelector(".mirror-glass").getBoundingClientRect();
         const inside = r => r.top >= g.top - 0.5 && r.bottom <= g.bottom + 0.5 && r.left >= g.left - 0.5 && r.right <= g.right + 0.5;
-        const panel = { tabNotes: coachNotesBody, tabWords: wordsPanel, tabReview: reviewPanel }[${JSON.stringify(tab)}].getBoundingClientRect();
+        // (below 990px the panel scrolls with the summary and tabs, so the shared area is what must fit)
+        const panel = (backstageOneColumn.matches ? backstageScroll : { tabNotes: coachNotesBody, tabWords: wordsPanel, tabReview: reviewPanel }[${JSON.stringify(tab)}]).getBoundingClientRect();
         const perf = document.querySelector(".perf");
         return { panel: inside(panel) && panel.height >= 100, perf: innerWidth > 600 ? inside(perf.getBoundingClientRect()) : true, sideways: document.documentElement.scrollWidth - innerWidth,
           scrolls: perfScroll.classList.contains("is-scrollable"), buttons: [backToStageBtn, tryAgainBtn].every(e => inside(e.getBoundingClientRect())) };
