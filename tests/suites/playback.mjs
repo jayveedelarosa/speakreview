@@ -97,8 +97,11 @@ const openWords = async b => {
 const RADIO = `({ radio: replayBox.isConnected && !replayBox.hidden && wordsPanel.firstElementChild === replayBox, gone: replayGone.isConnected && !replayGone.hidden,
   playing: !replayAudio.paused, t: replayAudio.currentTime,
   knob: [replayBox.querySelector('#replayPlayKnob').classList.contains("playing"), replayBox.querySelector('#replayPlayKnob').getAttribute("aria-label"), replayPlayLabel.textContent].join("|"),
-  key: [replayPlayKey.classList.contains("playing"), replayPlayKey.getAttribute("aria-label"), replayPlayKey.textContent].join("|"),
-  glow: replayBox.classList.contains("is-playing") })`;
+  playButtons: replayBox.querySelectorAll("button").length, glow: replayBox.classList.contains("is-playing") })`;
+// The play knob (the only Play button)
+const PLAY = "replayBox.querySelector('#replayPlayKnob').click()";
+// Where the dial and the knobs are (nothing may move when the speed or the play state changes)
+const PLACES = `[".replay-dial", "#replaySpeedBtn", "#replayPlayKnob", "#replaySpeedLabel", "#replayPlayLabel"].map(s => { const r = replayBox.querySelector(s).getBoundingClientRect(); return [s, Math.round(r.left * 10) / 10, Math.round(r.width * 10) / 10]; })`;
 
 if (!only || only === "radio") {
   for (const [w, h, dpr] of [[1280, 800, 1], [1093, 526, 1.25], [390, 780, 1]]) {
@@ -113,10 +116,13 @@ if (!only || only === "radio") {
     const fit = await b.evaluate(`(() => { const box = e => e.getBoundingClientRect(); const radio = box(replayBox), body = box(wordsPanel.querySelector(".words-body")), back = box(backToStageBtn);
       const bar = document.querySelector(".main-nav"), barTop = getComputedStyle(bar).display === "none" ? innerHeight : box(bar).top;
       return { radio: radio.top >= 0 && radio.bottom <= barTop && radio.left >= 0 && radio.right <= innerWidth, body: Math.round(body.height), back: back.bottom <= barTop + 0.5 && back.top >= 0,
-        keys: [...document.querySelectorAll(".replay-key")].map(k => k.offsetWidth + "x" + k.offsetHeight).join(), knobs: [...document.querySelectorAll(".replay-knob")].map(k => k.offsetWidth + "x" + k.offsetHeight).join(),
-        dial: document.querySelector(".replay-dial").offsetHeight }; })()`);
+        knobs: [...replayBox.querySelectorAll(".replay-knob")].map(k => k.offsetWidth + "x" + k.offsetHeight).join(), columns: [...replayBox.querySelectorAll(".replay-knob-box")].map(k => k.offsetWidth).join(),
+        skips: [...replayBox.querySelectorAll(".replay-cloth > .replay-skip")].map(k => k.textContent + " " + k.offsetWidth + "x" + k.offsetHeight + " " + k.getAttribute("aria-label")).join(" | "),
+        order: [...replayBox.querySelector(".replay-cloth").children].map(e => e.className).join(),
+        noKeys: !replayBox.querySelector(".replay-keys, .replay-key, #replayPlayKey"), dial: replayBox.querySelector(".replay-dial").offsetHeight,
+        height: Math.round(radio.height), labels: [replaySpeedLabel.textContent, replayPlayLabel.textContent].join() }; })()`);
     // Nothing of Your words reaches the buttons (the project's rule from backstage-layout: the open panel ends above
-    // them, and they stay inside the mirror). On short screens the cloth goes and the panel may scroll.
+    // them, and they stay inside the mirror). If it doesn't all fit, the panel scrolls; the cloth always stays.
     for (const banner of [false, true]) {
       await b.evaluate(`trophyBanner.hidden = ${!banner}; true`);
       await sleep(150);
@@ -127,24 +133,37 @@ if (!only || only === "radio") {
         return { above: p.bottom <= row.top + 0.5, spill, inMirror: back.top >= g.top - 0.5 && back.bottom <= g.bottom + 0.5,
           cloth: getComputedStyle(replayBox.querySelector(".replay-cloth")).display, scrolls: wordsPanel.scrollHeight > wordsPanel.clientHeight + 1,
           body: Math.round(box(wordsPanel.querySelector(".words-body")).height) }; })()`);
-      const short = phone || h <= 700;
-      check(`${tag}${banner ? " with the trophy banner" : ""}: Your words ends above the buttons and never spills onto them${short ? ", no cloth, the panel scrolls if it must" : ", the full radio fixed"}`,
-        m.above && !m.spill && m.inMirror && m.cloth === (short ? "none" : "block") && (short || !m.scrolls) && m.body >= 40, JSON.stringify(m));
+      check(`${tag}${banner ? " with the trophy banner" : ""}: Your words ends above the buttons and never spills onto them, the cloth always there${w === 1280 && !banner ? ", nothing scrolls" : ""}`,
+        m.above && !m.spill && m.inMirror && m.cloth === "flex" && (w !== 1280 || banner || !m.scrolls) && m.body >= 40, JSON.stringify(m));
     }
     await b.evaluate("trophyBanner.hidden = true; true");
     check(`${tag} the radio sits inside the window`, fit.radio, JSON.stringify(fit));
-    check(`${tag} keys 60x36, knobs 44x44, dial ${phone ? 48 : 54}px`, fit.keys === "60x36,60x36,60x36" && fit.knobs === "44x44,44x44" && fit.dial === (phone ? 48 : 54), JSON.stringify(fit));
+    check(`${tag} −5s and +5s in the cloth either side of the wordmark, 52x30, named for screen readers`, fit.order === "replay-skip,replay-wordmark,replay-skip"
+      && fit.skips === "−5s 52x30 Back 5 seconds | +5s 52x30 Forward 5 seconds", JSON.stringify(fit));
+    check(`${tag} no key row; knobs 44x44 in 56px columns; labels "1×" and "Play"; dial 48px`, fit.noKeys && fit.knobs === "44x44,44x44" && fit.columns === "56,56" && fit.labels === "1×,Play" && fit.dial === 48, JSON.stringify(fit));
+    if (!phone) check(`${tag} the radio is about 120px tall`, fit.height >= 110 && fit.height <= 125, fit.height);
+    if (phone) check(`${tag} the skip keys answer to taps across 44px`, await b.evaluate(`[...replayBox.querySelectorAll(".replay-skip")].every(k => { const r = k.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+      return [-21, 21].every(d => k === document.elementFromPoint(x, y + d)); })`));
     await shot(b, `replay-${tag}-paused`);
 
-    // Play from the knob, pause from the key: both always show the same state
-    await b.evaluate("replayPlayKnob.click()");
+    // Play and pause from the knob; nothing moves as the state changes
+    const placesBefore = JSON.stringify(await b.evaluate(PLACES));
+    await b.evaluate(PLAY);
     await b.waitFor("!replayAudio.paused && replayAudio.currentTime > 0.3", 5000);
     r = await b.evaluate(RADIO);
-    check(`${tag} the knob plays; the knob and the key both read Pause; the cloth glows`, r.playing && r.knob === "true|Pause|Pause" && r.key === "true|Pause|Pause" && r.glow, JSON.stringify(r));
+    check(`${tag} the knob plays and reads Pause; the cloth glows; −5s, the speed knob, Play and +5s are the only buttons`, r.playing && r.knob === "true|Pause|Pause" && r.glow && r.playButtons === 4, JSON.stringify(r));
     await shot(b, `replay-${tag}-playing`);
-    await b.evaluate("replayPlayKey.click()");
+    const placesPlaying = JSON.stringify(await b.evaluate(PLACES));
+    await b.evaluate(PLAY);
     r = await b.evaluate(RADIO);
-    check(`${tag} the key pauses; both read Play again; no glow`, !r.playing && r.knob === "false|Play your speech|Play" && r.key === "false|Play your speech|Play" && !r.glow, JSON.stringify(r));
+    check(`${tag} the knob pauses and reads Play again; no glow`, !r.playing && r.knob === "false|Play your speech|Play" && !r.glow, JSON.stringify(r));
+    // Every speed: the dial and the knobs never move
+    const placesSpeeds = [];
+    for (let i = 0; i < 7; i++) {
+      await b.evaluate("replaySpeedBtn.click()");
+      placesSpeeds.push(JSON.stringify(await b.evaluate(PLACES)));
+    }
+    check(`${tag} nothing moves when the speed or the play state changes`, placesPlaying === placesBefore && placesSpeeds.every(p => p === placesBefore), placesBefore);
 
     if (w === 1280) {
       // Speed: all seven steps and back, the pointer turning, the pitch kept
@@ -153,7 +172,7 @@ if (!only || only === "radio") {
         await b.evaluate("replaySpeedBtn.click()");
         seen.push(await b.evaluate(`[replayAudio.playbackRate, replaySpeedBtn.getAttribute("aria-label"), replaySpeedLabel.textContent, replaySpeedBtn.querySelector(".replay-pointer").style.getPropertyValue("--turn")].join("|")`));
       }
-      const want = [[1.25, 0], [1.5, 40], [1.75, 80], [2, 120], [0.5, -120], [0.75, -80], [1, -40]].map(([s, d]) => `${s}|Playback speed, ${s}×|Speed ${s}×|${d}deg`);
+      const want = [[1.25, 0], [1.5, 40], [1.75, 80], [2, 120], [0.5, -120], [0.75, -80], [1, -40]].map(([s, d]) => `${s}|Playback speed, ${s}×|${s}×|${d}deg`);
       check("speed goes 1.25, 1.5, 1.75, 2, 0.5, 0.75, then 1 again, the pointer turning 40 degrees a step", seen.join() === want.join(), seen.join(" ; "));
       check("the voice keeps its pitch", await b.evaluate("replayAudio.preservesPitch === true"));
       // The dial as a slider for keyboards
@@ -174,16 +193,16 @@ if (!only || only === "radio") {
       check("the dial: arrows move 5 s, Home and End go to the start and end, and the time is read out", a1 === "5|0:05 of 0:06|0:05 / 0:06" && a2 === "0|0:00 of 0:06|0:00 / 0:06" && a3 === "6|0:06 of 0:06|0:06 / 0:06" && a4 === "0|0:00 of 0:06|0:00 / 0:06", [a1, a2, a3, a4].join(" ; "));
       check("the dial shows keyboard focus", await b.evaluate(`getComputedStyle(document.querySelector(".replay-dial")).outlineStyle === "solid"`));
       // The end: it stops there, and Play starts again from 0
-      await b.evaluate("replayPlayer.seekTo(5.2); replayPlayKey.click(); true");
+      await b.evaluate("replayPlayer.seekTo(5.2); replayBox.querySelector('#replayPlayKnob').click(); true");
       check("it stops at the end, the needle stays there", await b.waitFor("replayAudio.paused && replayAudio.ended", 6000) && (await b.evaluate("Number(replayBox.querySelector('#replaySeek').value)")) === 6);
-      await b.evaluate("replayPlayKey.click()");
+      await b.evaluate("replayBox.querySelector('#replayPlayKnob').click()");
       await sleep(300);
       check("Play again starts from the beginning", await b.evaluate("!replayAudio.paused && replayAudio.currentTime < 1"));
       // Pausing: another tab, then leaving Backstage
       await b.evaluate("document.getElementById('tabNotes').click()");
       check("switching to Coach's notes pauses it", await b.evaluate("replayAudio.paused"));
       await openWords(b);
-      await b.evaluate("replayPlayKey.click()");
+      await b.evaluate("replayBox.querySelector('#replayPlayKnob').click()");
       await b.waitFor("!replayAudio.paused", 3000);
       await b.evaluate("goToView('stage')");
       check("leaving Backstage pauses it", await b.waitFor("replayAudio.paused", 3000));
@@ -256,16 +275,16 @@ if (!only || only === "words") {
         check(`at ${at} s the box is on "${word}"`, r.count === 1 && r.word === word, r.word);
       }
       await b.evaluate("replayPlayer.seekTo(6.7); true");
-      await sleep(150);
+      await b.waitFor(`!!wordsPanel.querySelector("mark.is-heard")`, 2000);
       check("marks keep their own look under the box", await b.evaluate(`(() => { const m = wordsPanel.querySelector("mark.is-heard"); return !!m && getComputedStyle(m).backgroundColor !== "rgba(217, 174, 82, 0.3)" && getComputedStyle(m).boxShadow.includes("rgb(217, 174, 82)"); })()`));
       check("the hostile word stays text", await b.evaluate("!window.__xss && !wordsPanel.querySelector('.words-text img')"));
       // Playing at 2×: the box is always on the word whose time has come
-      await b.evaluate(`replaySpeedBtn.click(); replaySpeedBtn.click(); replaySpeedBtn.click(); replaySpeedBtn.click(); replayPlayer.seekTo(6.6); replayPlayKey.click(); true`);
+      await b.evaluate(`replaySpeedBtn.click(); replaySpeedBtn.click(); replaySpeedBtn.click(); replaySpeedBtn.click(); replayPlayer.seekTo(6.6); replayBox.querySelector('#replayPlayKnob').click(); true`);
       await sleep(900);
       const follow = await b.evaluate(`(() => { const t = replayAudio.currentTime * 100; const items = [...wordsPanel.querySelectorAll(".words-text [data-s]")];
         const want = items.filter(e => Number(e.dataset.t) <= t).pop(); return { rate: replayAudio.playbackRate, t: Math.round(t), heard: wordsPanel.querySelector(".is-heard") === want || Math.abs(Number(want.dataset.t) - t) < 30 }; })()`);
       check("at 2× the box keeps up with the time", follow.rate === 2 && follow.t > 700 && follow.heard, JSON.stringify(follow));
-      await b.evaluate("replayPlayKey.click(); replaySpeedBtn.click(); replaySpeedBtn.click(); replaySpeedBtn.click(); true");
+      await b.evaluate("replayBox.querySelector('#replayPlayKnob').click(); replaySpeedBtn.click(); replaySpeedBtn.click(); replaySpeedBtn.click(); true");
       // Clicking a word jumps there; it keeps the play state
       const clickWord = word => b.evaluate(`(() => { const e = [...wordsPanel.querySelectorAll(".words-text [data-t]")].find(x => x.firstChild && x.firstChild.textContent === ${JSON.stringify(word)});
         const r = e.getBoundingClientRect(); return [r.left + 4, r.top + r.height / 2]; })()`);
@@ -275,14 +294,14 @@ if (!only || only === "words") {
       await sleep(200);
       r = await b.evaluate(HEARD);
       check("paused: a click on a word jumps there and stays paused", r.word === "better" && await b.evaluate("replayAudio.paused && Math.abs(replayAudio.currentTime - 2.2) < 0.05"), JSON.stringify(r));
-      await b.evaluate("replayPlayKey.click()");
+      await b.evaluate("replayBox.querySelector('#replayPlayKnob').click()");
       await b.waitFor("!replayAudio.paused", 3000);
       [x, y] = await b.evaluate(`(() => { const r = wordsPanel.querySelector(".words-text .w-pause").getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()`);
       await b.send("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
       await b.send("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
       await sleep(150);
       check("playing: a click on the long pause jumps to where it starts and keeps playing", await b.evaluate("!replayAudio.paused && replayAudio.currentTime >= 3.2 && replayAudio.currentTime < 3.9"), await b.evaluate("replayAudio.currentTime"));
-      await b.evaluate("replayPlayKey.click()");
+      await b.evaluate("replayBox.querySelector('#replayPlayKnob').click()");
       check("the words are not Tab stops", await b.evaluate(`[...wordsPanel.querySelectorAll(".words-text [data-t]")].every(e => e.tabIndex < 0 && !e.matches("button, a, [tabindex]"))`));
     }
     await done(b);
@@ -297,7 +316,7 @@ if (!only || only === "words") {
   await openWords(b);
   const scroll = () => b.evaluate("wordsPanel.querySelector('.words-body').scrollTop");
   const inView = () => b.evaluate(`(() => { const v = wordsPanel.querySelector(".words-body").getBoundingClientRect(), e = wordsPanel.querySelector(".is-heard").getBoundingClientRect(); return e.top >= v.top && e.bottom <= v.bottom - 40; })()`);
-  await b.evaluate("replayPlayer.seekTo(1); replayPlayKey.click(); true");
+  await b.evaluate("replayPlayer.seekTo(1); replayBox.querySelector('#replayPlayKnob').click(); true");
   await sleep(600);
   check("near the top: no scrolling while the boxed word is in view", (await scroll()) === 0);
   await b.evaluate("replayPlayer.seekTo(60); true");
@@ -319,7 +338,7 @@ if (!only || only === "words") {
   await b.evaluate("replayPlayer.seekTo(80); true");
   await sleep(1200);
   check("a word click starts auto-scrolling again", await inView());
-  await b.evaluate("replayPlayKey.click()");
+  await b.evaluate("replayBox.querySelector('#replayPlayKnob').click()");
   await done(b);
 }
 
@@ -343,7 +362,7 @@ if (!only || only === "hide") {
     if (w <= 600) check("phone: the link is at least 44px tall, on the hint's line", await b.evaluate(`(() => { const t = wordsPanel.querySelector(".replay-toggle").getBoundingClientRect(), hint = wordsPanel.querySelector(".replay-hint").getBoundingClientRect();
       return t.height >= 44 && Math.abs((t.top + t.bottom) / 2 - (hint.top + hint.bottom) / 2) < 4 && t.left > hint.right; })()`));
     // Set a place and a speed, play, then hide
-    await b.evaluate(`replaySpeedBtn.click(); replaySpeedBtn.click(); replayPlayer.seekTo(3); replayPlayKey.click(); true`);
+    await b.evaluate(`replaySpeedBtn.click(); replaySpeedBtn.click(); replayPlayer.seekTo(3); replayBox.querySelector('#replayPlayKnob').click(); true`);
     await b.waitFor("!replayAudio.paused", 3000);
     await b.evaluate("wordsPanel.querySelector('.replay-toggle').click()");
     await sleep(200);

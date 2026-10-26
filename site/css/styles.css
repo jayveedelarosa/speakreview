@@ -3618,24 +3618,29 @@ html.settings-lock {
 }
 
 /* ---------- Replay: the console radio at the top of Your words (the speech just sent) ---------- */
-/* A walnut cabinet: the speaker cloth, then the speed knob, the tuning dial and the play knob, then three keys */
+/* A walnut cabinet: the speaker cloth with the −5s and +5s keys, then the speed knob, the tuning dial and the
+   play knob. Each knob has a fixed 56px column, so nothing moves when the speed or the play state changes. */
 .replay {
     flex: none;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 10px 14px 12px;
+    gap: 6px;
+    padding: 8px 12px;
     border-radius: 12px;
     background:
         repeating-linear-gradient(100deg, rgba(255, 255, 255, 0.035) 0 2px, rgba(0, 0, 0, 0) 2px 9px),
         linear-gradient(180deg, #8E5428, #5E3215 60%, #4A2610);
-    box-shadow: inset 0 1px 0 rgba(255, 220, 170, 0.25), inset 0 -3px 6px rgba(0, 0, 0, 0.4), 0 10px 22px rgba(0, 0, 0, 0.5);
+    box-shadow: inset 0 1px 0 rgba(255, 220, 170, 0.25), inset 0 -3px 6px rgba(0, 0, 0, 0.4), 0 8px 18px rgba(0, 0, 0, 0.45);
 }
 
-/* The speaker cloth, which glows warm while it plays */
+/* The speaker cloth, which glows warm while it plays, holding the skip keys either side of the wordmark */
 .replay-cloth {
     position: relative;
-    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 38px;
+    padding: 0 3px;
     border: 2px solid #C9A25A;
     border-radius: 4px;
     box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.45);
@@ -3653,6 +3658,7 @@ html.settings-lock {
     background: radial-gradient(ellipse 70% 80% at 50% 50%, rgba(255, 196, 107, 0.75), rgba(255, 170, 70, 0.25) 60%, rgba(0, 0, 0, 0) 85%);
     opacity: 0;
     transition: opacity 0.4s ease;
+    pointer-events: none;
 }
 
 .replay.is-playing .replay-cloth::after {
@@ -3660,9 +3666,7 @@ html.settings-lock {
 }
 
 .replay-wordmark {
-    position: absolute;
-    top: 50%;
-    right: 12px;
+    position: relative;
     z-index: 1;
     font-family: var(--serif);
     font-size: 16px;
@@ -3670,7 +3674,25 @@ html.settings-lock {
     font-weight: 600;
     line-height: 1;
     color: #5A2A10;
-    transform: translateY(-52%) rotate(-4deg);
+    transform: rotate(-3deg);
+}
+
+/* −5s and +5s: small dark-wood keys */
+.replay-skip {
+    position: relative;
+    z-index: 1;
+    flex: none;
+    width: 52px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid #B8893A;
+    border-radius: 5px;
+    background: linear-gradient(180deg, #3A2418, #1A0F0A);
+    box-shadow: 0 2px 0 #6E4A1E;
+    font: 800 11px var(--sans);
+    letter-spacing: 0.04em;
+    color: #F0CF86;
+    cursor: pointer;
 }
 
 .replay-row {
@@ -3684,7 +3706,8 @@ html.settings-lock {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
+    gap: 3px;
+    width: 56px;
 }
 
 /* Aged brass knobs */
@@ -3704,10 +3727,12 @@ html.settings-lock {
     cursor: pointer;
 }
 
+/* Under each knob: the speed ("1×", "0.75×") or Play / Pause, centred in the 56px column */
 .replay-knob-label {
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: 0.16em;
+    width: 56px;
+    font: 800 10px var(--mono);
+    letter-spacing: 0.08em;
+    text-align: center;
     text-transform: uppercase;
     white-space: nowrap;
     color: #F0CF86;
@@ -3720,8 +3745,8 @@ html.settings-lock {
     top: 50%;
     left: 50%;
     width: 3px;
-    height: 17px;
-    margin: -17px 0 0 -1.5px;
+    height: 16px;
+    margin: -16px 0 0 -1.5px;
     border-radius: 2px;
     background: #7A1222;
     transform-origin: 50% 100%;
@@ -3739,21 +3764,21 @@ html.settings-lock {
 
 /* The tuning dial: dark glass with the recording's waveform, scale ticks, the needle and the time */
 .wave-seek.replay-dial {
-    height: 54px;
+    height: 48px;
     min-width: 0;
-    padding: 4px 8px 12px;
+    padding: 4px 6px 10px;
     border: 2px solid #C9A25A;
     border-radius: 6px;
     background: linear-gradient(180deg, #24180C, #120A05);
-    box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 231, 176, 0.15);
+    box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.8);
 }
 
 .replay-ticks {
     position: absolute;
-    left: 8px;
-    right: 8px;
+    left: 6px;
+    right: 6px;
     bottom: 3px;
-    height: 6px;
+    height: 5px;
     background: repeating-linear-gradient(90deg, rgba(240, 207, 134, 0.7) 0 1px, rgba(0, 0, 0, 0) 1px 10px);
     pointer-events: none;
 }
@@ -3761,14 +3786,13 @@ html.settings-lock {
 .replay-time {
     position: absolute;
     top: 3px;
-    right: 8px;
+    right: 6px;
     padding: 0 4px;
     border-radius: 3px;
     background: rgba(18, 10, 5, 0.85);
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 10px;
     color: #FFC46B;
-    text-shadow: 0 0 6px rgba(255, 180, 80, 0.7);
     pointer-events: none;
 }
 
@@ -3777,57 +3801,21 @@ html.settings-lock {
     outline-offset: 2px;
 }
 
-/* Three piano keys, 60 x 36 on every screen. Play stays pressed while it plays. */
-.replay-keys {
-    display: flex;
-    justify-content: center;
-    gap: 6px;
-}
-
-.replay-key {
-    flex: none;
-    width: 60px;
-    height: 36px;
-    padding: 0;
-    border: 1px solid #B8893A;
-    border-radius: 0 0 5px 5px;
-    background: linear-gradient(180deg, #3A2418, #1A0F0A);
-    box-shadow: 0 3px 0 #6E4A1E;
-    font: 800 11px var(--sans);
-    letter-spacing: 0.06em;
-    color: #F0CF86;
-    cursor: pointer;
-}
-
-.replay-key.playing {
-    background: linear-gradient(180deg, #24150E, #120905);
-    box-shadow: 0 1px 0 #6E4A1E;
-    color: #FFE7B0;
-    transform: translateY(2px);
-}
-
 .replay-knob:focus-visible,
-.replay-key:focus-visible {
+.replay-skip:focus-visible {
     outline: 2px solid #F0CF86;
     outline-offset: 2px;
 }
 
-/* Short screens (laptop windows up to 700px tall, and phones): the decorative speaker cloth is left out and the
-   words may shrink to 40px. If it still doesn't fit (for example with the trophy banner), the whole Your words
-   panel scrolls, radio included, so nothing ever covers the buttons under it. */
-@media (max-width: 600px), (min-width: 601px) and (max-height: 700px) {
-    .replay-cloth {
-        display: none;
-    }
+/* When the radio and the words don't both fit (short screens, the trophy banner), the whole Your words panel
+   scrolls, radio included, so nothing ever covers the buttons under it. The words keep at least 40px. */
+.words-panel:has(> .replay:not([hidden])) {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
 
-    .words-panel:has(> .replay:not([hidden])) {
-        overflow-y: auto;
-        overscroll-behavior: contain;
-    }
-
-    .words-panel:has(> .replay:not([hidden])) .words-body {
-        min-height: 40px;
-    }
+.words-panel:has(> .replay:not([hidden])) .words-body {
+    min-height: 40px;
 }
 
 /* The words follow the replay: the word being heard in a gold box, its sentence bright, plain words in the other
@@ -3905,28 +3893,22 @@ html.settings-lock {
 
 @media (max-width: 600px) {
     .replay {
-        gap: 6px;
-        padding: 8px 8px 10px;
-    }
-
-    .replay-cloth {
-        height: 22px;
+        padding: 7px 8px;
     }
 
     .replay-wordmark {
-        font-size: 13px;
+        font-size: 14px;
+    }
+
+    /* The skip keys answer to taps across 44px (measured inside their 1px border: 28 + 2 x 8) */
+    .replay-skip::before {
+        content: "";
+        position: absolute;
+        inset: -8px -4px;
     }
 
     .replay-row {
         gap: 8px;
-    }
-
-    .wave-seek.replay-dial {
-        height: 48px;
-    }
-
-    .replay-time {
-        font-size: 10px;
     }
 
     /* Phones: the hint on its own line, the link on its right */

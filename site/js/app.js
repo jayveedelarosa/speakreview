@@ -4066,7 +4066,7 @@ function isLowMemoryDevice() {
 }
 
 // Optional settings, used by replay: playBtns (several buttons that always show the same state), colors
-// ({ played, rest, playhead, glow }), stayAtEnd (stop at the end instead of going back to the start), label(playing)
+// ({ played, rest, playhead, glow, maxBar }), stayAtEnd (stop at the end instead of going back to the start), label(playing)
 // (the buttons' names) and onPlaying(playing) (anything else that follows the play state).
 function setupPlayer({ audio, playBtn, playBtns, backBtn, fwdBtn, seek, time, name, getDuration, ownsUrl,
                        colors = {}, stayAtEnd = false, label = null, onPlaying = null }) {
@@ -4116,7 +4116,7 @@ function setupPlayer({ audio, playBtn, playBtns, backBtn, fwdBtn, seek, time, na
                 const to = Math.max(from + 1, Math.floor((i + 1) * peaks.length / bars));
                 for (let j = from; j < to; j++) level = Math.max(level, peaks[j]);
             }
-            const barHeight = Math.max(2, level * (height - 4));      // silence: a flat line
+            const barHeight = Math.max(2, level * Math.min(height - 4, colors.maxBar || Infinity));      // silence: a flat line
             const isPlayed = (i + 0.5) * slot <= playX;
             ctx.fillStyle = isPlayed ? played : rest;
             ctx.shadowColor = played;
@@ -4340,7 +4340,7 @@ const filePlayer = setupPlayer({
 // ---- Replay in Your words ----
 // The console radio at the top of Your words plays the speech just sent, from its kept recording (see
 // keepRecording). It only shows when Backstage shows that speech; any other result gets the note for past shows.
-// The knob and the Play key are one player's two play buttons, so they always show the same state.
+// The play knob is the only Play button; the −5s and +5s keys sit in the speaker cloth.
 const REPLAY_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 const replayBox = document.getElementById("replay");
 const replayGone = document.getElementById("replayGone");
@@ -4348,7 +4348,6 @@ const replayAudio = document.getElementById("replayAudio");
 const replaySpeedBtn = document.getElementById("replaySpeedBtn");
 const replaySpeedLabel = document.getElementById("replaySpeedLabel");
 const replayPlayLabel = document.getElementById("replayPlayLabel");
-const replayPlayKey = document.getElementById("replayPlayKey");
 let replaySpeed = 1;             // starts at 1× each visit
 const REPLAY_KEY = "speakreview.replay";
 // "Hide replay" is remembered on this device, like the stopwatch. Shown unless it was hidden before (or storage
@@ -4379,7 +4378,7 @@ replayAudio.preservesPitch = true;   // a faster or slower voice keeps its norma
 
 const replayPlayer = setupPlayer({
     audio: replayAudio,
-    playBtns: [document.getElementById("replayPlayKnob"), replayPlayKey],
+    playBtns: [document.getElementById("replayPlayKnob")],
     backBtn: document.getElementById("replayBackBtn"),
     fwdBtn: document.getElementById("replayFwdBtn"),
     seek: document.getElementById("replaySeek"),
@@ -4388,12 +4387,11 @@ const replayPlayer = setupPlayer({
     getDuration: () => (replayRecording ? replayRecording.seconds : 0),
     ownsUrl: false,          // the kept recording owns its URL (keepRecording / forgetRecording)
     stayAtEnd: true,
-    colors: { played: "#FFC46B", rest: "rgba(255, 196, 107, 0.22)", playhead: "#FF5A3C", glow: true },
+    colors: { played: "#FFC46B", rest: "rgba(255, 196, 107, 0.22)", playhead: "#FF5A3C", glow: true, maxBar: 24 },
     label: playing => (playing ? "Pause" : "Play your speech"),
     onPlaying: playing => {
         replayBox.classList.toggle("is-playing", playing);    // the speaker cloth glows
         replayPlayLabel.textContent = playing ? "Pause" : "Play";
-        replayPlayKey.textContent = playing ? "Pause" : "Play";
     }
 });
 replayReady = true;
@@ -4409,7 +4407,7 @@ function setReplaySpeed(speed) {
     replayAudio.playbackRate = speed;
     const shown = `${speed}×`;
     replaySpeedBtn.setAttribute("aria-label", `Playback speed, ${shown}`);
-    replaySpeedLabel.textContent = `Speed ${shown}`;
+    replaySpeedLabel.textContent = shown;
     replaySpeedBtn.querySelector(".replay-pointer").style.setProperty("--turn", `${-120 + REPLAY_SPEEDS.indexOf(speed) * 40}deg`);
 }
 

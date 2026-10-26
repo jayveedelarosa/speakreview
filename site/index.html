@@ -466,11 +466,15 @@
                             <!-- Replay: the console radio for the speech just sent (its recording is kept in memory only).
                                  app.js moves it, or the note for past shows, to the top of Your words. -->
                             <section id="replay" class="replay" aria-label="Replay" hidden>
-                                <div class="replay-cloth" aria-hidden="true"><span class="replay-wordmark">SpeakReview</span></div>
+                                <div class="replay-cloth">
+                                    <button type="button" id="replayBackBtn" class="replay-skip" aria-label="Back 5 seconds">−5s</button>
+                                    <span class="replay-wordmark" aria-hidden="true">SpeakReview</span>
+                                    <button type="button" id="replayFwdBtn" class="replay-skip" aria-label="Forward 5 seconds">+5s</button>
+                                </div>
                                 <div class="replay-row">
                                     <div class="replay-knob-box">
                                         <button type="button" id="replaySpeedBtn" class="replay-knob replay-speed" aria-label="Playback speed, 1×"><span class="replay-pointer" aria-hidden="true"></span></button>
-                                        <span id="replaySpeedLabel" class="replay-knob-label" aria-hidden="true">Speed 1×</span>
+                                        <span id="replaySpeedLabel" class="replay-knob-label" aria-hidden="true">1×</span>
                                     </div>
                                     <div class="wave-seek replay-dial">
                                         <canvas class="wave-canvas" aria-hidden="true"></canvas>
@@ -485,11 +489,6 @@
                                         </button>
                                         <span id="replayPlayLabel" class="replay-knob-label" aria-hidden="true">Play</span>
                                     </div>
-                                </div>
-                                <div class="replay-keys">
-                                    <button type="button" id="replayBackBtn" class="replay-key" aria-label="Back 5 seconds">−5s</button>
-                                    <button type="button" id="replayPlayKey" class="replay-key replay-play" aria-label="Play your speech">Play</button>
-                                    <button type="button" id="replayFwdBtn" class="replay-key" aria-label="Forward 5 seconds">+5s</button>
                                 </div>
                                 <audio id="replayAudio" preload="metadata"></audio>
                             </section>
