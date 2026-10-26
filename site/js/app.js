@@ -4350,6 +4350,28 @@ const replaySpeedLabel = document.getElementById("replaySpeedLabel");
 const replayPlayLabel = document.getElementById("replayPlayLabel");
 const replayPlayKey = document.getElementById("replayPlayKey");
 let replaySpeed = 1;             // starts at 1× each visit
+const REPLAY_KEY = "speakreview.replay";
+// "Hide replay" is remembered on this device, like the stopwatch. Shown unless it was hidden before (or storage
+// is blocked).
+function readReplayChoice() {
+    try {
+        return localStorage.getItem(REPLAY_KEY) !== "hidden";
+    } catch (err) {
+        return true;
+    }
+}
+let replayShown = readReplayChoice();
+// At the end of the legend row: the hint and the Hide replay / Show replay link (only with a recording)
+const replayTools = document.createElement("span");
+replayTools.className = "replay-tools";
+const replayHint = document.createElement("span");
+replayHint.className = "replay-hint";
+replayHint.setAttribute("aria-hidden", "true");
+replayHint.append(makeSpan("long-label", "Click any word to hear it"), makeSpan("short-label", "Tap any word to hear it"));
+const replayToggle = document.createElement("button");
+replayToggle.type = "button";
+replayToggle.className = "replay-toggle";
+replayTools.append(replayHint, replayToggle);
 let replayLoadedId = null;       // the speech whose recording is in the player
 let backstageSpeech = null;      // { id, hasWords } for the result Backstage shows
 
@@ -4423,12 +4445,22 @@ function refreshReplay() {
     pauseReplay();
     const { id, hasWords } = backstageSpeech;
     const live = hasWords && id !== null && replayRecording !== null && replayRecording.id === id;
-    replayBox.hidden = !live;
+    const playing = live && replayShown;
+    replayBox.hidden = !playing;
     replayGone.hidden = !hasWords || live;
-    if (!live) unbindReplayWords();
-    if (!live) replayBox.remove();
+    if (!playing) unbindReplayWords();
+    if (!playing) replayBox.remove();
     if (!hasWords || live) replayGone.remove();
-    if (hasWords) wordsPanel.prepend(live ? replayBox : replayGone);
+    if (playing) wordsPanel.prepend(replayBox);
+    else if (hasWords && !live) wordsPanel.prepend(replayGone);
+    const legend = wordsPanel.querySelector(".words-legend");
+    if (live && legend) {
+        replayHint.hidden = !replayShown;
+        replayToggle.textContent = replayShown ? "Hide replay" : "Show replay";
+        if (replayTools.parentNode !== legend) legend.append(replayTools);
+    } else {
+        replayTools.remove();
+    }
     if (!live) return;
     if (replayLoadedId !== replayRecording.id) {
         const recording = replayRecording;
@@ -4441,8 +4473,23 @@ function refreshReplay() {
             })
             .catch(err => console.error(err));
     }
-    bindReplayWords();
+    if (playing) bindReplayWords();
 }
+
+// Hide replay takes the radio away, pauses, and turns off the box, the dimming and the word clicks (the words
+// read like a past show's, without the note). Show replay brings it all back where it was, at the same speed.
+replayToggle.addEventListener("click", () => {
+    replayShown = !replayShown;
+    try {
+        if (replayShown) localStorage.removeItem(REPLAY_KEY);
+        else localStorage.setItem(REPLAY_KEY, "hidden");
+    } catch (err) {
+        // Storage is blocked: the choice still applies, it just isn't remembered
+    }
+    pauseReplay();
+    refreshReplay();
+    replayToggle.focus();
+});
 
 // ---- The words follow the replay ----
 // While the radio is there, the word being heard gets a gold box and its sentence stays bright (plain words in
@@ -4459,8 +4506,6 @@ function unbindReplayWords() {
     if (!replayWords) return;
     replayWords.text.classList.remove("is-live");
     replayWords.text.querySelectorAll(".is-heard, .is-sentence").forEach(el => el.classList.remove("is-heard", "is-sentence"));
-    const hint = wordsPanel.querySelector(".replay-hint");
-    if (hint) hint.remove();
     replayWords = null;
 }
 
@@ -4473,15 +4518,6 @@ function bindReplayWords() {
     if (items.length === 0) return;
     replayWords = { text, body: wordsPanel.querySelector(".words-body"), items, heard: -1, sentence: -1 };
     text.classList.add("is-live");
-    // "Click any word to hear it" (laptop) / "Tap any word to hear it" (phone), at the end of the legend row
-    const legend = wordsPanel.querySelector(".words-legend");
-    if (legend) {
-        const hint = document.createElement("span");
-        hint.className = "replay-hint";
-        hint.setAttribute("aria-hidden", "true");
-        hint.append(makeSpan("long-label", "Click any word to hear it"), makeSpan("short-label", "Tap any word to hear it"));
-        legend.append(hint);
-    }
     replayAutoScroll = true;
     markHeard(replayAudio.currentTime);
 }

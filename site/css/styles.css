@@ -3854,10 +3854,34 @@ html.settings-lock {
     color: #FFF6E3;
 }
 
-.replay-hint {
+/* At the right end of the legend row: the hint, then Hide replay / Show replay */
+.replay-tools {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
     margin-left: auto;
+}
+
+.replay-hint {
     font-size: 12px;
     color: #BCA992;
+}
+
+.replay-toggle {
+    flex: none;
+    height: 36px;
+    padding: 0 4px;
+    border: 0;
+    background: transparent;
+    font: 700 12px var(--sans);
+    color: #D9AE52;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+
+.replay-toggle:hover {
+    color: var(--gold-light);
 }
 
 /* Past shows: the note instead of the radio */
@@ -3905,10 +3929,20 @@ html.settings-lock {
         font-size: 10px;
     }
 
-    .replay-hint {
+    /* Phones: the hint on its own line, the link on its right */
+    .replay-tools {
         flex-basis: 100%;
-        margin-left: 0;
+        justify-content: space-between;
+        margin: -6px 0;
+    }
+
+    .replay-hint {
         font-size: 11px;
+    }
+
+    .replay-toggle {
+        height: 44px;
+        margin-left: auto;
     }
 
     .replay-gone {
