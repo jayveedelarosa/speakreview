@@ -1037,6 +1037,8 @@ async function upload(take) {
 
         // The take reached the server, so leaving the page no longer loses it
         if(isRecording) markTakeSent(take);
+        // The exact WAV that was sent stays in memory for replay in Your words (the latest speech only)
+        keepRecording(data.fileId, file, take.seconds);
 
         // Uploaded: Act I is done (the coach has it) and Act II begins. From now on the speech is kept on this
         // device, so a visitor who leaves can still see the notes when they come back.
@@ -3967,6 +3969,22 @@ function discardTake() {
 function markTakeSent(take) {
     take.sent = true;
     updateLeaveWarning();
+}
+
+// ---- The sent recording, kept for replay ----
+// The exact WAV of the latest sent speech (a recorded take or a converted upload), with its speech ID. It lives
+// in memory only: it is never saved to storage and never sent again. It has its own object URL, so clearing
+// the take, discarding it or picking a new file can't free it. Sending another speech replaces it.
+let replayRecording = null;      // { id, blob, seconds, url, peaks }
+
+function keepRecording(id, blob, seconds) {
+    forgetRecording();
+    replayRecording = { id: String(id), blob, seconds, url: URL.createObjectURL(blob), peaks: null };
+}
+
+function forgetRecording() {
+    if (replayRecording) URL.revokeObjectURL(replayRecording.url);
+    replayRecording = null;
 }
 
 // ---- Players: listen to a take or a converted file, and move through it ----

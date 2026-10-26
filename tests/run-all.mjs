@@ -32,7 +32,8 @@ const SUITES = [
   ["security", "Hostile text from outside the page"],
   ["throttle", "Throttling: quiet waiting, retries, a calm busy message"],
   ["programme", "Stage name and Tonight's programme"],
-  ["intermission", "Intermission acts, checking /result, the tab title, Coming back"]
+  ["intermission", "Intermission acts, checking /result, the tab title, Coming back"],
+  ["playback", "Replay in Your words"]
 ];
 const SUITE_TIMEOUT = 30 * 60 * 1000;
 
