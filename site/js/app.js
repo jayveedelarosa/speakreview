@@ -1294,6 +1294,7 @@ function displayResult(data, speechId = null) {
     notesHintOnNotes = !tooShort;
     coachNotesBody.scrollTop = 0;
     perfScroll.scrollTop = 0;
+    backstageScroll.scrollTop = 0;     // a new result starts with its summary showing
     // Your words (too-short speeches show theirs too), with the coach's dotted fillers when it judged them
     const transcript = cleanTranscript(data.words, data.filler_flags, data.fillers_judged);
     wordsPanel.replaceChildren(buildWordsView(transcript.words, transcript.flags, { playable: true, info: true }));
@@ -1614,8 +1615,14 @@ function setWordsInfo(open, focusButton = false) {
     if (!button || !card) return;
     card.hidden = !open;
     button.setAttribute("aria-expanded", String(open));
-    // When Your words is short (phones, short windows) the panel scrolls: bring the whole card into view
-    if (open) card.scrollIntoView({ block: "nearest", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    // When Your words is short (short laptop windows) the panel scrolls: bring the whole card into view
+    if (open && backstageOneColumn.matches) {
+        // One column: if the card reaches below the area, scroll just enough (the legend sticks before it would hide)
+        const overflow = card.getBoundingClientRect().bottom - (backstageScroll.getBoundingClientRect().bottom - 26);
+        if (overflow > 0) backstageScroll.scrollBy({ top: overflow, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    } else if (open) {
+        card.scrollIntoView({ block: "nearest", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    }
     if (!open && focusButton) button.focus();
 }
 
@@ -1747,6 +1754,7 @@ function updateNotesHint() {
     let scroller = coachNotesBody;
     if (id === "tabWords") scroller = wordsPanel.querySelector(".words-body");
     if (id === "tabReview") scroller = reviewPanel;
+    if (backstageOneColumn.matches) scroller = backstageScroll;
     const canScroll = Boolean(scroller) && scroller.clientHeight > 0 && scroller.scrollHeight > scroller.clientHeight + 1;
     notesHint.hidden = !canScroll || (id === "tabNotes" && !notesHintOnNotes);
 }
@@ -1756,13 +1764,19 @@ function updateNotesHint() {
 document.addEventListener("scroll", event => {
     const panel = event.target;
     if (panel instanceof Element) panel.classList.toggle("is-scrolled", panel.scrollTop > 2);
+    if (panel === backstageScroll) {
+        panel.classList.toggle("is-stuck", backstageOneColumn.matches && panel.scrollTop >= backstageHeaderHeight() - 1);
+    }
 }, { capture: true, passive: true });
 
 const wordsPanel = document.getElementById("wordsPanel");
+// One column (below 990px): the summary, the tabs and the open tab scroll together in here
+const backstageScroll = document.getElementById("backstageScroll");
 const reviewPanel = document.getElementById("reviewPanel");
 const tabReview = document.getElementById("tabReview");
 const perfReview = document.getElementById("perfReview");
 const backstageTabs = setupTabs(document.getElementById("backstageTabs"), id => {
+    keepTabsInPlace();
     updateNotesHint();
     if (id !== "tabWords") pauseReplay();      // replay only plays beside the words
 });
@@ -4572,11 +4586,24 @@ function bindReplayWords() {
 // The fade at the bottom of the transcript (40px, less when the transcript is very short)
 const wordsFade = view => Math.min(40, view.height / 4);
 
-// Is the word inside the part of the transcript that can be seen (above the fade at the bottom)?
-function inWordsView(el) {
+// The part of the transcript that can be seen, and what scrolls it. Laptops: the words' own box (above its fade).
+// One column: the shared Backstage area, below the sticky tabs, radio and legend (above its 26px fade).
+function wordsViewport() {
+    if (backstageOneColumn.matches) {
+        const area = backstageScroll.getBoundingClientRect();
+        const legend = wordsPanel.querySelector(".words-legend");
+        const top = legend ? Math.max(area.top, legend.getBoundingClientRect().bottom) : area.top;
+        return { scroller: backstageScroll, top, bottom: area.bottom - 26 };
+    }
     const view = replayWords.body.getBoundingClientRect();
+    return { scroller: replayWords.body, top: view.top, bottom: view.bottom - wordsFade(view) };
+}
+
+// Is the word inside the part of the transcript that can be seen?
+function inWordsView(el) {
+    const view = wordsViewport();
     const box = el.getBoundingClientRect();
-    return box.top >= view.top && box.bottom <= view.bottom - wordsFade(view);
+    return box.top >= view.top && box.bottom <= view.bottom;
 }
 
 // Boxes the word being heard at `seconds` (the last word that has started), and brightens its sentence
@@ -4617,10 +4644,19 @@ function keepHeardInView() {
         return;
     }
     if (visible) return;
-    const body = replayWords.body;
-    const view = body.getBoundingClientRect();
+    const behavior = prefersReducedMotion() ? "auto" : "smooth";
+    if (backstageOneColumn.matches) {
+        // The tabs, radio and legend stick once the summary has gone, so aim with their height once stuck:
+        // the word ends up a third of the way down the part under them
+        const area = backstageScroll.getBoundingClientRect();
+        const block = stickyBlockHeight();
+        const at = el.getBoundingClientRect().top - area.top + backstageScroll.scrollTop;
+        backstageScroll.scrollTo({ top: Math.max(0, at - block - (area.height - 26 - block) / 3), behavior });
+        return;
+    }
+    const view = wordsViewport();
     const offset = el.getBoundingClientRect().top - view.top;
-    body.scrollTo({ top: body.scrollTop + offset - (view.height - wordsFade(view)) / 3, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    view.scroller.scrollTo({ top: view.scroller.scrollTop + offset - (view.bottom - view.top) / 3, behavior });
 }
 
 function followReplay() {
@@ -4649,12 +4685,49 @@ wordsPanel.addEventListener("click", e => {
 // Scrolling the transcript by hand while it plays pauses auto-scrolling (scrolling done by the page never
 // fires these events)
 function scrolledByHand(e) {
-    if (!replayWords || replayAudio.paused || !replayWords.body.contains(e.target)) return;
+    if (!replayWords || replayAudio.paused || !wordsViewport().scroller.contains(e.target)) return;
     if (e.type === "keydown" && !REPLAY_SCROLL_KEYS.includes(e.key)) return;
     replayAutoScroll = false;
     replayWordLeftView = false;
 }
-["wheel", "touchmove", "keydown"].forEach(type => wordsPanel.addEventListener(type, scrolledByHand, { passive: true }));
+["wheel", "touchmove", "keydown"].forEach(type => document.addEventListener(type, scrolledByHand, { passive: true }));
+
+// ---- One column: the shared scrolling area ----
+// How far the area scrolls before the tabs stick (the summary, and the trophy banner when it shows)
+function backstageHeaderHeight() {
+    const notes = document.querySelector("#result .notes");
+    const area = backstageScroll.getBoundingClientRect();
+    let top = notes.getBoundingClientRect().top;
+    if (!trophyBanner.hidden) top = trophyBanner.getBoundingClientRect().bottom + (parseFloat(getComputedStyle(notes).rowGap) || 0);
+    return Math.max(0, Math.round(top - area.top + backstageScroll.scrollTop));
+}
+
+// Switching tabs never moves the tabs: with the summary scrolled away it stays away, and while it shows it stays
+function keepTabsInPlace() {
+    if (!backstageOneColumn.matches) return;
+    measureBackstageScroll();
+    // (the open tab is never shorter than the area, so the browser never pulls this below the header's height)
+    backstageScroll.scrollTop = Math.min(backstageScroll.scrollTop, backstageHeaderHeight());
+}
+
+// The sticky block's height once stuck: the tabs, the radio (on Your words) and the legend
+function stickyBlockHeight() {
+    const legend = wordsPanel.querySelector(".words-legend");
+    const radio = replayBox.isConnected && !replayBox.hidden ? replayBox.offsetHeight : 0;
+    return document.querySelector("#result .notes-head").offsetHeight + radio + (legend ? legend.offsetHeight : 0);
+}
+
+// The sizes the sticky block needs: the tabs' height, the radio's (0 without one) and the area's own
+function measureBackstageScroll() {
+    if (!backstageOneColumn.matches) return;
+    const radio = replayBox.isConnected && !replayBox.hidden ? replayBox.offsetHeight : 0;
+    backstageScroll.style.setProperty("--stick-tabs", `${document.querySelector("#result .notes-head").offsetHeight}px`);
+    backstageScroll.style.setProperty("--stick-radio", `${radio}px`);
+    backstageScroll.style.setProperty("--scroll-h", `${backstageScroll.clientHeight}px`);
+}
+const stickObserver = new ResizeObserver(() => measureBackstageScroll());
+[backstageScroll, document.querySelector("#result .notes-head"), replayBox, wordsPanel].forEach(element => stickObserver.observe(element));
+backstageOneColumn.addEventListener("change", () => measureBackstageScroll());
 
 function pausePlayers() {
     takePlayer.pause();

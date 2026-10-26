@@ -427,6 +427,9 @@
                     <!-- Filled by displayResult() -->
                     <div id="result" class="backstage-content" hidden>
                         <div class="backstage-grid">
+                            <!-- Phones and narrow windows (one column): the summary, the tabs and the open tab scroll here
+                                 together, under the buttons' row. Laptops (two columns): no box of its own (display: contents). -->
+                            <div id="backstageScroll" class="backstage-scroll">
                             <aside class="perf" aria-label="Your speech">
                                 <!-- Laptops: the part above the buttons scrolls when it doesn't fit, so the buttons always show -->
                                 <div id="perfScroll" class="perf-scroll">
@@ -497,6 +500,7 @@
                                 <!-- Phones: The Nightly Review (filled by buildReview()) -->
                                 <div id="reviewPanel" class="review-panel" role="tabpanel" aria-labelledby="tabReview" tabindex="0" hidden></div>
                             </section>
+                            </div>
 
                             <!-- Laptops: bottom right of the mirror, under the notes (as in F2Backstage.dc.html). Phones: under the notes. -->
                             <div class="perf-buttons">

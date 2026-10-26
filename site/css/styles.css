@@ -2795,6 +2795,11 @@ html.settings-lock {
     height: 100%;
 }
 
+/* Two columns: the scrolling area has no box of its own; its two parts sit in the grid as before */
+.backstage-scroll {
+    display: contents;
+}
+
 /* Left: the speech summary and the buttons. The content is 290px wide; the 6px on each side (taken back
    by the negative margin, so nothing moves) leaves room for focus outlines when the column scrolls. */
 .perf {
@@ -7632,6 +7637,85 @@ body.curtains-closed .drape {
 
     .cb-see {
         font-size: 14px;
+    }
+}
+
+/* ---------- One column (below 990px): the summary, the tabs and the open tab scroll as one area ----------
+   The two buttons stay under it. Once the summary has scrolled away the tabs stick to the top, and on Your words
+   the radio and the legend stick under them (app.js measures --stick-tabs, --stick-radio and --scroll-h). The
+   panels no longer scroll by themselves. The #backstageScroll selectors win over the phone rules above. */
+@media (max-width: 989px) {
+    .backstage-scroll {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        flex: 1;
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 26px), rgba(0, 0, 0, 0));
+        mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0), #000 var(--fade-top, 0px), #000 calc(100% - 26px), rgba(0, 0, 0, 0));
+    }
+
+    /* The top fade only while the summary is still scrolling away; once the tabs stick they are never faded */
+    #backstageScroll.is-stuck {
+        --fade-top: 0px;
+    }
+
+    /* The open tab is always at least as tall as the area, so the summary can always scroll fully away and
+       switching tabs never moves the tabs */
+    #backstageScroll > .notes {
+        flex: none;
+        min-height: var(--scroll-h, 0px);
+    }
+
+    #backstageScroll .notes-body,
+    #backstageScroll .review-panel,
+    #backstageScroll .words-panel,
+    #backstageScroll .words-body {
+        flex: none;
+        min-height: 0;
+        overflow: visible;
+        -webkit-mask-image: none;
+        mask-image: none;
+    }
+
+    /* The sticky block: the tabs, then (on Your words) the radio and the legend, on the panel's colour */
+    #backstageScroll .notes-head {
+        position: sticky;
+        top: 0;
+        z-index: 4;
+        padding-bottom: 8px;
+        background: #1E0F0C;
+        box-shadow: 0 10px 10px -8px rgba(0, 0, 0, 0.7);
+    }
+
+    /* On Your words the legend is the bottom of the block, so the shadow is under it instead */
+    #backstageScroll .notes:has(> #wordsPanel:not([hidden]) > .words-legend) .notes-head {
+        box-shadow: none;
+    }
+
+    /* The radio's rounded corners and the space round it are filled with the panel's colour */
+    #backstageScroll #wordsPanel > .replay {
+        position: sticky;
+        top: var(--stick-tabs, 0px);
+        z-index: 3;
+        box-shadow: inset 0 1px 0 rgba(255, 220, 170, 0.25), inset 0 -3px 6px rgba(0, 0, 0, 0.4), 0 0 0 6px #1E0F0C;
+    }
+
+    #backstageScroll #wordsPanel > .words-legend {
+        position: sticky;
+        top: calc(var(--stick-tabs, 0px) + var(--stick-radio, 0px));
+        z-index: 3;
+        padding-bottom: 8px;
+        background: #1E0F0C;
+        box-shadow: 0 10px 10px -8px rgba(0, 0, 0, 0.7);
+    }
+
+    /* "How clearly your words came through" under Clarity: laptops only */
+    #backstageScroll .stat-hint {
+        display: none;
     }
 }
 

@@ -156,11 +156,11 @@ if (!only || only === "phone") {
     check(`${w}x${h}: End selects Review, its panel shows the clipping`, (await b.evaluate(`document.activeElement.id === "tabReview" && !reviewPanel.hidden && coachNotesBody.hidden && wordsPanel.hidden && !!reviewPanel.querySelector(".review")`)));
     const r = await b.evaluate(REVIEW_READ("#reviewPanel"));
     check(`${w}x${h}: phone clipping tilted about -0.8 deg`, /matrix/.test(r.transform) && r.rows.length === 4);
-    const inside = await b.evaluate(`(() => { const g = document.querySelector(".mirror-glass").getBoundingClientRect(), p = reviewPanel.getBoundingClientRect(); return p.top >= g.top - 0.5 && p.bottom <= g.bottom + 0.5 && document.documentElement.scrollWidth <= innerWidth; })()`);
-    check(`${w}x${h}: Review panel inside the mirror, no sideways scroll`, inside);
-    await b.evaluate(`reviewPanel.scrollTop = 1e9`);
+    const inside = await b.evaluate(`(() => { const g = document.querySelector(".mirror-glass").getBoundingClientRect(), p = backstageScroll.getBoundingClientRect(); return p.top >= g.top - 0.5 && p.bottom <= g.bottom + 0.5 && document.documentElement.scrollWidth <= innerWidth; })()`);
+    check(`${w}x${h}: Review (in the shared scrolling area) inside the mirror, no sideways scroll`, inside);
+    await b.evaluate(`backstageScroll.scrollTop = 1e9`);
     await sleep(150);
-    check(`${w}x${h}: the whole clipping is reachable above the fade`, await b.evaluate(`(() => { const p = reviewPanel.getBoundingClientRect(), last = reviewPanel.querySelector(".review").getBoundingClientRect(); return last.bottom <= p.bottom - 26 + 12; })()`));
+    check(`${w}x${h}: the whole clipping is reachable above the fade`, await b.evaluate(`(() => { const p = backstageScroll.getBoundingClientRect(), last = reviewPanel.querySelector(".review").getBoundingClientRect(); return last.bottom <= p.bottom - 26 + 12; })()`));
     await shot(b, `review-${w}x${h}`);
     contrastOk(await b.evaluate(COLOR_CONTRAST(["#backstageTabs .feedback-tab"])), `${w}x${h} tabs`);
     await b.key("ArrowRight");

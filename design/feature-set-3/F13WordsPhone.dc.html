@@ -22,7 +22,106 @@ body{margin:0}
 
 <div style="position: absolute; top: 48px; left: 10px; right: 10px; bottom: 76px; padding: 10px; box-sizing: border-box; border-radius: 16px; background: linear-gradient(160deg, #B07A44, #8A5A2E 45%, #6E4522); box-shadow: 0 20px 50px rgba(0,0,0,0.55)">
 <div style="height: 100%; box-sizing: border-box; border-radius: 8px; padding: 14px 12px 12px; display: flex; flex-direction: column; gap: 10px; background: linear-gradient(155deg, rgba(255,255,255,0.05), rgba(255,255,255,0) 35%), #1E0F0C; box-shadow: inset 0 0 40px rgba(0,0,0,0.45)">
+<sc-if value="{{h3}}" hint-placeholder-val="{{true}}">
+<div style="flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column">
+<sc-if value="{{fullHeadNew}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #BCA992">Tonight's performance</span>
+<div style="display: flex; align-items: baseline; gap: 8px">
+<span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 20px; font-weight: 600; color: #FFF6E3">{{totalLabel}}</span>
+<span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #BCA992">(untimed)</span>
+<span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; border: 1px solid rgba(246,234,211,0.35); font-size: 11px; font-weight: 600; color: #EFE2CF">Uploaded file</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 6px 0; border-top: 1px solid rgba(246,234,211,0.16); border-bottom: 1px solid rgba(246,234,211,0.16); text-align: center">
+<div style="display: flex; flex-direction: column"><span style="font-family: Fraunces, Georgia, serif; font-size: 20px; color: #FFF6E3">132</span><span style="font-size: 11px; color: #D8C6AE">words per min</span></div>
+<div style="display: flex; flex-direction: column"><span style="font-family: Fraunces, Georgia, serif; font-size: 20px; color: #FFF6E3">5</span><span style="font-size: 11px; color: #D8C6AE">fillers</span></div>
+<div style="display: flex; flex-direction: column; align-items: center"><span style="font-family: Fraunces, Georgia, serif; font-size: 20px; color: #FFF6E3">84%</span><span style="font-size: 11px; color: #D8C6AE">clarity</span><span aria-hidden="true" style="margin-top: 4px; width: 60%; height: 4px; border-radius: 2px; background: linear-gradient(90deg, #D9AE52 84%, rgba(246,234,211,0.18) 84%)"></span></div>
+</div>
+</div>
+</sc-if>
+<div style="position: sticky; top: 0; z-index: 4; margin-top: 10px; padding: 0 0 8px; background: #1E0F0C; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 10px 10px -8px rgba(0,0,0,0.7)">
+<div role="tablist" aria-label="Feedback views" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 3px; border-radius: 999px; background: rgba(0,0,0,0.35); border: 1px solid rgba(246,234,211,0.14)">
+<sc-for list="{{tabBtns}}" as="t" hint-placeholder-count="3"><button type="button" role="tab" aria-selected="{{t.sel}}" onClick="{{t.pick}}" style="height: 34px; border: 0; border-radius: 999px; cursor: pointer; font: 700 12px Manrope, system-ui, sans-serif; {{t.style}}">{{t.label}}</button></sc-for>
+</div>
+<sc-if value="{{wordsTab}}" hint-placeholder-val="{{true}}">
+<sc-if value="{{skinH2}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 7px 8px; border-radius: 12px; background: repeating-linear-gradient(100deg, rgba(255,255,255,0.035) 0 2px, rgba(0,0,0,0) 2px 9px), linear-gradient(180deg, #8E5428, #5E3215 60%, #4A2610); box-shadow: inset 0 1px 0 rgba(255,220,170,0.25), inset 0 -3px 6px rgba(0,0,0,0.4), 0 8px 18px rgba(0,0,0,0.45)">
+<div style="height: 38px; box-sizing: border-box; padding: 0 3px; display: flex; align-items: center; justify-content: space-between; border-radius: 4px; border: 2px solid #C9A25A; box-shadow: inset 0 0 8px rgba(0,0,0,0.45); background: repeating-linear-gradient(90deg, rgba(60,30,10,0.35) 0 1px, rgba(0,0,0,0) 1px 4px), repeating-linear-gradient(0deg, rgba(60,30,10,0.2) 0 1px, rgba(0,0,0,0) 1px 3px), {{grilleGlow}} #D8BF8A">
+<button type="button" aria-label="Back 5 seconds" onClick="{{back5}}" style="flex: none; width: 52px; height: 30px; padding: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #B8893A; border-radius: 5px; cursor: pointer; background: linear-gradient(180deg, #3A2418, #1A0F0A); color: #F0CF86; font: 800 11px Manrope, system-ui, sans-serif; letter-spacing: 0.04em; box-shadow: 0 2px 0 #6E4A1E">−5s</button>
+<span aria-hidden="true" style="font-family: Fraunces, Georgia, serif; font-style: italic; font-weight: 600; font-size: 14px; color: #5A2A10; transform: rotate(-3deg)">SpeakReview</span>
+<button type="button" aria-label="Forward 5 seconds" onClick="{{fwd5}}" style="flex: none; width: 52px; height: 30px; padding: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #B8893A; border-radius: 5px; cursor: pointer; background: linear-gradient(180deg, #3A2418, #1A0F0A); color: #F0CF86; font: 800 11px Manrope, system-ui, sans-serif; letter-spacing: 0.04em; box-shadow: 0 2px 0 #6E4A1E">+5s</button>
+</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<div style="flex: none; width: 56px; display: flex; flex-direction: column; align-items: center; gap: 3px">
+<button type="button" aria-label="Playback speed, {{speedLabel}}" onClick="{{cycleSpeed}}" style="position: relative; width: 44px; height: 44px; padding: 0; border-radius: 999px; cursor: pointer; border: 2px solid #3A2010; background: radial-gradient(circle at 38% 30%, #FFE9AE, #D9AE52 45%, #8C6224); box-shadow: 0 3px 6px rgba(0,0,0,0.55), inset 0 -2px 3px rgba(0,0,0,0.2)"><span aria-hidden="true" style="position: absolute; left: 50%; top: 50%; width: 3px; height: 16px; margin-left: -1.5px; margin-top: -16px; border-radius: 2px; background: #7A1222; transform-origin: 50% 100%; {{knobTurn}}"></span></button>
+<span aria-hidden="true" style="width: 56px; text-align: center; font: 800 10px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.08em; text-transform: uppercase; color: #F0CF86">{{speedLabel}}</span>
+</div>
+<div style="position: relative; flex: 1; min-width: 0; height: 48px; box-sizing: border-box; padding: 4px 6px 10px; border-radius: 6px; background: linear-gradient(180deg, #24180C, #120A05); border: 2px solid #C9A25A; box-shadow: inset 0 0 12px rgba(0,0,0,0.8)">
+<div style="height: 100%; display: flex; align-items: center; gap: 2px">
+<sc-for list="{{bars}}" as="b" hint-placeholder-count="40"><button type="button" aria-label="{{b.aria}}" onClick="{{b.seek}}" style="flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: transparent; cursor: pointer; display: flex; align-items: center"><span style="display: block; width: 100%; border-radius: 2px; {{b.styleRadioSmall}}"></span></button></sc-for>
+</div>
+<span aria-hidden="true" style="position: absolute; left: 6px; right: 6px; bottom: 3px; height: 5px; background: repeating-linear-gradient(90deg, rgba(240,207,134,0.7) 0 1px, rgba(0,0,0,0) 1px 10px)"></span>
+<span aria-hidden="true" style="position: absolute; top: 2px; bottom: 2px; width: 2px; margin-left: -1px; background: #FF5A3C; box-shadow: 0 0 6px 1px rgba(255,90,60,0.8); {{needleStyle}}"></span>
+<span style="position: absolute; top: 3px; right: 6px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; color: #FFC46B; background: rgba(18,10,5,0.85); padding: 0 4px; border-radius: 3px">{{nowLabel}} / {{totalLabel}}</span>
+</div>
+<div style="flex: none; width: 56px; display: flex; flex-direction: column; align-items: center; gap: 3px">
+<button type="button" aria-label="{{playLabel}}" onClick="{{toggle}}" style="width: 44px; height: 44px; padding: 0; border-radius: 999px; cursor: pointer; border: 2px solid #3A2010; background: radial-gradient(circle at 38% 30%, #FFE9AE, #D9AE52 45%, #8C6224); box-shadow: 0 3px 6px rgba(0,0,0,0.55), inset 0 -2px 3px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; color: #2A1406"><sc-if value="{{playing}}" hint-placeholder-val="{{false}}"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"></rect><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"></rect></svg></sc-if><sc-if value="{{paused}}" hint-placeholder-val="{{true}}"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z" fill="currentColor"></path></svg></sc-if></button>
+<span aria-hidden="true" style="width: 56px; text-align: center; font: 800 10px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0.08em; text-transform: uppercase; color: #F0CF86">{{playWord}}</span>
+</div>
+</div>
+</div>
+</sc-if>
+<div style="position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 11px; color: #DCCBB3">
+<span style="display: inline-flex; align-items: center; gap: 4px"><mark style="padding: 0 3px; border-radius: 3px; background: rgba(255,176,102,0.24); color: #FFE2C2; border-bottom: 2px solid #FFB066">um</mark> Filler 5</span>
+<span style="display: inline-flex; align-items: center; gap: 4px"><span style="color: #FFF6E3; border-bottom: 2px dotted #D9AE52">like</span> As filler 6</span>
+<span style="display: inline-flex; align-items: center; gap: 4px"><span style="display: inline-flex; align-items: center; height: 16px; padding: 0 5px; border-radius: 999px; border: 1px dashed rgba(246,234,211,0.45); color: #D8C6AE; font-size: 10px; font-weight: 700">3s+</span> Pause 1</span>
+<span style="display: inline-flex; align-items: center; gap: 4px"><span style="color: #A8977F; font-style: italic; border-bottom: 1px dashed rgba(246,234,211,0.35)">word</span> Unclear 1</span>
+<sc-if value="{{infoOn}}" hint-placeholder-val="{{false}}"><button type="button" aria-label="What the marks mean" aria-expanded="{{infoOpenAttr}}" onClick="{{toggleInfo}}" style="flex: none; width: 22px; height: 22px; padding: 0; border-radius: 999px; border: 1px solid rgba(217,174,82,0.7); background: transparent; color: #D9AE52; cursor: pointer; font: italic 700 12px Fraunces, Georgia, serif">i</button></sc-if>
+<sc-if value="{{infoOpen}}" hint-placeholder-val="{{false}}"><div role="note" style="position: absolute; z-index: 5; top: calc(100% + 6px); left: 0; right: 0; padding: 10px 12px; border-radius: 8px; background: #2A1712; border: 1px solid rgba(217,174,82,0.55); box-shadow: 0 10px 24px rgba(0,0,0,0.6); font-size: 12px; line-height: 1.45; color: #E8D8C0"><sc-if value="{{tipOn}}" hint-placeholder-val="{{true}}"><strong style="display: block; margin-bottom: 6px; color: #FFF6E3">Tap any word to jump there in the replay.</strong></sc-if><ul style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px"><li>Dotted words are marked only when used as filler.</li><li>Pauses of 3 seconds or more are shown, but they're not mistakes. A pause is better than saying "um".</li><li>Unclear words are ones the transcription wasn't sure about.</li></ul></div></sc-if>
+</div>
+</sc-if>
+</div>
+<sc-if value="{{wordsTab}}" hint-placeholder-val="{{true}}">
+<p style="margin: 4px 0 8px; font-size: 14px; line-height: 1.85; color: #E8D8C0">
+<sc-for list="{{tokensLong}}" as="w" hint-placeholder-count="80"><span><button type="button" onClick="{{w.seek}}" aria-label="{{w.aria}}" style="padding: 0 1px; margin: 0; border: 0; background: transparent; font: inherit; line-height: inherit; color: inherit; cursor: {{w.cursor}}; {{w.style}}">{{w.t}}</button>{{w.after}}</span></sc-for>
+</p>
+</sc-if>
+<sc-if value="{{notesTab}}" hint-placeholder-val="{{false}}">
+<div role="tabpanel" style="flex: 1; min-height: 0; padding: 0 6px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; line-height: 1.45; color: #DCCBB3">
+<h3 style="margin: 0; font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #8FE0B0">Strengths</h3>
+<div><strong style="color: #FFF6E3">Clear position:</strong> You took a side in your first sentence.</div>
+<div><strong style="color: #FFF6E3">Personal example:</strong> The driving test story made the point relatable.</div>
+<h3 style="margin: 4px 0 0; font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #FFB066">Weaknesses</h3>
+<div><strong style="color: #FFF6E3">Fillers at transitions:</strong> Most "um" sounds came right before a new point.</div>
+<div><strong style="color: #FFF6E3">One side only:</strong> The speech skipped what success can teach.</div>
+<div><strong style="color: #FFF6E3">Abrupt ending:</strong> The last point stopped without a closing line.</div>
+<h3 style="margin: 4px 0 0; font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #9CCBFF">Improvement tips</h3>
+<div><strong style="color: #FFF6E3">Pause instead of filling:</strong> Breathe for a second before each new point.</div>
+<div><strong style="color: #FFF6E3">Plan your last line:</strong> Repeat your position in one memorable sentence.</div>
+</div>
+</sc-if>
+<sc-if value="{{reviewTab}}" hint-placeholder-val="{{false}}">
+<div role="tabpanel" style="flex: 1; min-height: 0; padding: 8px 6px 0">
+<div style="position: relative; transform: rotate(-0.8deg); padding: 12px 14px 6px; background: linear-gradient(180deg, #F7ECD3, #EAD9B6); color: #2A1A0E; box-shadow: 0 10px 22px rgba(0,0,0,0.55); border-radius: 2px">
+<span aria-hidden="true" style="position: absolute; top: -6px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 999px; background: radial-gradient(circle at 35% 35%, #F5D891, #8C6224)"></span>
+<div style="display: flex; flex-direction: column; align-items: center; padding-bottom: 6px; border-bottom: 2px solid #2A1A0E; text-align: center"><span style="font-family: Fraunces, Georgia, serif; font-size: 16px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase">The Nightly Review</span><span style="font-size: 11px; color: #5A4330">Your coach's rating. A rough guide, not a grade.</span></div>
+<div style="display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(42,26,14,0.18)"><span style="font-size: 13px; font-weight: 800">Structure</span><span style="font-family: Fraunces, Georgia, serif; font-style: italic; font-weight: 600">Strong</span></div>
+<div style="display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(42,26,14,0.18)"><span style="font-size: 13px; font-weight: 800">Clarity of message</span><span style="font-family: Fraunces, Georgia, serif; font-style: italic; font-weight: 600">Solid</span></div>
+<div style="display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(42,26,14,0.18)"><span style="font-size: 13px; font-weight: 800">Staying on point</span><span style="font-family: Fraunces, Georgia, serif; font-style: italic; font-weight: 600">Outstanding</span></div>
+<div style="display: flex; justify-content: space-between; padding: 7px 0"><span style="font-size: 13px; font-weight: 800">Word choice</span><span style="font-family: Fraunces, Georgia, serif; font-style: italic; font-weight: 600">Developing</span></div>
+</div>
+</div>
+</sc-if>
+</div>
+<div style="display: flex; gap: 8px; justify-content: center">
+<button type="button" style="height: 38px; padding: 0 16px; border-radius: 999px; border: 0; background: #D9AE52; color: #1E1006; font: 800 12px Manrope, system-ui, sans-serif">Back to the stage</button>
+<button type="button" style="height: 38px; padding: 0 16px; border-radius: 999px; background: transparent; border: 1px solid rgba(246,234,211,0.28); color: #EFE2CF; font: 600 12px Manrope, system-ui, sans-serif">Try topic again</button>
+</div>
+</sc-if>
+<sc-if value="{{notH3}}" hint-placeholder-val="{{false}}">
+<div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px">
 
+<sc-if value="{{fullHeadOld}}" hint-placeholder-val="{{false}}">
 <div style="display: flex; flex-direction: column; gap: 4px">
 <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #BCA992">Tonight's performance</span>
 <h2 style="margin: 0; font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 17px; line-height: 1.2; color: #FFF6E3">Is failure a better teacher than success?</h2>
@@ -31,13 +130,33 @@ body{margin:0}
 <span style="font-size: 11px; color: #BCA992">(untimed) · Live recording</span>
 </div>
 </div>
+</sc-if>
+<sc-if value="{{fullHeadNew}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #BCA992">Tonight's performance</span>
+<div style="display: flex; align-items: baseline; gap: 8px">
+<span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 20px; font-weight: 600; color: #FFF6E3">{{totalLabel}}</span>
+<span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #BCA992">(untimed)</span>
+<span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; border: 1px solid rgba(246,234,211,0.35); font-size: 11px; font-weight: 600; color: #EFE2CF">Uploaded file</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 6px 0; border-top: 1px solid rgba(246,234,211,0.16); border-bottom: 1px solid rgba(246,234,211,0.16); text-align: center">
+<div style="display: flex; flex-direction: column"><span style="font-family: Fraunces, Georgia, serif; font-size: 20px; color: #FFF6E3">132</span><span style="font-size: 11px; color: #D8C6AE">words per min</span></div>
+<div style="display: flex; flex-direction: column"><span style="font-family: Fraunces, Georgia, serif; font-size: 20px; color: #FFF6E3">5</span><span style="font-size: 11px; color: #D8C6AE">fillers</span></div>
+<div style="display: flex; flex-direction: column; align-items: center"><span style="font-family: Fraunces, Georgia, serif; font-size: 20px; color: #FFF6E3">84%</span><span style="font-size: 11px; color: #D8C6AE">clarity</span><span aria-hidden="true" style="margin-top: 4px; width: 60%; height: 4px; border-radius: 2px; background: linear-gradient(90deg, #D9AE52 84%, rgba(246,234,211,0.18) 84%)"></span></div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{slimHead}}" hint-placeholder-val="{{true}}">
+<div role="group" aria-label="Tonight's performance" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid rgba(246,234,211,0.16); background: rgba(0,0,0,0.25); color: #EFE2CF; font: 600 12px Manrope, system-ui, sans-serif">
+<span style="display: flex; align-items: baseline; gap: 7px; white-space: nowrap"><span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; color: #FFF6E3">{{totalLabel}}</span><span style="color: #8A7660">·</span><span>132 wpm</span><span style="color: #8A7660">·</span><span>5 fillers</span><span style="color: #8A7660">·</span><span>84% clarity</span></span>
+</div>
+</sc-if>
 
 <div role="tablist" aria-label="Feedback views" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 3px; border-radius: 999px; background: rgba(0,0,0,0.35); border: 1px solid rgba(246,234,211,0.14)">
-<button type="button" role="tab" aria-selected="false" style="height: 34px; border: 0; border-radius: 999px; background: transparent; color: #D8C6AE; font: 700 12px Manrope, system-ui, sans-serif">Notes</button>
-<button type="button" role="tab" aria-selected="true" style="height: 34px; border: 0; border-radius: 999px; background: #D9AE52; color: #1E1006; font: 700 12px Manrope, system-ui, sans-serif">Your words</button>
-<button type="button" role="tab" aria-selected="false" style="height: 34px; border: 0; border-radius: 999px; background: transparent; color: #D8C6AE; font: 700 12px Manrope, system-ui, sans-serif">Review</button>
+<sc-for list="{{tabBtns}}" as="t" hint-placeholder-count="3"><button type="button" role="tab" aria-selected="{{t.sel}}" onClick="{{t.pick}}" style="height: 34px; border: 0; border-radius: 999px; cursor: pointer; font: 700 12px Manrope, system-ui, sans-serif; {{t.style}}">{{t.label}}</button></sc-for>
 </div>
 
+<sc-if value="{{wordsTab}}" hint-placeholder-val="{{true}}">
 <div role="tabpanel" style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px">
 
 <sc-if value="{{skinTabletop}}" hint-placeholder-val="{{false}}">
@@ -239,11 +358,35 @@ body{margin:0}
 </sc-if>
 
 </div>
+</sc-if>
+<sc-if value="{{notesTab}}" hint-placeholder-val="{{false}}">
+<div role="tabpanel" style="flex: 1; min-height: 0; overflow: hidden; padding: 0 6px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; line-height: 1.45; color: #DCCBB3">
+<h3 style="margin: 0; font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #8FE0B0">Strengths</h3>
+<div><strong style="color: #FFF6E3">Clear position:</strong> You took a side in your first sentence.</div>
+<div><strong style="color: #FFF6E3">Personal example:</strong> The driving test story made the point relatable.</div>
+<h3 style="margin: 4px 0 0; font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #FFB066">Weaknesses</h3>
+<div><strong style="color: #FFF6E3">Fillers at transitions:</strong> Most "um" sounds came right before a new point.</div>
+</div>
+</sc-if>
+<sc-if value="{{reviewTab}}" hint-placeholder-val="{{false}}">
+<div role="tabpanel" style="flex: 1; min-height: 0; overflow: hidden; padding: 8px 6px 0">
+<div style="position: relative; transform: rotate(-0.8deg); padding: 12px 14px 6px; background: linear-gradient(180deg, #F7ECD3, #EAD9B6); color: #2A1A0E; box-shadow: 0 10px 22px rgba(0,0,0,0.55); border-radius: 2px">
+<span aria-hidden="true" style="position: absolute; top: -6px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 999px; background: radial-gradient(circle at 35% 35%, #F5D891, #8C6224)"></span>
+<div style="display: flex; flex-direction: column; align-items: center; padding-bottom: 6px; border-bottom: 2px solid #2A1A0E; text-align: center"><span style="font-family: Fraunces, Georgia, serif; font-size: 16px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase">The Nightly Review</span><span style="font-size: 11px; color: #5A4330">Your coach's rating. A rough guide, not a grade.</span></div>
+<div style="display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(42,26,14,0.18)"><span style="font-size: 13px; font-weight: 800">Structure</span><span style="font-family: Fraunces, Georgia, serif; font-style: italic; font-weight: 600">Strong</span></div>
+<div style="display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(42,26,14,0.18)"><span style="font-size: 13px; font-weight: 800">Clarity of message</span><span style="font-family: Fraunces, Georgia, serif; font-style: italic; font-weight: 600">Solid</span></div>
+<div style="display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(42,26,14,0.18)"><span style="font-size: 13px; font-weight: 800">Staying on point</span><span style="font-family: Fraunces, Georgia, serif; font-style: italic; font-weight: 600">Outstanding</span></div>
+<div style="display: flex; justify-content: space-between; padding: 7px 0"><span style="font-size: 13px; font-weight: 800">Word choice</span><span style="font-family: Fraunces, Georgia, serif; font-style: italic; font-weight: 600">Developing</span></div>
+</div>
+</div>
+</sc-if>
 
 <div style="display: flex; gap: 8px; justify-content: center">
 <button type="button" style="height: 38px; padding: 0 16px; border-radius: 999px; border: 0; background: #D9AE52; color: #1E1006; font: 800 12px Manrope, system-ui, sans-serif">Back to the stage</button>
 <button type="button" style="height: 38px; padding: 0 16px; border-radius: 999px; background: transparent; border: 1px solid rgba(246,234,211,0.28); color: #EFE2CF; font: 600 12px Manrope, system-ui, sans-serif">Try topic again</button>
 </div>
+</div>
+</sc-if>
 </div>
 </div>
 
@@ -256,7 +399,7 @@ body{margin:0}
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"layout":{"editor":"enum","options":["A","B"],"default":"A"},"audio":{"editor":"enum","options":["here","gone"],"default":"here"},"skin":{"editor":"enum","options":["none","tabletop","console","compactH","compactI","compactH2"],"default":"none"},"keys":{"editor":"enum","options":["icons","words","circle"],"default":"icons"},"$preview":{"width":390,"height":780}}'>
+<script type="text/x-dc" data-dc-script data-props='{"layout":{"editor":"enum","options":["A","B"],"default":"A"},"audio":{"editor":"enum","options":["here","gone"],"default":"here"},"tab":{"editor":"enum","options":["words","notes","review"],"default":"words"},"skin":{"editor":"enum","options":["none","tabletop","console","compactH","compactI","compactH2","compactH3"],"default":"none"},"keys":{"editor":"enum","options":["icons","words","circle"],"default":"icons"},"$preview":{"width":390,"height":780}}'>
 class Component extends DCLogic {
 componentDidMount() {
 this.timer = setInterval(() => {
@@ -274,7 +417,9 @@ clearInterval(this.timer);
 renderVals() {
 const s = this.state || {};
 const layout = this.props.layout === 'B' ? 'B' : 'A';
-const skin = ['tabletop', 'console', 'compactH', 'compactI', 'compactH2'].indexOf(this.props.skin) >= 0 ? this.props.skin : 'none';
+const h3 = this.props.skin === 'compactH3';
+const skin = h3 ? 'compactH2' : (['tabletop', 'console', 'compactH', 'compactI', 'compactH2'].indexOf(this.props.skin) >= 0 ? this.props.skin : 'none');
+const tab = (h3 && (s.tab || this.props.tab)) || 'words';
 const themed = skin !== 'none';
 const hasAudio = this.props.audio !== 'gone';
 const hide = !!s.hideReplay;
@@ -369,8 +514,14 @@ tokens: tokens, bars: bars, bulbs: bulbs,
 hasAudio: hasAudio,
 playerTop: hasAudio && layout === 'A' && !themed,
 keysIcons: this.props.keys !== 'words' && this.props.keys !== 'circle', keysWords: this.props.keys === 'words', keysCircle: this.props.keys === 'circle',
+showNotes: () => this.setState({ tab: 'notes', playing: false }),
+notH3: !h3, tokensLong: tokens.concat(tokens.map((w) => Object.assign({}, w, { style: w.style.replace(/box-shadow[^;]*;|background: rgba\(217,174,82,0.3\);/g, '') }))),
+h3: h3, wordsTab: tab === 'words', notesTab: tab === 'notes', reviewTab: tab === 'review',
+lgFiller: h3 ? 'Filler 5' : 'Filler, 5', lgAs: h3 ? 'As filler 6' : 'Used as filler, 6', lgPause: h3 ? 'Pause 1' : 'Long pause, 1', lgUnclear: h3 ? 'Unclear 1' : 'Unclear, 1', lgGap: h3 ? 'gap: 6px 12px;' : 'gap: 8px 16px;',
+fullHeadOld: !h3, fullHeadNew: h3, slimHead: false,
+tabBtns: [['notes', 'Notes'], ['words', 'Your words'], ['review', 'Review']].map((d) => ({ label: d[1], sel: d[0] === tab ? 'true' : 'false', pick: () => { if (h3) this.setState({ tab: d[0], playing: false }); }, style: d[0] === tab ? 'background: #D9AE52; color: #1E1006;' : 'background: transparent; color: #D8C6AE;' })),
 skinTabletop: hasAudio && skin === 'tabletop', skinConsole: live && skin === 'console', skinH: live && skin === 'compactH', skinH2: live && skin === 'compactH2',
-infoOn: skin === 'compactH2', infoOpen: skin === 'compactH2' && (s.info === undefined ? true : s.info), infoOpenAttr: (s.info === undefined || s.info) ? 'true' : 'false', toggleInfo: () => this.setState({ info: !(s.info === undefined ? true : s.info) }), skinI: live && skin === 'compactI',
+infoOn: skin === 'compactH2', infoOpen: skin === 'compactH2' && (s.info === undefined ? !h3 : s.info), infoOpenAttr: (s.info === undefined ? !h3 : s.info) ? 'true' : 'false', toggleInfo: () => this.setState({ info: !(s.info === undefined ? !h3 : s.info) }), skinI: live && skin === 'compactI',
 dialGlow: playing ? 'radial-gradient(ellipse 80% 90% at 50% 60%, rgba(255,170,70,0.28), rgba(0,0,0,0) 75%), ' : '',
 hintOn: live && skin !== 'compactH2',
 tipOn: live,

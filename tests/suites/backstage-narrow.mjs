@@ -21,10 +21,13 @@ const MEASURE = `(() => {
   const overlap = (a, b) => !(a.right <= b.left + 0.5 || a.left >= b.right - 0.5 || a.bottom <= b.top + 0.5 || a.top >= b.bottom - 0.5);
   const tabs = [...document.querySelectorAll("#backstageTabs .feedback-tab")].filter(t => t.getClientRects().length);
   const hint = document.getElementById("notesHint");
-  const parts = [["summary", perfSummary], ["tab row", document.getElementById("backstageTabs")], ["notes", document.querySelector(".notes")],
+  // One column (since stage 4 update 2): the summary, the tabs and the tab scroll together in #backstageScroll,
+  // so that area is what must sit inside the mirror and end above the buttons
+  const one = getComputedStyle(document.querySelector(".perf")).display === "contents";
+  const parts = [...(one && backstageScroll.scrollTop > 0 ? [] : [["summary", perfSummary]]), ["tab row", document.getElementById("backstageTabs")], one ? ["scrolling area", backstageScroll] : ["notes", document.querySelector(".notes")],
     ["buttons", document.querySelector("#result .perf-buttons")], ...(hint.getClientRects().length && getComputedStyle(hint).display !== "none" ? [["hint", hint]] : [])];
   const back = box(backToStageBtn), again = box(tryAgainBtn);
-  const panel = [coachNotesBody, wordsPanel, reviewPanel].find(p => !p.hidden);
+  const panel = one ? backstageScroll : [coachNotesBody, wordsPanel, reviewPanel].find(p => !p.hidden);
   return {
     oneColumn: getComputedStyle(document.querySelector(".perf")).display === "contents",
     sideways: document.documentElement.scrollWidth - innerWidth,
@@ -55,19 +58,20 @@ if (!only || only === "sizes") {
     // Keyboard on the tabs
     await b.evaluate("tabNotes.focus()");
     await b.key("ArrowRight");
-    check(`${tag}: ArrowRight to Your words, which scroll inside their panel`, (await b.evaluate(`document.activeElement.id === "tabWords" && !wordsPanel.hidden && (() => { const s = wordsPanel.querySelector(".words-body"); return s.scrollHeight > s.clientHeight; })()`)) && (await b.evaluate(MEASURE)).panelInGlass);
+    check(`${tag}: ArrowRight to Your words, which scroll${one ? " (with the summary and tabs)" : " inside their panel"}`, (await b.evaluate(`document.activeElement.id === "tabWords" && !wordsPanel.hidden && (() => { const s = backstageOneColumn.matches ? backstageScroll : wordsPanel.querySelector(".words-body"); return s.scrollHeight > s.clientHeight; })()`)) && (await b.evaluate(MEASURE)).panelInGlass);
     await shot(b, `narrow-${w}x${h}-words`);
     if (one) {
       await b.key("End");
       check(`${tag}: End to Review, which opens the clipping`, await b.evaluate(`document.activeElement.id === "tabReview" && !reviewPanel.hidden && !!reviewPanel.querySelector(".review")`));
       m = await b.evaluate(MEASURE);
       check(`${tag}: Review panel inside the mirror, above the buttons`, m.panelInGlass && m.panelAboveButtons && m.outside.length === 0);
-      await b.evaluate(`reviewPanel.scrollTop = 0`);
+      // (one column: the shared area scrolls, and the tabs stick over the top of it)
+      await b.evaluate(`backstageScroll.scrollTop = 0`);
       await sleep(150);
-      check(`${tag}: review top: pin and masthead visible`, await b.evaluate(`(() => { const p = reviewPanel.getBoundingClientRect(), pin = reviewPanel.querySelector(".review-pin").getBoundingClientRect(); return pin.top >= p.top - 0.5; })()`));
-      await b.evaluate(`reviewPanel.scrollTop = 1e9`);
+      check(`${tag}: review top: pin and masthead visible`, await b.evaluate(`(() => { const p = backstageScroll.getBoundingClientRect(), pin = reviewPanel.querySelector(".review-pin").getBoundingClientRect(); return pin.top >= p.top - 0.5 && pin.bottom <= p.bottom; })()`));
+      await b.evaluate(`backstageScroll.scrollTop = 1e9`);
       await sleep(150);
-      check(`${tag}: review bottom: the last row above the fade`, await b.evaluate(`(() => { const p = reviewPanel.getBoundingClientRect(), rows = reviewPanel.querySelectorAll(".review-row"), last = rows[rows.length - 1].getBoundingClientRect(); return last.bottom <= p.bottom - 26 + 4; })()`));
+      check(`${tag}: review bottom: the last row above the fade`, await b.evaluate(`(() => { const p = backstageScroll.getBoundingClientRect(), rows = reviewPanel.querySelectorAll(".review-row"), last = rows[rows.length - 1].getBoundingClientRect(); return last.bottom <= p.bottom - 26 + 4; })()`));
       await shot(b, `narrow-${w}x${h}-review`);
       await b.key("ArrowRight");
       check(`${tag}: ArrowRight from Review wraps to Notes`, (await b.evaluate("document.activeElement.id")) === "tabNotes");

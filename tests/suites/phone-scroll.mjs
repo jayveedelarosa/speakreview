@@ -196,16 +196,16 @@ if (!only || only === "overscroll") {
   await b.settled();
   check("page: overscroll-behavior-y none", (await b.evaluate(`getComputedStyle(document.documentElement).overscrollBehaviorY`)) === "none");
   await b.show(FULL);
-  const PANELS = `(() => [...document.querySelectorAll(".notes-body, .words-body, .review-panel, .perf-scroll.is-scrollable, .wall-frames, .wall-scroll, .pb-notes, .pb-review, .settings-panel")]
+  const PANELS = `(() => [...document.querySelectorAll(".backstage-scroll, .notes-body, .words-body, .review-panel, .perf-scroll.is-scrollable, .wall-frames, .wall-scroll, .pb-notes, .pb-review, .settings-panel")]
     .map(e => ({ c: e.className, ob: getComputedStyle(e).overscrollBehaviorY, ov: getComputedStyle(e).overflowY })))()`;
   const all = await b.evaluate(PANELS);
   const scrollers = all.filter(p => p.ov === "auto");
   check("every scrolling panel contains its pull", scrollers.length >= 2 && scrollers.every(p => p.ob === "contain"), JSON.stringify(scrollers));
-  // Each tab's panel still scrolls
-  for (const [tab, sel] of [["#tabNotes", "#coachNotesBody"], ["#tabWords", "#wordsPanel .words-body"], ["#tabReview", "#reviewPanel"]]) {
+  // Each tab still scrolls (one column since stage 4 update 2: the summary, the tabs and the tab scroll together)
+  for (const tab of ["#tabNotes", "#tabWords", "#tabReview"]) {
     await b.click(tab); await sleep(250);
-    const r = await b.evaluate(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); const max = e.scrollHeight - e.clientHeight; e.scrollTop = 60; return { max, top: e.scrollTop }; })()`);
-    if (r.max > 4) check(`${tab}: its panel still scrolls`, r.top > 0, JSON.stringify(r));
+    const r = await b.evaluate(`(() => { const e = backstageScroll; e.scrollTop = 0; const max = e.scrollHeight - e.clientHeight; e.scrollTop = 60; return { max, top: e.scrollTop }; })()`);
+    check(`${tab}: the shared area scrolls`, r.max > 4 && r.top > 0, JSON.stringify(r));
   }
   await done(b);
 }
@@ -215,7 +215,9 @@ if (!only || only === "fade") {
   for (const [w, h] of [[390, 780], [768, 1024], [1280, 800]]) {
     const b = await open({ width: w, height: h });
     await b.show(FULL);
-    for (const [tab, sel] of [["#tabNotes", "#coachNotesBody"], ["#tabWords", "#wordsPanel .words-body"]]) {
+    // One column (below 990px): the shared area scrolls, not the panels
+    for (const [tab, own] of [["#tabNotes", "#coachNotesBody"], ["#tabWords", "#wordsPanel .words-body"]]) {
+      const sel = w < 990 ? "#backstageScroll" : own;
       await b.click(tab); await sleep(250);
       const at = top => b.evaluate(`(async () => { const e = document.querySelector(${JSON.stringify(sel)}); e.scrollTop = ${top}; await new Promise(r => setTimeout(r, 120));
         const cs = getComputedStyle(e); return { scrolls: e.scrollHeight > e.clientHeight + 1, cls: e.classList.contains("is-scrolled"), fade: cs.getPropertyValue("--fade-top").trim(), mask: cs.maskImage || cs.webkitMaskImage }; })()`);

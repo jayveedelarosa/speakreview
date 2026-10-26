@@ -4,6 +4,7 @@
 //   words    the boxed word follows the time, the sentence stays bright, clicking a word, auto-scroll
 //   always   no Hide replay or hint any more; an old stored choice is cleared and the radio shows
 //   info     the "i" card in Backstage's Your words: what it says, opening and closing, sizes
+//   space    one column: the summary, tabs and tab scroll as one area, with the tabs (and radio and legend) sticky
 // Every API call is answered by the fake API stub; nothing reaches AWS.
 import { launch, sleep, LIVE, STUB, RESULT as BASE_RESULT, WORDS, check, finish, only, shot } from "../lib/page.mjs";
 
@@ -127,13 +128,15 @@ if (!only || only === "radio") {
     for (const banner of [false, true]) {
       await b.evaluate(`trophyBanner.hidden = ${!banner}; true`);
       await sleep(150);
-      const m = await b.evaluate(`(() => { const box = e => e.getBoundingClientRect(); const row = box(document.querySelector("#result .perf-buttons")), p = box(wordsPanel), g = box(document.querySelector(".mirror-glass"));
+      // (one column: the shared scrolling area is what has to end above the buttons)
+      const m = await b.evaluate(`(() => { const box = e => e.getBoundingClientRect(); const row = box(document.querySelector("#result .perf-buttons")), g = box(document.querySelector(".mirror-glass"));
+        const one = backstageOneColumn.matches, p = box(one ? backstageScroll : wordsPanel);
         const kids = [...wordsPanel.children].filter(e => e.getClientRects().length).map(box);
-        const spill = wordsPanel.scrollHeight > wordsPanel.clientHeight + 1 && getComputedStyle(wordsPanel).overflowY === "visible";
+        const spill = one ? getComputedStyle(backstageScroll).overflowY !== "auto" : wordsPanel.scrollHeight > wordsPanel.clientHeight + 1 && getComputedStyle(wordsPanel).overflowY === "visible";
         const back = box(backToStageBtn);
         return { above: p.bottom <= row.top + 0.5, spill, inMirror: back.top >= g.top - 0.5 && back.bottom <= g.bottom + 0.5,
           cloth: getComputedStyle(replayBox.querySelector(".replay-cloth")).display, scrolls: wordsPanel.scrollHeight > wordsPanel.clientHeight + 1,
-          body: Math.round(box(wordsPanel.querySelector(".words-body")).height) }; })()`);
+          body: one ? 999 : Math.round(box(wordsPanel.querySelector(".words-body")).height) }; })()`);
       check(`${tag}${banner ? " with the trophy banner" : ""}: Your words ends above the buttons and never spills onto them, the cloth always there${w === 1280 && !banner ? ", nothing scrolls" : ""}`,
         m.above && !m.spill && m.inMirror && m.cloth === "flex" && (w !== 1280 || banner || !m.scrolls) && m.body >= 40, JSON.stringify(m));
     }
@@ -386,7 +389,7 @@ if (!only || only === "info") {
       && r.tip === `${phone ? "Tap" : "Click"} any word to jump there in the replay.` && JSON.stringify(r.items) === JSON.stringify(BULLETS), JSON.stringify(r));
     // It lies over the words (they don't move inside the panel), and the whole card can be seen
     await sleep(500);
-    const box = await b.evaluate(`(() => { const c = wordsPanel.querySelector(".words-info").getBoundingClientRect(), l = wordsPanel.querySelector(".words-legend").getBoundingClientRect(), p = wordsPanel.getBoundingClientRect();
+    const box = await b.evaluate(`(() => { const c = wordsPanel.querySelector(".words-info").getBoundingClientRect(), l = wordsPanel.querySelector(".words-legend").getBoundingClientRect(), p = (backstageOneColumn.matches ? backstageScroll : wordsPanel).getBoundingClientRect();
       const t = wordsPanel.querySelector(".words-text").getBoundingClientRect(), lg = l;
       return { w: Math.round(c.width), left: Math.round(c.left - l.left), right: Math.round(l.right - c.right), inside: c.left >= 0 && c.right <= innerWidth && c.top >= p.top - 0.5 && c.bottom <= p.bottom + 0.5,
         textUnderLegend: Math.round(t.top - lg.bottom) }; })()`);
@@ -432,6 +435,111 @@ if (!only || only === "info") {
     }
     await done(b);
   }
+}
+
+// ---------------------------------------------------------------- one scrolling area (one column)
+const LONG_WORDS = Array.from({ length: 200 }, (_, i) => [i % 12 === 11 ? "end." : (i % 7 === 3 ? "um" : "word"), i * 30, i * 30 + 20, 95]);
+const LONG_NOTES = "Strengths:\n" + Array.from({ length: 10 }, (_, i) => `${i + 1}. A strength about the speech, number ${i + 1}, with some words.`).join("\n");
+const REVIEW = { structure: { level: 3, reason: "Clear start and end." }, clarity: { level: 2, reason: "Some words ran together." },
+  on_topic: { level: 4, reason: "Stayed on the question." }, word_choice: { level: 3, reason: "Plain and direct." } };
+const SPACE_RESULT = { ...RESULT, words: LONG_WORDS, ai_feedback: LONG_NOTES, review: REVIEW };
+// Where things are, relative to the top of the shared scrolling area
+const SPACE = `(() => { const area = backstageScroll.getBoundingClientRect(), box = e => e.getBoundingClientRect(), rel = e => Math.round(box(e).top - area.top);
+  const head = document.querySelector("#result .notes-head"), legend = wordsPanel.querySelector(".words-legend");
+  return { top: backstageScroll.scrollTop, header: backstageHeaderHeight(), tabs: rel(head), tabsBottom: Math.round(box(head).bottom - area.top),
+    radio: replayBox.isConnected && !replayBox.hidden && !wordsPanel.hidden ? [rel(replayBox), Math.round(box(replayBox).bottom - area.top)] : null,
+    legend: legend && !wordsPanel.hidden ? [rel(legend), Math.round(box(legend).bottom - area.top)] : null,
+    stuck: backstageScroll.classList.contains("is-stuck"), scrolled: backstageScroll.classList.contains("is-scrolled"),
+    fade: getComputedStyle(backstageScroll).getPropertyValue("--fade-top").trim(),
+    bg: [head, legend].filter(e => e && e.getClientRects().length).map(e => getComputedStyle(e).backgroundColor) }; })()`;
+
+if (!only || only === "space") {
+  for (const [w, h] of [[390, 780], [360, 740]]) {
+    console.log(`\n== one scrolling area (${w}x${h})`);
+    const b = await open({ width: w, height: h, pre: [`window.__result = ${JSON.stringify(SPACE_RESULT)};`] });
+    await sendAndShow(b, 60);
+    await b.evaluate("trophyBanner.hidden = true; true");
+    const layout = await b.evaluate(`(() => { const area = backstageScroll.getBoundingClientRect(), row = document.querySelector("#result .perf-buttons").getBoundingClientRect();
+      return { inside: backstageScroll.contains(perfSummary) && backstageScroll.contains(document.querySelector("#result .notes-head")) && !backstageScroll.contains(backToStageBtn),
+        above: area.bottom <= row.top + 0.5, scrolls: getComputedStyle(backstageScroll).overflowY, bar: backstageScroll.offsetWidth - backstageScroll.clientWidth,
+        hint: [...perfSummary.querySelectorAll(".stat-hint")].map(e => getComputedStyle(e).display).join(), sideways: document.documentElement.scrollWidth - innerWidth }; })()`);
+    check(`${w}x${h} the summary, tabs and tab scroll together; the buttons stay below, outside it; no scrollbar, nothing sideways`,
+      layout.inside && layout.above && layout.scrolls === "auto" && layout.bar === 0 && layout.sideways <= 0, JSON.stringify(layout));
+    check(`${w}x${h} no "How clearly your words came through" in this layout`, layout.hint === "none", layout.hint);
+    for (const tab of ["tabNotes", "tabWords", "tabReview"]) {
+      await b.evaluate(`backstageScroll.scrollTop = 0; document.getElementById("${tab}").click(); true`);
+      await sleep(250);
+      let r = await b.evaluate(SPACE);
+      check(`${w}x${h} ${tab}: at the top the summary shows and the tabs sit under it`, r.top === 0 && r.tabs > 100 && !r.stuck && r.fade === "0px", JSON.stringify(r));
+      await b.evaluate("backstageScroll.scrollTop = 40; true");
+      await sleep(250);
+      r = await b.evaluate(SPACE);
+      check(`${w}x${h} ${tab}: scrolled a little: the 16px top fade, tabs not stuck yet`, r.scrolled && !r.stuck && r.fade === "16px", JSON.stringify(r));
+      await b.evaluate("backstageScroll.scrollTop = 700; true");
+      await sleep(300);
+      r = await b.evaluate(SPACE);
+      const words = tab === "tabWords";
+      check(`${w}x${h} ${tab}: scrolled: the tabs stick at the top${words ? ", the radio and legend right under them" : ""}, on #1E0F0C, no top fade`,
+        r.top >= r.header && r.tabs === 0 && r.stuck && r.fade === "0px" && r.bg.every(c => c === "rgb(30, 15, 12)")
+        && (!words || (r.radio && Math.abs(r.radio[0] - r.tabsBottom) <= 1 && Math.abs(r.legend[0] - r.radio[1]) <= 1)), JSON.stringify(r));
+      await shot(b, `space-${w}-${tab}`);
+    }
+    // Switching tabs never moves the tabs
+    for (const [from, to] of [["tabWords", "tabNotes"], ["tabNotes", "tabReview"], ["tabReview", "tabWords"]]) {
+      await b.evaluate(`document.getElementById("${from}").click(); backstageScroll.scrollTop = 700; true`);
+      await sleep(250);
+      const before = await b.evaluate(SPACE);
+      await b.evaluate(`document.getElementById("${to}").click()`);
+      await sleep(250);
+      const after = await b.evaluate(SPACE);
+      check(`${w}x${h} scrolled: ${from} to ${to} keeps the tabs exactly in place, the summary still away`, before.tabs === 0 && after.tabs === 0 && after.top === after.header, `${JSON.stringify(before)} -> ${JSON.stringify(after)}`);
+      await b.evaluate(`backstageScroll.scrollTop = 0; document.getElementById("${from}").click(); true`);
+      await sleep(150);
+      await b.evaluate(`document.getElementById("${to}").click()`);
+      await sleep(250);
+      check(`${w}x${h} at the top: ${from} to ${to} keeps the summary showing`, (await b.evaluate(SPACE)).top === 0);
+    }
+    // The "i" card opens under the sticky block, all of it in view
+    await b.evaluate(`document.getElementById("tabWords").click(); backstageScroll.scrollTop = 700; true`);
+    await sleep(250);
+    await b.evaluate(`wordsPanel.querySelector(".words-info-btn").click()`);
+    await sleep(300);
+    const card = await b.evaluate(`(() => { const c = wordsPanel.querySelector(".words-info").getBoundingClientRect(), l = wordsPanel.querySelector(".words-legend").getBoundingClientRect(), a = backstageScroll.getBoundingClientRect();
+      return { below: c.top >= l.bottom - 0.5 - (c.top - l.bottom < 0 ? 0 : 0), inView: c.bottom <= a.bottom + 0.5, top: !!document.elementFromPoint(c.left + 20, c.top + 12).closest(".words-info") }; })()`);
+    check(`${w}x${h} the "i" card opens under the sticky block, fully in view, nothing over it`, card.inView && card.top, JSON.stringify(card));
+    await shot(b, `space-${w}-info`);
+    await b.evaluate(`wordsPanel.querySelector(".words-info-btn").click()`);
+    // Auto-scroll while playing keeps the gold box below the sticky block; scrolling by hand pauses it
+    await b.evaluate(`backstageScroll.scrollTop = 0; replayPlayer.seekTo(1); ${PLAY}; true`);
+    await b.waitFor("!replayAudio.paused", 3000);
+    await b.evaluate("replayPlayer.seekTo(40); true");
+    await sleep(1500);
+    const seen = await b.evaluate(`(() => { const e = wordsPanel.querySelector(".is-heard").getBoundingClientRect(), l = wordsPanel.querySelector(".words-legend").getBoundingClientRect(), a = backstageScroll.getBoundingClientRect();
+      return { below: e.top >= l.bottom - 0.5, above: e.bottom <= a.bottom, top: backstageScroll.scrollTop }; })()`);
+    check(`${w}x${h} while playing, the area scrolls to keep the gold box in view below the sticky block`, seen.below && seen.above && seen.top > 0, JSON.stringify(seen));
+    const [x, y] = await b.evaluate(`(() => { const r = backstageScroll.getBoundingClientRect(); return [r.left + 40, r.bottom - 60]; })()`);
+    await b.send("Input.dispatchMouseEvent", { type: "mouseWheel", x, y, deltaX: 0, deltaY: -300 });
+    await sleep(500);
+    const handTop = await b.evaluate("backstageScroll.scrollTop");
+    await b.evaluate("replayPlayer.seekTo(55); true");
+    await sleep(1200);
+    check(`${w}x${h} after scrolling by hand, the area stays where it was put`, Math.abs((await b.evaluate("backstageScroll.scrollTop")) - handTop) < 2, handTop);
+    await b.evaluate(PLAY);
+    // A past show (no radio): only the tabs and the legend stick
+    await b.evaluate(`displayResult(${JSON.stringify(SPACE_RESULT)}, "an-older-speech"); true`);
+    await b.waitFor("!appRoot.inert", 5000);
+    await b.evaluate(`document.getElementById("tabWords").click(); backstageScroll.scrollTop = 700; true`);
+    await sleep(300);
+    const past = await b.evaluate(SPACE);
+    check(`${w}x${h} no recording: the tabs and the legend stick, no radio`, past.radio === null && past.tabs === 0 && past.legend && Math.abs(past.legend[0] - past.tabsBottom) <= 1, JSON.stringify(past));
+    await done(b);
+  }
+
+  console.log("\n== laptop keeps two columns");
+  const b = await open({ width: 1280, height: 800, pre: [`window.__result = ${JSON.stringify(SPACE_RESULT)};`] });
+  await sendAndShow(b, 60);
+  check("1280x800: the scrolling area has no box of its own, and Clarity keeps its line", await b.evaluate(`getComputedStyle(backstageScroll).display === "contents" && [...perfSummary.querySelectorAll(".stat-hint")].some(e => getComputedStyle(e).display !== "none" && e.getClientRects().length > 0)`));
+  await done(b);
 }
 
 finish();

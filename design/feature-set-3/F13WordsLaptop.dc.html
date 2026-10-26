@@ -224,11 +224,11 @@ body{margin:0}
 </div>
 </sc-if>
 
-<div style="position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; font-size: 13px; color: #DCCBB3">
-<span style="display: inline-flex; align-items: center; gap: 7px"><mark style="padding: 0 3px; border-radius: 3px; background: rgba(255,176,102,0.24); color: #FFE2C2; border-bottom: 2px solid #FFB066">um</mark> Filler, 5</span>
-<span style="display: inline-flex; align-items: center; gap: 7px"><span style="color: #FFF6E3; border-bottom: 2px dotted #D9AE52">like</span> Used as filler, 6</span>
-<span style="display: inline-flex; align-items: center; gap: 7px"><span style="display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 999px; border: 1px dashed rgba(246,234,211,0.45); color: #D8C6AE; font-size: 11px; font-weight: 700">3.4s</span> Long pause, 1</span>
-<span style="display: inline-flex; align-items: center; gap: 7px"><span style="color: #A8977F; font-style: italic; border-bottom: 1px dashed rgba(246,234,211,0.35)">word</span> Unclear, 1</span>
+<div style="position: relative; display: flex; flex-wrap: wrap; align-items: center; {{lgGap}} font-size: 13px; color: #DCCBB3">
+<span style="display: inline-flex; align-items: center; gap: 7px"><mark style="padding: 0 3px; border-radius: 3px; background: rgba(255,176,102,0.24); color: #FFE2C2; border-bottom: 2px solid #FFB066">um</mark> {{lgFiller}}</span>
+<span style="display: inline-flex; align-items: center; gap: 7px"><span style="color: #FFF6E3; border-bottom: 2px dotted #D9AE52">like</span> {{lgAs}}</span>
+<span style="display: inline-flex; align-items: center; gap: 7px"><span style="display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 999px; border: 1px dashed rgba(246,234,211,0.45); color: #D8C6AE; font-size: 11px; font-weight: 700">3.4s</span> {{lgPause}}</span>
+<span style="display: inline-flex; align-items: center; gap: 7px"><span style="color: #A8977F; font-style: italic; border-bottom: 1px dashed rgba(246,234,211,0.35)">word</span> {{lgUnclear}}</span>
 <sc-if value="{{infoOn}}" hint-placeholder-val="{{false}}"><button type="button" aria-label="What the marks mean" aria-expanded="{{infoOpenAttr}}" onClick="{{toggleInfo}}" style="flex: none; width: 22px; height: 22px; padding: 0; border-radius: 999px; border: 1px solid rgba(217,174,82,0.7); background: transparent; color: #D9AE52; cursor: pointer; font: italic 700 12px Fraunces, Georgia, serif">i</button></sc-if>
 <sc-if value="{{infoOpen}}" hint-placeholder-val="{{false}}"><div role="note" style="position: absolute; z-index: 5; top: calc(100% + 6px); right: 0; width: 340px; padding: 10px 12px; border-radius: 8px; background: #2A1712; border: 1px solid rgba(217,174,82,0.55); box-shadow: 0 10px 24px rgba(0,0,0,0.6); font-size: 12px; line-height: 1.45; color: #E8D8C0"><sc-if value="{{tipOn}}" hint-placeholder-val="{{true}}"><strong style="display: block; margin-bottom: 6px; color: #FFF6E3">Click any word to jump there in the replay.</strong></sc-if><ul style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px"><li>Dotted words are marked only when used as filler.</li><li>Pauses of 3 seconds or more are shown, but they're not mistakes. A pause is better than saying "um".</li><li>Unclear words are ones the transcription wasn't sure about.</li></ul></div></sc-if>
 <sc-if value="{{hintOn}}" hint-placeholder-val="{{true}}"><span style="margin-left: auto; font-size: 12px; color: #BCA992">Click any word to hear it</span></sc-if>
@@ -275,7 +275,7 @@ body{margin:0}
 </sc-for>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"layout":{"editor":"enum","options":["A","B"],"default":"A"},"audio":{"editor":"enum","options":["here","gone"],"default":"here"},"skin":{"editor":"enum","options":["none","tabletop","console","compactH","compactI","compactH2"],"default":"none"},"keys":{"editor":"enum","options":["icons","words","circle"],"default":"icons"},"$preview":{"width":1280,"height":800}}'>
+<script type="text/x-dc" data-dc-script data-props='{"layout":{"editor":"enum","options":["A","B"],"default":"A"},"audio":{"editor":"enum","options":["here","gone"],"default":"here"},"skin":{"editor":"enum","options":["none","tabletop","console","compactH","compactI","compactH2","compactH3"],"default":"none"},"keys":{"editor":"enum","options":["icons","words","circle"],"default":"icons"},"$preview":{"width":1280,"height":800}}'>
 class Component extends DCLogic {
 componentDidMount() {
 this.timer = setInterval(() => {
@@ -293,7 +293,9 @@ clearInterval(this.timer);
 renderVals() {
 const s = this.state || {};
 const layout = this.props.layout === 'B' ? 'B' : 'A';
-const skin = ['tabletop', 'console', 'compactH', 'compactI', 'compactH2'].indexOf(this.props.skin) >= 0 ? this.props.skin : 'none';
+const h3 = this.props.skin === 'compactH3';
+const skin = h3 ? 'compactH2' : (['tabletop', 'console', 'compactH', 'compactI', 'compactH2'].indexOf(this.props.skin) >= 0 ? this.props.skin : 'none');
+const tab = (h3 && s.tab) || 'words';
 const themed = skin !== 'none';
 const hasAudio = this.props.audio !== 'gone';
 const hide = !!s.hideReplay;
@@ -396,8 +398,12 @@ critic: [lv('Structure', 'Strong'), lv('Clarity of message', 'Solid'), lv('Stayi
 hasAudio: hasAudio,
 playerTop: hasAudio && layout === 'A' && !themed,
 keysIcons: this.props.keys !== 'words' && this.props.keys !== 'circle', keysWords: this.props.keys === 'words', keysCircle: this.props.keys === 'circle',
+h3: h3, wordsTab: tab === 'words', notesTab: tab === 'notes', reviewTab: tab === 'review',
+lgFiller: h3 ? 'Filler 5' : 'Filler, 5', lgAs: h3 ? 'As filler 6' : 'Used as filler, 6', lgPause: h3 ? 'Pause 1' : 'Long pause, 1', lgUnclear: h3 ? 'Unclear 1' : 'Unclear, 1', lgGap: h3 ? 'gap: 6px 12px;' : 'gap: 8px 16px;',
+fullHeadOld: !h3, fullHeadNew: h3 && tab !== 'words', slimHead: h3 && tab === 'words',
+tabBtns: [['notes', 'Notes'], ['words', 'Your words'], ['review', 'Review']].map((d) => ({ label: d[1], sel: d[0] === tab ? 'true' : 'false', pick: () => { if (h3) this.setState({ tab: d[0], playing: false }); }, style: d[0] === tab ? 'background: #D9AE52; color: #1E1006;' : 'background: transparent; color: #D8C6AE;' })),
 skinTabletop: hasAudio && skin === 'tabletop', skinConsole: live && skin === 'console', skinH: live && skin === 'compactH', skinH2: live && skin === 'compactH2',
-infoOn: skin === 'compactH2', infoOpen: skin === 'compactH2' && (s.info === undefined ? true : s.info), infoOpenAttr: (s.info === undefined || s.info) ? 'true' : 'false', toggleInfo: () => this.setState({ info: !(s.info === undefined ? true : s.info) }), skinI: live && skin === 'compactI',
+infoOn: skin === 'compactH2', infoOpen: skin === 'compactH2' && (s.info === undefined ? !h3 : s.info), infoOpenAttr: (s.info === undefined ? !h3 : s.info) ? 'true' : 'false', toggleInfo: () => this.setState({ info: !(s.info === undefined ? !h3 : s.info) }), skinI: live && skin === 'compactI',
 dialGlow: playing ? 'radial-gradient(ellipse 80% 90% at 50% 60%, rgba(255,170,70,0.28), rgba(0,0,0,0) 75%), ' : '',
 hintOn: live && skin !== 'compactH2',
 tipOn: live,

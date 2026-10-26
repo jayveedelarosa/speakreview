@@ -71,13 +71,14 @@ if (!only || only === "long") {
     await b.show({ ...RESULT, speaking_seconds: 600, words });
     await b.mouse("#tabWords");
     await sleep(200);
-    const s = await b.evaluate(`(() => { const body = wordsPanel.querySelector(".words-body"); return { sh: body.scrollHeight, ch: body.clientHeight, mask: getComputedStyle(body).maskImage || getComputedStyle(body).webkitMaskImage,
+    // (below 990px the summary, tabs and words scroll together in #backstageScroll)
+    const s = await b.evaluate(`(() => { const body = (innerWidth < 990 ? backstageScroll : wordsPanel.querySelector(".words-body")); return { sh: body.scrollHeight, ch: body.clientHeight, mask: getComputedStyle(body).maskImage || getComputedStyle(body).webkitMaskImage,
       count: [...wordsPanel.querySelectorAll(".words-text .w-filler")].length, hint: !document.getElementById("notesHint").hidden }; })()`);
-    check(`${w}x${h}: scrolls inside the panel with the fade`, s.sh > s.ch * 3 && /gradient/.test(s.mask), `${s.sh} / ${s.ch}`);
+    check(`${w}x${h}: scrolls ${w < 990 ? "in the shared area" : "inside the panel"} with the fade`, s.sh > s.ch * 3 && /gradient/.test(s.mask), `${s.sh} / ${s.ch}`);
     check(`${w}x${h}: "Scroll for more" hint shows on Your words when it scrolls (laptop; phones use the fade only)`, w <= 600 ? true : s.hint);
-    await b.evaluate(`wordsPanel.querySelector(".words-body").scrollTop = 1e9`);
+    await b.evaluate(`(innerWidth < 990 ? backstageScroll : wordsPanel.querySelector(".words-body")).scrollTop = 1e9`);
     await sleep(200);
-    const end = await b.evaluate(`(() => { const body = wordsPanel.querySelector(".words-body"), r = body.getBoundingClientRect();
+    const end = await b.evaluate(`(() => { const body = (innerWidth < 990 ? backstageScroll : wordsPanel.querySelector(".words-body")), r = body.getBoundingClientRect();
       const t = wordsPanel.querySelector(".words-text"); const range = document.createRange(); range.selectNodeContents(t); const rects = range.getClientRects(); const last = rects[rects.length - 1];
       const fadeStart = r.bottom - (innerWidth <= 600 ? 26 : 40); return { lastBottom: last.bottom, fadeStart, bottom: r.bottom }; })()`);
     check(`${w}x${h}: the last line is reachable, above the fade`, end.lastBottom <= end.fadeStart + 1, JSON.stringify(end));
@@ -225,7 +226,7 @@ if (!only || only === "layout") {
       contrastOk(await contrast(b, w, h, ["#wordsPanel .words-key .short-label"]), `${tag} (phone): legend`);
       contrastOk(await b.evaluate(COLOR_CONTRAST(["#backstageTabs .feedback-tab", ...MARKS("#wordsPanel")])), `${tag} (phone): tabs, text and marks`);
       check(`${tag}: each tab label on one line and not cut off`, await b.evaluate(`[...document.querySelectorAll("#backstageTabs .feedback-tab")].every(t => t.getBoundingClientRect().height <= 36 && t.scrollWidth <= t.clientWidth)`));
-      await b.evaluate(`wordsPanel.querySelector(".words-body").scrollTop = 1e9`);
+      await b.evaluate(`(innerWidth < 990 ? backstageScroll : wordsPanel.querySelector(".words-body")).scrollTop = 1e9`);
       await sleep(200);
       check(`${tag}: no note at the end of the Backstage words (the "i" card instead)`, await b.evaluate(`!wordsPanel.querySelector(".words-note, .words-note-inline") && !!wordsPanel.querySelector(".words-info-btn")`));
       await shot(b, `layout-${tag}-words-end`);
