@@ -2,7 +2,7 @@
 //   keep     the exact WAV that was sent stays in memory for the latest speech only, and nothing else frees it
 //   radio    the console radio: where it shows, play and pause, speed, the dial, the end, pausing, sizes
 //   words    the boxed word follows the time, the sentence stays bright, clicking a word, auto-scroll
-//   hide     Hide replay and Show replay, remembered on the device
+//   always   no Hide replay or hint any more; an old stored choice is cleared and the radio shows
 // Every API call is answered by the fake API stub; nothing reaches AWS.
 import { launch, sleep, LIVE, STUB, RESULT as BASE_RESULT, WORDS, check, finish, only, shot } from "../lib/page.mjs";
 
@@ -259,7 +259,6 @@ if (!only || only === "words") {
     let r = await b.evaluate(HEARD);
     check(`${tag} before playing: the first word boxed, the first sentence bright, other plain words dimmed`, r.live && r.count === 1 && r.word === "So" && r.box.includes("rgb(217, 174, 82)")
       && r.sentence === "So um, I think failure is a better teacher." && r.dim.join() === "rgb(184, 164, 140)" && r.bright.join() === "rgb(232, 216, 192)", JSON.stringify(r));
-    check(`${tag} the hint: "${phone ? "Tap" : "Click"} any word to hear it"`, await b.evaluate(`[...wordsPanel.querySelectorAll(".replay-hint > span")].filter(e => getComputedStyle(e).display !== "none" && getComputedStyle(e).position !== "absolute").map(e => e.textContent).join("")`) === (phone ? "Tap any word to hear it" : "Click any word to hear it"));
     if (!phone) {
       // The dimmed colour on the lightest part of the panel (#1E0F0C under a 5% white sheen)
       const ratio = await b.evaluate(`(() => { const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
@@ -280,7 +279,7 @@ if (!only || only === "words") {
       check("the hostile word stays text", await b.evaluate("!window.__xss && !wordsPanel.querySelector('.words-text img')"));
       // Playing at 2×: the box is always on the word whose time has come
       await b.evaluate(`replaySpeedBtn.click(); replaySpeedBtn.click(); replaySpeedBtn.click(); replaySpeedBtn.click(); replayPlayer.seekTo(6.6); replayBox.querySelector('#replayPlayKnob').click(); true`);
-      await sleep(900);
+      await b.waitFor("!replayAudio.paused && replayAudio.currentTime > 7.2", 5000);
       const follow = await b.evaluate(`(() => { const t = replayAudio.currentTime * 100; const items = [...wordsPanel.querySelectorAll(".words-text [data-s]")];
         const want = items.filter(e => Number(e.dataset.t) <= t).pop(); return { rate: replayAudio.playbackRate, t: Math.round(t), heard: wordsPanel.querySelector(".is-heard") === want || Math.abs(Number(want.dataset.t) - t) < 30 }; })()`);
       check("at 2× the box keeps up with the time", follow.rate === 2 && follow.t > 700 && follow.heard, JSON.stringify(follow));
@@ -342,79 +341,17 @@ if (!only || only === "words") {
   await done(b);
 }
 
-// ---------------------------------------------------------------- Hide replay
-const TOOLS = `(() => { const t = wordsPanel.querySelector(".replay-toggle"); const text = wordsPanel.querySelector(".words-text");
-  return { toggle: t ? t.textContent : null, radio: replayBox.isConnected && !replayBox.hidden, live: !!text && text.classList.contains("is-live"), heard: wordsPanel.querySelectorAll(".is-heard").length,
-    dim: !!text && [...text.querySelectorAll(".w")].some(e => getComputedStyle(e).color === "rgb(184, 164, 140)"),
-    hint: !!wordsPanel.querySelector(".replay-hint") && !wordsPanel.querySelector(".replay-hint").hidden, gone: replayGone.isConnected && !replayGone.hidden,
-    stored: (() => { try { return localStorage.getItem("speakreview.replay"); } catch (e) { return "blocked"; } })(), focus: document.activeElement === t }; })()`;
-
-if (!only || only === "hide") {
-  for (const [w, h] of [[1280, 800], [390, 780]]) {
-    const tag = w <= 600 ? "phone" : "laptop";
-    console.log(`\n== Hide replay (${tag})`);
-    const b = await open({ width: w, height: h });
-    await sendAndShow(b, 14);
-    await openWords(b);
-    let r = await b.evaluate(TOOLS);
-    check(`${tag} with a recording: "Hide replay" at the end of the legend row`, r.toggle === "Hide replay" && r.radio && r.live && r.hint && r.stored === null
-      && (await b.evaluate(`wordsPanel.querySelector(".words-legend").lastElementChild.classList.contains("replay-tools")`)), JSON.stringify(r));
-    if (w <= 600) check("phone: the link is at least 44px tall, on the hint's line", await b.evaluate(`(() => { const t = wordsPanel.querySelector(".replay-toggle").getBoundingClientRect(), hint = wordsPanel.querySelector(".replay-hint").getBoundingClientRect();
-      return t.height >= 44 && Math.abs((t.top + t.bottom) / 2 - (hint.top + hint.bottom) / 2) < 4 && t.left > hint.right; })()`));
-    // Set a place and a speed, play, then hide
-    await b.evaluate(`replaySpeedBtn.click(); replaySpeedBtn.click(); replayPlayer.seekTo(3); replayBox.querySelector('#replayPlayKnob').click(); true`);
-    await b.waitFor("!replayAudio.paused", 3000);
-    await b.evaluate("wordsPanel.querySelector('.replay-toggle').click()");
-    await sleep(200);
-    r = await b.evaluate(TOOLS);
-    const at = await b.evaluate("replayAudio.currentTime");
-    check(`${tag} Hide replay: no radio, paused, no box, no dimming, no hint; the link reads Show replay and keeps focus; remembered`,
-      !r.radio && !r.live && r.heard === 0 && !r.dim && !r.hint && !r.gone && r.toggle === "Show replay" && r.focus && r.stored === "hidden" && (await b.evaluate("replayAudio.paused")), JSON.stringify(r));
-    const [x, y] = await b.evaluate(`(() => { const e = wordsPanel.querySelector(".words-text [data-t]"); const r = e.getBoundingClientRect(); return [r.left + 4, r.top + r.height / 2]; })()`);
-    await b.send("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
-    await b.send("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
-    await sleep(150);
-    check(`${tag} while hidden, clicking a word does nothing`, Math.abs((await b.evaluate("replayAudio.currentTime")) - at) < 0.01);
-    await shot(b, `replay-hidden-${tag}`);
-    await b.evaluate("wordsPanel.querySelector('.replay-toggle').click()");
-    await sleep(200);
-    r = await b.evaluate(TOOLS);
-    check(`${tag} Show replay: everything back, at the same place and speed`, r.radio && r.live && r.heard === 1 && r.hint && r.toggle === "Hide replay" && r.stored === null && r.focus
-      && Math.abs((await b.evaluate("replayAudio.currentTime")) - at) < 0.01 && (await b.evaluate("replayAudio.playbackRate")) === 1.5
-      && (await b.evaluate("wordsPanel.firstElementChild === replayBox")), JSON.stringify(r));
-    await done(b);
-  }
-
-  console.log("\n== Hide replay is remembered");
-  const b = await open();
+// ---------------------------------------------------------------- the radio always shows (Hide replay is gone)
+if (!only || only === "always") {
+  console.log("\n== no Hide replay, no hint; an old stored choice is cleared");
+  const b = await open({ pre: [`localStorage.setItem("speakreview.replay", "hidden");`] });
+  check("the old \"hidden\" choice is cleared when the page loads", (await b.evaluate(`localStorage.getItem("speakreview.replay")`)) === null);
   await sendAndShow(b, 6);
   await openWords(b);
-  await b.evaluate("wordsPanel.querySelector('.replay-toggle').click()");
-  await b.send("Page.reload");
-  await sleep(800);
-  await b.waitFor("document.readyState === 'complete' && typeof micSupported !== 'undefined'", 15000);
-  await sendAndShow(b, 6);
-  await openWords(b);
-  let r = await b.evaluate(TOOLS);
-  check("after a reload and a new speech: still hidden, the link reads Show replay", !r.radio && !r.live && r.toggle === "Show replay" && r.stored === "hidden", JSON.stringify(r));
-  await b.evaluate(`displayResult(${JSON.stringify(RESULT)}, "an-older-speech"); true`);
-  await b.waitFor("!appRoot.inert", 5000);
-  r = await b.evaluate(TOOLS);
-  check("a result without a recording: no link at all, just the note", r.toggle === null && r.gone && !r.radio, JSON.stringify(r));
+  const r = await b.evaluate(`({ radio: replayBox.isConnected && !replayBox.hidden, hint: !!document.querySelector(".replay-hint, .replay-tools, .replay-toggle"),
+    text: /Hide replay|Show replay|any word to hear it/.test(document.body.textContent) })`);
+  check("the radio shows; no hint row and no Hide replay / Show replay anywhere", r.radio && !r.hint && !r.text, JSON.stringify(r));
   await done(b);
-
-  console.log("\n== storage blocked");
-  const BLOCK = `Storage.prototype.getItem = function () { throw new DOMException("blocked", "SecurityError"); };
-    Storage.prototype.setItem = function () { throw new DOMException("blocked", "SecurityError"); };
-    Storage.prototype.removeItem = function () { throw new DOMException("blocked", "SecurityError"); };`;
-  const c = await open({ pre: [BLOCK] });
-  await sendAndShow(c, 6);
-  await openWords(c);
-  r = await c.evaluate(TOOLS);
-  check("blocked storage: shown by default", r.radio && r.toggle === "Hide replay", JSON.stringify(r));
-  await c.evaluate("wordsPanel.querySelector('.replay-toggle').click()");
-  check("and hiding still works", !(await c.evaluate(TOOLS)).radio);
-  await done(c);
 }
 
 finish();
