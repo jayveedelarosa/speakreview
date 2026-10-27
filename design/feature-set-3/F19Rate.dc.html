@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>How was the coach tonight? (the rating piece)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="{{rootStyle}} box-sizing: border-box; font-family: Manrope, system-ui, sans-serif; color: #EFE2CF">
+
+<sc-if value="{{isRow}}" hint-placeholder-val="{{true}}">
+<div role="group" aria-label="How was the coach tonight?" style="height: 44px; display: flex; align-items: center; gap: 8px">
+<sc-if value="{{asking}}" hint-placeholder-val="{{true}}">
+<span style="font-family: Fraunces, Georgia, serif; font-size: 14px; font-style: italic; color: #D8C6AE; white-space: nowrap">How was the coach tonight?</span>
+<sc-for list="{{opts}}" as="o" hint-placeholder-count="3"><button type="button" onClick="{{o.pick}}" style="display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 11px; border-radius: 999px; cursor: pointer; border: 1px solid rgba(217,174,82,0.55); background: transparent; color: #F0CF86; font: 700 12px Manrope, system-ui, sans-serif; white-space: nowrap"><sc-if value="{{o.rose}}" hint-placeholder-val="{{true}}"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12v9" stroke="#7FB069" stroke-width="2" stroke-linecap="round" fill="none"></path><path d="M12 17c-2-1-4-1-5 0 1 1.5 3 1.5 5 0z" fill="#7FB069"></path><path d="M12 3c-3 0-5 2-5 5s2 4.5 5 4.5 5-1.5 5-4.5-2-5-5-5z" fill="#E2566A"></path><path d="M9 7c1.5-1 4.5-1 6 0M10 9.5c1.2.7 2.8.7 4 0" stroke="#8C1426" stroke-width="1.2" fill="none" stroke-linecap="round"></path></svg></sc-if><sc-if value="{{o.clap}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F0CF86" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21l-3.5-5.5a2 2 0 0 1 3.3-2.2L9 15V8.5a1.5 1.5 0 0 1 3 0V13"></path><path d="M12 12.5V7a1.5 1.5 0 0 1 3 0v6.5l1.6-1.7a1.8 1.8 0 0 1 2.7 2.4L15 20"></path><path d="M6 4.5l1 1.5M10.5 2.5V4.5M15 4l-1 1.6"></path></svg></sc-if><sc-if value="{{o.tomato}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="14" r="7.5" fill="#E5533D"></circle><path d="M8.5 9.5c1 .8 2.2 1 3.5 1s2.5-.2 3.5-1" stroke="#9E2A1E" stroke-width="1" fill="none"></path><path d="M12 6.5l1.5-2.5M12 7l-3-1.5 1.8 2.6-2.6 1 3.4.4L12 11l.4-1.5 3.4-.4-2.6-1 1.8-2.6z" fill="#6FA35A" stroke="#6FA35A" stroke-width="0.8" stroke-linejoin="round"></path></svg></sc-if>{{o.label}}</button></sc-for>
+</sc-if>
+<sc-if value="{{thanked}}" hint-placeholder-val="{{false}}">
+<span role="status" style="font-size: 13px; color: #D8C6AE; white-space: nowrap">Thanks, noted: <strong style="color: #F0CF86">{{chosen}}</strong>.</span>
+<a href="#" style="font-size: 13px; font-weight: 700; color: #D9AE52; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap">Say more in a short form</a>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{isCard}}" hint-placeholder-val="{{false}}">
+<div role="group" aria-label="How was the coach tonight?" style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px 16px; border-radius: 12px; border: 1px dashed rgba(217,174,82,0.45); background: rgba(0,0,0,0.25); text-align: center">
+<sc-if value="{{asking}}" hint-placeholder-val="{{true}}">
+<span style="font-family: Fraunces, Georgia, serif; font-size: {{titleSize}}; font-weight: 500; color: #FFF6E3">How was the coach tonight?</span>
+<sc-if value="{{notMeter}}" hint-placeholder-val="{{true}}"><div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px">
+<sc-for list="{{opts}}" as="o" hint-placeholder-count="3"><button type="button" onClick="{{o.pick}}" style="display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 999px; cursor: pointer; border: 1px solid rgba(217,174,82,0.6); background: transparent; color: #F0CF86; font: 700 13px Manrope, system-ui, sans-serif"><sc-if value="{{looksColor}}" hint-placeholder-val="{{false}}"><sc-if value="{{o.rose}}" hint-placeholder-val="{{true}}"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12v9" stroke="#7FB069" stroke-width="2" stroke-linecap="round" fill="none"></path><path d="M12 17c-2-1-4-1-5 0 1 1.5 3 1.5 5 0z" fill="#7FB069"></path><path d="M12 3c-3 0-5 2-5 5s2 4.5 5 4.5 5-1.5 5-4.5-2-5-5-5z" fill="#E2566A"></path><path d="M9 7c1.5-1 4.5-1 6 0M10 9.5c1.2.7 2.8.7 4 0" stroke="#8C1426" stroke-width="1.2" fill="none" stroke-linecap="round"></path></svg></sc-if><sc-if value="{{o.clap}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F0CF86" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21l-3.5-5.5a2 2 0 0 1 3.3-2.2L9 15V8.5a1.5 1.5 0 0 1 3 0V13"></path><path d="M12 12.5V7a1.5 1.5 0 0 1 3 0v6.5l1.6-1.7a1.8 1.8 0 0 1 2.7 2.4L15 20"></path><path d="M6 4.5l1 1.5M10.5 2.5V4.5M15 4l-1 1.6"></path></svg></sc-if><sc-if value="{{o.tomato}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="14" r="7.5" fill="#E5533D"></circle><path d="M8.5 9.5c1 .8 2.2 1 3.5 1s2.5-.2 3.5-1" stroke="#9E2A1E" stroke-width="1" fill="none"></path><path d="M12 6.5l1.5-2.5M12 7l-3-1.5 1.8 2.6-2.6 1 3.4.4L12 11l.4-1.5 3.4-.4-2.6-1 1.8-2.6z" fill="#6FA35A" stroke="#6FA35A" stroke-width="0.8" stroke-linejoin="round"></path></svg></sc-if></sc-if><sc-if value="{{looksLine}}" hint-placeholder-val="{{true}}"><sc-if value="{{o.rose}}" hint-placeholder-val="{{true}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12.5V21"></path><path d="M12 17.5c-1.6-1.4-3.4-1.6-4.8-.8 1.2 1.6 3.2 1.9 4.8.8z"></path><path d="M12 12.5c-2.8 0-4.6-1.8-4.6-4.3 0-1.5.7-2.8 1.9-3.6.6 1.2 1.6 1.8 2.7 1.8s2.1-.6 2.7-1.8c1.2.8 1.9 2.1 1.9 3.6 0 2.5-1.8 4.3-4.6 4.3z"></path><path d="M10 7.4c.6.9 3.4.9 4 0"></path></svg></sc-if><sc-if value="{{o.clap}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21l-3.5-5.5a2 2 0 0 1 3.3-2.2L9 15V8.5a1.5 1.5 0 0 1 3 0V13"></path><path d="M12 12.5V7a1.5 1.5 0 0 1 3 0v6.5l1.6-1.7a1.8 1.8 0 0 1 2.7 2.4L15 20"></path><path d="M6 4.5l1 1.5M10.5 2.5V4.5M15 4l-1 1.6"></path></svg></sc-if><sc-if value="{{o.tomato}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="14" r="7"></circle><path d="M12 7V4.5"></path><path d="M12 7.2c-1.5-1.6-3.4-1.6-4.4-.9 1.2.4 2.4.9 4.4.9zM12 7.2c1.5-1.6 3.4-1.6 4.4-.9-1.2.4-2.4.9-4.4.9z"></path></svg></sc-if></sc-if>{{o.label}}</button></sc-for>
+</div></sc-if><sc-if value="{{isMeter}}" hint-placeholder-val="{{false}}"><div style="position: relative; width: 270px; height: 128px; box-sizing: border-box; border-radius: 10px; border: 2px solid #C9A25A; background: radial-gradient(ellipse 70% 80% at 50% 100%, rgba(255,196,107,0.12), rgba(0,0,0,0) 70%), linear-gradient(180deg, #24180C, #120A05); box-shadow: inset 0 0 14px rgba(0,0,0,0.8), 0 6px 14px rgba(0,0,0,0.45)">
+<svg width="266" height="124" viewBox="0 0 266 124" aria-hidden="true" style="position: absolute; left: 0; top: 0">
+<path d="M 48 104 A 85 85 0 0 1 218 104" fill="none" stroke="rgba(240,207,134,0.35)" stroke-width="2"></path>
+<path d="M 48 104 A 85 85 0 0 1 218 104" fill="none" stroke="#C9A25A" stroke-width="6" stroke-dasharray="1 9.7" stroke-linecap="butt"></path>
+<circle cx="61.4" cy="61.5" r="3.5" fill="{{dotBoo}}"></circle>
+<circle cx="133" cy="19" r="3.5" fill="{{dotClap}}"></circle>
+<circle cx="204.6" cy="61.5" r="3.5" fill="{{dotBravo}}"></circle>
+</svg>
+<span aria-hidden="true" style="position: absolute; left: 132px; bottom: 18px; width: 3px; height: 74px; margin-left: -1.5px; border-radius: 2px; background: #FF5A3C; box-shadow: 0 0 6px 1px rgba(255,90,60,0.8); transform-origin: 50% 100%; transition: transform 0.6s cubic-bezier(0.3, 1.4, 0.5, 1); {{needleTurn}}"></span>
+<span aria-hidden="true" style="position: absolute; left: 125px; bottom: 11px; width: 16px; height: 16px; border-radius: 999px; background: radial-gradient(circle at 38% 30%, #FFE9AE, #D9AE52 45%, #8C6224); border: 1px solid #3A2010"></span>
+<button type="button" onClick="{{pickBoo}}" aria-pressed="{{pBoo}}" style="position: absolute; left: 6px; top: 70px; min-width: 44px; height: 36px; padding: 0 6px; border: 0; background: transparent; cursor: pointer; color: {{cBoo}}; font: italic 600 14px Fraunces, Georgia, serif">Boo</button>
+<button type="button" onClick="{{pickClap}}" aria-pressed="{{pClap}}" style="position: absolute; left: 50%; top: 22px; transform: translateX(-50%); height: 36px; padding: 0 6px; border: 0; background: transparent; cursor: pointer; color: {{cClap}}; font: italic 600 14px Fraunces, Georgia, serif; white-space: nowrap">Polite clap</button>
+<button type="button" onClick="{{pickBravo}}" aria-pressed="{{pBravo}}" style="position: absolute; right: 6px; top: 70px; min-width: 44px; height: 36px; padding: 0 6px; border: 0; background: transparent; cursor: pointer; color: {{cBravo}}; font: italic 600 14px Fraunces, Georgia, serif">Bravo!</button>
+</div></sc-if>
+</sc-if>
+<sc-if value="{{thanked}}" hint-placeholder-val="{{false}}">
+<span role="status" style="font-family: Fraunces, Georgia, serif; font-size: {{titleSize}}; font-weight: 500; color: #FFF6E3">Thanks for the review!</span>
+<span style="font-size: 12px; color: #BCA992">Your verdict: <strong style="color: #F0CF86">{{chosen}}</strong></span>
+<a href="#" style="display: inline-flex; align-items: center; min-height: 40px; font-size: 13px; font-weight: 700; color: #D9AE52; text-decoration: underline; text-underline-offset: 3px">Say more in a short form</a>
+</sc-if>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"mode":{"editor":"enum","options":["row","card","phone"],"default":"card"},"look":{"editor":"enum","options":["color","line","meter"],"default":"color"},"$preview":{"width":560,"height":160}}'>
+class Component extends DCLogic {
+renderVals() {
+const s = this.state || {};
+const mode = ['row', 'card', 'phone'].indexOf(this.props.mode) >= 0 ? this.props.mode : 'card';
+const labels = ['Bravo!', 'Polite clap', 'Boo'];
+const look = ['color', 'line', 'meter'].indexOf(this.props.look) >= 0 ? this.props.look : 'color';
+const pick = s.pick || '';
+const ang = pick === 'Boo' ? -58 : pick === 'Polite clap' ? 0 : pick === 'Bravo!' ? 58 : -86;
+const on = '#FFE7B0', off = '#D9AE52';
+return {
+isRow: mode === 'row',
+isCard: mode !== 'row',
+titleSize: mode === 'phone' ? '16px' : '18px',
+rootStyle: mode === 'row' ? 'width: 100%;' : 'width: 100%; padding: 0;',
+asking: !s.pick || look === 'meter', thanked: !!s.pick, chosen: s.pick || '',
+looksColor: look === 'color', looksLine: look !== 'color', isMeter: look === 'meter', notMeter: look !== 'meter',
+needleTurn: 'transform: rotate(' + ang + 'deg);' + (pick ? '' : ' opacity: 0.55;'),
+dotBoo: pick === 'Boo' ? '#FF5A3C' : 'rgba(240,207,134,0.5)', dotClap: pick === 'Polite clap' ? '#FF5A3C' : 'rgba(240,207,134,0.5)', dotBravo: pick === 'Bravo!' ? '#FF5A3C' : 'rgba(240,207,134,0.5)',
+cBoo: pick === 'Boo' ? on : off, cClap: pick === 'Polite clap' ? on : off, cBravo: pick === 'Bravo!' ? on : off,
+pBoo: pick === 'Boo' ? 'true' : 'false', pClap: pick === 'Polite clap' ? 'true' : 'false', pBravo: pick === 'Bravo!' ? 'true' : 'false',
+pickBoo: () => this.setState({ pick: 'Boo' }), pickClap: () => this.setState({ pick: 'Polite clap' }), pickBravo: () => this.setState({ pick: 'Bravo!' }),
+opts: labels.map((l, i) => ({ label: l, rose: i === 0, clap: i === 1, tomato: i === 2, pick: () => this.setState({ pick: l }) }))
+};
+}
+}
+</script>
+</body>
+</html>

@@ -206,6 +206,175 @@ textarea,
     color: var(--gold);
 }
 
+/* ---------- Beta (feature set 3, stage 5) ---------- */
+/* The name and its Beta stamp sit in one row. The stamp is a small rubber-stamped "Beta" with a red light
+   on its corner until the note from the producer has been opened once on this device. */
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.beta {
+    position: relative;
+    display: inline-flex;
+}
+
+.beta-stamp {
+    position: relative;
+    height: 22px;
+    margin-left: 4px;
+    padding: 0 7px;
+    border: 3px double #D9AE52;
+    border-radius: 3px;
+    background: transparent;
+    color: #F0CF86;
+    font: 800 10px var(--sans);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    transform: rotate(-6deg);
+    box-shadow: 0 0 10px rgba(217, 174, 82, 0.25);
+    cursor: pointer;
+}
+
+.beta-stamp:hover,
+.beta-stamp:focus-visible,
+.beta-stamp[aria-expanded="true"] {
+    color: #FFE7B0;
+}
+
+.beta-light {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 10px;
+    height: 10px;
+    border: 1px solid #3A0A0A;
+    border-radius: 999px;
+    background: radial-gradient(circle at 40% 35%, #FFB0A0, #FF4A36 55%, #A3161E);
+    box-shadow: 0 0 6px 2px rgba(255, 80, 60, 0.7);     /* steady with reduced motion (no pulse) */
+    pointer-events: none;
+    animation: betaLight 1.6s ease-in-out infinite;
+}
+
+.beta-light[hidden] {
+    display: none;
+}
+
+@keyframes betaLight {
+    0%, 100% { box-shadow: 0 0 4px 1px rgba(255, 80, 60, 0.5); }
+    50% { box-shadow: 0 0 11px 4px rgba(255, 80, 60, 0.95); }
+}
+
+/* The phone Stage shows the name on the ticket, so it has its own stamp there (see the phone section) */
+.stage-brand {
+    display: none;
+}
+
+/* The note: the same paper as Tonight's programme. app.js sets --beta-left and --beta-top (inside .app)
+   so it hangs just under the stamp that opened it, always fully on screen. */
+.beta-note {
+    position: absolute;
+    z-index: 50;
+    top: var(--beta-top, 60px);
+    left: var(--beta-left, 18px);
+    width: min(300px, calc(100vw - 36px));
+    padding: 14px;
+    border-radius: 2px;
+    color: #2A1A0E;
+    font-family: var(--sans);
+    text-align: left;
+    transform: rotate(-0.6deg);
+    background:
+        repeating-linear-gradient(0deg, rgba(110, 80, 40, 0.03) 0 1px, rgba(0, 0, 0, 0) 1px 4px),
+        linear-gradient(180deg, #F7ECD3, #EAD9B6);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.65), inset 0 0 30px rgba(120, 80, 30, 0.18);
+}
+
+.beta-note[hidden] {
+    display: none;
+}
+
+.beta-pin {
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    margin-left: -6px;
+    border-radius: 999px;
+    background: radial-gradient(circle at 35% 35%, #F5D891, #8C6224);
+}
+
+.beta-box {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    border: 1.5px solid #2A1A0E;
+}
+
+.beta-kicker {
+    margin: 0;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #7A1222;
+}
+
+.beta-title {
+    margin: 0;
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: #2A1A0E;
+}
+
+.beta-line {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.45;
+    color: #4A3423;
+}
+
+.beta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4px;
+}
+
+.beta-got-it {
+    height: 40px;
+    padding: 0 2px;
+    border: 0;
+    background: transparent;
+    color: #5A4330;
+    font: 600 13px var(--sans);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    cursor: pointer;
+}
+
+.beta-share {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 40px;
+    color: #7A1222;
+    font: 800 13px var(--sans);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+.beta-got-it:focus-visible,
+.beta-share:focus-visible {
+    outline: 2px solid #7A1222;
+    outline-offset: 2px;
+}
+
 /* ---------- Navigation (feature set 2) ---------- */
 /* Laptops: marquee arrow signs in each room (Stage: on the curtains; Backstage: right of the mirror;
    Wall of Fame: on the left wall). Phones and laptop windows too narrow for the signs use the bottom
@@ -6125,12 +6294,39 @@ body.curtains-closed .drape {
         white-space: nowrap;
     }
 
+    /* Backstage and the Wall of Fame: the name and stamp move a little left of centre so the stamp and its
+       light stay clear of Privacy */
+    .app[data-view="backstage"] .site-header .brand,
+    .app[data-view="wall"] .site-header .brand {
+        margin-right: 76px;
+    }
+
+    /* The header's stamp hides with its name on the Stage; the ticket's own stamp shows instead */
+    .app:not([data-view="backstage"]):not([data-view="wall"]) .site-header .beta {
+        display: none;
+    }
+
+    .stage-brand {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        height: 26px;
+        margin: 0 0 14px;
+    }
+
+    /* At least 44px to tap (the inset is measured inside the 3px border) */
+    .beta-stamp::before {
+        content: "";
+        position: absolute;
+        inset: -14px -8px;
+    }
+
     .stage-logo {
         display: flex;
         align-items: center;
         gap: 7px;
         height: 26px;
-        margin: 0 0 14px;
+        margin: 0;
         font-family: var(--serif);
         font-size: 18px;
         font-weight: 600;

@@ -21,10 +21,14 @@
 
 <div class="app">
     <header class="site-header">
+        <!-- The name, then the Beta stamp (its red light shows until the note from the producer is opened once) -->
+        <div class="brand">
         <h1 class="logo">
             <svg class="logo-icon" width="26" height="26" viewBox="0 0 28 28" fill="none" aria-hidden="true" focusable="false"><rect x="3" y="11" width="3" height="6" rx="1.5" fill="#D9AE52"></rect><rect x="9" y="6" width="3" height="16" rx="1.5" fill="#D9AE52"></rect><rect x="15" y="3" width="3" height="22" rx="1.5" fill="#D9AE52"></rect><rect x="21" y="9" width="3" height="10" rx="1.5" fill="#D9AE52"></rect></svg>
             <span>Speak<span class="logo-accent">Review</span></span>
         </h1>
+        <span class="beta"><button type="button" id="betaBtn" class="beta-stamp" aria-expanded="false" aria-controls="betaNote" aria-label="Beta, new note from the producer">Beta</button><span class="beta-light" aria-hidden="true"></span></span>
+        </div>
 
         <!-- The bottom bar: on phones, and on laptop windows too narrow for the marquee signs (see styles.css).
              Wider laptop windows use the signs on the stage, mirror wall and Wall of Fame instead. -->
@@ -95,10 +99,14 @@
                      a bottom sheet on phones. -->
                 <section class="topic-area" id="stepTopic" aria-label="Topic">
                     <!-- Phones only: the logo sits on top of the ticket (the header's logo stays for screen readers) -->
+                    <!-- (with its own Beta stamp, since the header's name and stamp are hidden there) -->
+                    <div class="stage-brand">
                     <p class="stage-logo" aria-hidden="true">
                         <svg width="20" height="20" viewBox="0 0 28 28" fill="none" focusable="false"><rect x="3" y="11" width="3" height="6" rx="1.5" fill="#D9AE52"></rect><rect x="9" y="6" width="3" height="16" rx="1.5" fill="#D9AE52"></rect><rect x="15" y="3" width="3" height="22" rx="1.5" fill="#D9AE52"></rect><rect x="21" y="9" width="3" height="10" rx="1.5" fill="#D9AE52"></rect></svg>
                         <span>Speak<span class="logo-accent">Review</span></span>
                     </p>
+                    <span class="beta"><button type="button" id="stageBetaBtn" class="beta-stamp" aria-expanded="false" aria-controls="betaNote" aria-label="Beta, new note from the producer">Beta</button><span class="beta-light" aria-hidden="true"></span></span>
+                    </div>
 
                     <div class="ticket-wrap">
                         <div class="ticket">
@@ -605,6 +613,20 @@
             </div>
         </section>
     </main>
+
+    <!-- A note from the producer: opened by either Beta stamp and placed under it by app.js -->
+    <div id="betaNote" class="beta-note" role="dialog" aria-labelledby="betaTitle" hidden>
+        <span class="beta-pin" aria-hidden="true"></span>
+        <div class="beta-box">
+            <p class="beta-kicker">A note from the producer</p>
+            <h2 id="betaTitle" class="beta-title">SpeakReview is in beta.</h2>
+            <p class="beta-line">It's free while it's being tested. Some things may change or break, and your feedback shapes what comes next.</p>
+            <div class="beta-row">
+                <button type="button" id="betaGotIt" class="beta-got-it">Got it</button>
+                <a id="betaShare" class="beta-share" target="_blank" rel="noopener">Share feedback<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Curtains for scene changes: they sweep closed, the screen changes, then they sweep open -->

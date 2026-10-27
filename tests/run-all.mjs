@@ -34,7 +34,8 @@ const SUITES = [
   ["throttle", "Throttling: quiet waiting, retries, a calm busy message"],
   ["programme", "Stage name and Tonight's programme"],
   ["intermission", "Intermission acts, checking /result, the tab title, Coming back"],
-  ["playback", "Replay in Your words"]
+  ["playback", "Replay in Your words"],
+  ["beta", "Beta tools: the stamp, the producer's note, the rating, the device code"]
 ];
 const args = process.argv.slice(2);
 // Each suite gets at most this long (--timeout=<minutes> changes it). A suite that runs over, for example

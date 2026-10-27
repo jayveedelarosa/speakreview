@@ -2138,6 +2138,129 @@ document.addEventListener("keydown", e => {
 });
 
 // ---------------------------
+// Beta: the stamp next to the name and the note from the producer
+// ---------------------------
+// The header has a stamp, and so does the ticket's name on the phone Stage (only one shows at a time). Both open
+// the same note, placed under the stamp that opened it. Its red light shows until the note has been opened once
+// on this device (BETA_SEEN_KEY). Only one paper note is open at a time: opening this one closes Tonight's
+// programme and the Coming back note, and opening either of those closes this one.
+const FEEDBACK_FORM_URL = "https://forms.gle/pDd4x4mFGkh8L27L6";
+const BETA_SEEN_KEY = "speakreview.betaSeen.v1";
+const betaNote = document.getElementById("betaNote");
+const betaGotIt = document.getElementById("betaGotIt");
+const betaStamps = [document.getElementById("betaBtn"), document.getElementById("stageBetaBtn")];
+let betaOpener = null;         // the stamp that opened the note: focus goes back there
+let betaSeen = false;
+
+document.getElementById("betaShare").href = FEEDBACK_FORM_URL;
+
+// Storage is untrusted and may be blocked: only the exact value counts, and blocked means not seen yet
+try {
+    betaSeen = localStorage.getItem(BETA_SEEN_KEY) === "1";
+} catch (err) {
+    betaSeen = false;
+}
+
+function renderBetaStamps() {
+    betaStamps.forEach(stamp => {
+        stamp.setAttribute("aria-label", betaSeen ? "Beta. What this means" : "Beta, new note from the producer");
+        stamp.setAttribute("aria-expanded", String(!betaNote.hidden && stamp === betaOpener));
+        stamp.nextElementSibling.hidden = betaSeen;
+    });
+}
+
+// Under the stamp (on laptops starting 60px to its left), kept fully on screen with 18px sides
+function placeBetaNote() {
+    if (betaNote.hidden || !betaOpener) return;
+    const app = appRoot.getBoundingClientRect();
+    const stamp = betaOpener.getBoundingClientRect();
+    const width = betaNote.offsetWidth;
+    const wanted = phoneQuery.matches ? stamp.left + stamp.width / 2 - width / 2 : stamp.left - 60;
+    const left = Math.max(18, Math.min(wanted, innerWidth - 18 - width));
+    betaNote.style.setProperty("--beta-left", `${Math.round(left - app.left)}px`);
+    betaNote.style.setProperty("--beta-top", `${Math.round(stamp.bottom + 12 - app.top)}px`);
+}
+
+function openBetaNote(stamp) {
+    closeProgramme(false);
+    if (comebackOpen) {
+        comebackOpen = null;     // as "Not now": the performance is already on the Wall of Fame
+        closeDialog(false);
+    }
+    setPrivacyOpen(false);
+    pauseReplay();
+    betaOpener = stamp;
+    betaNote.hidden = false;
+    if (!betaSeen) {
+        betaSeen = true;
+        try {
+            localStorage.setItem(BETA_SEEN_KEY, "1");
+        } catch (err) {
+            // Storage is blocked: the light comes back on the next visit
+        }
+    }
+    renderBetaStamps();
+    placeBetaNote();
+    betaGotIt.focus({ preventScroll: true });
+}
+
+// returnFocus: put focus back on the stamp that opened it
+function closeBetaNote(returnFocus) {
+    if (betaNote.hidden) return;
+    const opener = betaOpener;
+    betaNote.hidden = true;
+    betaOpener = null;
+    renderBetaStamps();
+    if (returnFocus && opener && opener.getClientRects().length > 0) opener.focus({ preventScroll: true });
+}
+
+betaStamps.forEach(stamp => stamp.addEventListener("click", () => {
+    if (!betaNote.hidden && betaOpener === stamp) {
+        closeBetaNote(true);
+    } else {
+        openBetaNote(stamp);
+    }
+}));
+
+betaGotIt.addEventListener("click", () => closeBetaNote(true));
+
+// A click or tap outside the note and the stamps closes it. If that doesn't land on something focusable,
+// focus goes back to the stamp.
+document.addEventListener("pointerdown", e => {
+    if (betaNote.hidden || betaNote.contains(e.target) || e.target.closest(".beta-stamp")) return;
+    const opener = betaOpener;
+    closeBetaNote(false);
+    setTimeout(() => {
+        const active = document.activeElement;
+        if ((!active || active === document.body) && opener && opener.getClientRects().length > 0 && !appRoot.inert) opener.focus({ preventScroll: true });
+    }, 0);
+});
+
+// Escape closes it, and Tab stays inside it
+document.addEventListener("keydown", e => {
+    if (betaNote.hidden) return;
+    if (e.key === "Escape") {
+        e.preventDefault();
+        closeBetaNote(true);
+    } else if (e.key === "Tab") {
+        const items = dialogFocusables(betaNote);
+        const first = items[0];
+        const last = items[items.length - 1];
+        const inside = betaNote.contains(document.activeElement);
+        if (e.shiftKey && (!inside || document.activeElement === first)) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && (!inside || document.activeElement === last)) {
+            e.preventDefault();
+            first.focus();
+        }
+    }
+});
+
+window.addEventListener("resize", placeBetaNote);
+renderBetaStamps();
+
+// ---------------------------
 // Wall of Fame: past performances, saved only in this browser
 // ---------------------------
 // Saved under WALL_KEY as a JSON array of entries, newest first. Anything read back from storage is
@@ -2485,6 +2608,7 @@ let openEntry = null;          // the entry shown in the open playbill
 
 function openDialog(overlay, focusTarget, returnTo) {
     setPrivacyOpen(false);
+    closeBetaNote(false);          // one paper note at a time (the Coming back note opens this way)
     openOverlay = overlay;
     dialogReturnFocus = returnTo;
     overlay.hidden = false;
@@ -2505,7 +2629,7 @@ function closeDialog(focusTarget) {
 }
 
 function dialogFocusables(overlay) {
-    return Array.from(overlay.querySelectorAll('button, input, [tabindex="0"]'))
+    return Array.from(overlay.querySelectorAll('button, input, a[href], [tabindex="0"]'))
         .filter(element => !element.disabled && element.getClientRects().length > 0);
 }
 
@@ -4982,6 +5106,7 @@ function openProgramme(section, opener) {
     const phone = phoneQuery.matches;
     pauseReplay();
     setPrivacyOpen(false);
+    closeBetaNote(false);          // one paper note at a time
     programmeOpen = true;
     programmeOpener = opener;
     programme.hidden = false;
@@ -5285,7 +5410,7 @@ function noteDayLabel(date) {
 // The note only opens on a calm Stage: nothing being recorded, sent or shown on top
 function calmForNote() {
     return currentView === "stage" && recState === "idle" && !isBusy && !isRolling && !intermissionOn
-        && !openOverlay && !programmeOpen && !appRoot.inert && !document.body.classList.contains("curtains-closed");
+        && !openOverlay && !programmeOpen && betaNote.hidden && !appRoot.inert && !document.body.classList.contains("curtains-closed");
 }
 
 function waitForCalm() {
