@@ -987,6 +987,7 @@ async function upload(take) {
         // Both are 16 kHz mono WAV made on this device; source says which way it was made
         params.set("format", "wav");
         params.set("source", isRecording ? "recording" : "upload");
+        params.set("device", deviceCode());     // only to count returning visitors (see deviceCode)
         const query = params.toString();
 
         let response;
@@ -2259,6 +2260,45 @@ document.addEventListener("keydown", e => {
 
 window.addEventListener("resize", placeBetaNote);
 renderBetaStamps();
+
+// ---- The device code ----
+// A random code made by this browser on first use and sent as device=<code> with every GET /upload-url, only so
+// the server can count how many people come back. It is never tied to a name or anything typed. Storage is
+// untrusted, so only a well-formed code is reused; when storage is blocked the code lasts for this visit only.
+const DEVICE_KEY = "speakreview.device.v1";
+const DEVICE_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+let deviceCodeThisVisit = null;
+
+function newDeviceCode() {
+    if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+    // Older browsers: the same kind of code (version 4) from random bytes
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function deviceCode() {
+    if (deviceCodeThisVisit) return deviceCodeThisVisit;
+    let saved = null;
+    try {
+        saved = localStorage.getItem(DEVICE_KEY);
+    } catch (err) {
+        saved = null;
+    }
+    if (typeof saved === "string" && DEVICE_PATTERN.test(saved)) {
+        deviceCodeThisVisit = saved;
+        return saved;
+    }
+    deviceCodeThisVisit = newDeviceCode();
+    try {
+        localStorage.setItem(DEVICE_KEY, deviceCodeThisVisit);
+    } catch (err) {
+        // Storage is blocked or full: a new code on the next visit
+    }
+    return deviceCodeThisVisit;
+}
 
 // ---------------------------
 // Wall of Fame: past performances, saved only in this browser

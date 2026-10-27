@@ -1,8 +1,9 @@
 // Feature set 3, stage 5: Beta tools.
 //   stamp    the Beta stamp after the name (header, and the ticket on the phone Stage), its look, tap area and red light
 //   note     the note from the producer: focus, Tab, Escape, outside click, the light gone for good, one paper note at a time
+//   device   the device code: made once, kept, sent as device=<code> on every GET /upload-url and nowhere else
 // Every API call is answered by the fake API stub; nothing reaches AWS.
-import { launch, sleep, LIVE, STUB, check, finish, only, shot } from "../lib/page.mjs";
+import { launch, sleep, LIVE, STUB, RESULT, check, finish, only, shot } from "../lib/page.mjs";
 
 const SEEN_KEY = "speakreview.betaSeen.v1";
 const FORM = "https://forms.gle/pDd4x4mFGkh8L27L6";
@@ -16,7 +17,7 @@ async function open({ width = 1280, height = 800, pre = [], motion = "no-prefere
   const mobile = width <= 600;
   const b = await launch({ width, height, flags: [], mobile });
   await b.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: motion }] });
-  await b.goto(LIVE, [STUB, ...pre]);
+  await b.goto(LIVE, [STUB, `window.__result = ${JSON.stringify(RESULT)};`, ...pre]);
   b.waitFor = async (expr, ms = 15000) => {
     const end = Date.now() + ms;
     while (Date.now() < end) { if (await b.evaluate(expr).catch(() => false)) return true; await sleep(60); }
@@ -212,6 +213,63 @@ if (!only || only === "note") {
   s = await c.evaluate(STAMP);
   check("anything else stored counts as not seen yet", s.light && !(await c.evaluate("!!window.__xss")));
   await done(c);
+}
+
+// ---------------------------------------------------------------- the device code
+const DEVICE_KEY = "speakreview.device.v1";
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+// Sends a short WAV straight through upload() and waits until its notes show in Backstage
+async function sendAndShow(b, seconds = 6) {
+  await b.evaluate(`(() => { const n = 16000 * ${seconds}, x = new Float32Array(n); for (let i = 0; i < n; i++) x[i] = 0.3 * Math.sin(i / 5);
+    upload({ blob: buildWav([toPcm16(x, n)], n), seconds: ${seconds}, source: "upload" }); return true; })()`);
+  const shown = await b.waitFor("currentView === 'backstage' && !intermissionOn && !appRoot.inert && !document.body.classList.contains('curtains-closed')", 20000);
+  await sleep(600);
+  return shown;
+}
+const DEVICE = `(() => { const ups = __calls.filter(u => u.includes("/upload-url")).map(u => new URL(u).searchParams.get("device"));
+  let stored; try { stored = localStorage.getItem(${JSON.stringify(DEVICE_KEY)}); } catch (e) { stored = "blocked"; }
+  return { ups, stored, elsewhere: __calls.filter(u => !u.includes("/upload-url") && u.includes("device")).length }; })()`;
+
+if (!only || only === "device") {
+  console.log("\n== the device code");
+  const b = await open();
+  let d = await b.evaluate(DEVICE);
+  check("nothing made before the first upload", d.stored === null && d.ups.length === 0, JSON.stringify(d));
+  check("first upload", await sendAndShow(b));
+  d = await b.evaluate(DEVICE);
+  check("first upload: a random code (UUID v4) is made, kept and sent as device=<code>", UUID.test(d.stored) && d.ups.length === 1 && d.ups[0] === d.stored, JSON.stringify(d));
+  check("second upload", await sendAndShow(b));
+  d = await b.evaluate(DEVICE);
+  check("second upload: the same code", d.ups.length === 2 && d.ups.every(u => u === d.stored), JSON.stringify(d));
+  const first = d.stored;
+  await b.reload();
+  check("after a reload", await sendAndShow(b));
+  d = await b.evaluate(DEVICE);
+  check("after a reload: the same code again", d.ups.length === 1 && d.ups[0] === first && d.stored === first, JSON.stringify(d));
+  check("sent only with GET /upload-url (not /result or the upload itself)", d.elsewhere === 0, JSON.stringify(d));
+  await done(b);
+
+  console.log("\n== a bad stored code");
+  for (const bad of ["not-a-code", "<img src=x onerror=window.__xss=1>", "11111111-1111-1111-1111-111111111111", "{}"]) {
+    const c = await open({ pre: [`localStorage.setItem(${JSON.stringify(DEVICE_KEY)}, ${JSON.stringify(bad)});`] });
+    await sendAndShow(c);
+    d = await c.evaluate(DEVICE);
+    check(`${JSON.stringify(bad)} is replaced by a new code`, UUID.test(d.stored) && d.ups[0] === d.stored && !(await c.evaluate("!!window.__xss")), JSON.stringify(d));
+    await done(c);
+  }
+
+  console.log("\n== storage blocked (device code)");
+  const k = await open({ pre: [BLOCK] });
+  check("blocked: the upload still works", await sendAndShow(k));
+  check("blocked: a second upload", await sendAndShow(k));
+  d = await k.evaluate(DEVICE);
+  check("blocked: a code is still sent, the same one for this visit", d.ups.length === 2 && UUID.test(d.ups[0]) && d.ups[1] === d.ups[0], JSON.stringify(d));
+  const visit1 = d.ups[0];
+  await k.reload();
+  await sendAndShow(k);
+  d = await k.evaluate(DEVICE);
+  check("blocked: the next visit gets a new code", UUID.test(d.ups[0]) && d.ups[0] !== visit1, JSON.stringify(d));
+  await done(k);
 }
 
 finish();
