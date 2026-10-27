@@ -72,7 +72,7 @@ const FIELDS = ["id", "savedAt", "topic", "topic_type", "time_limit_seconds", "s
 await test("empty wall, tab and privacy", async () => {
   const b = await page();
   check("Wall tab visible", await b.evaluate(`!document.getElementById('navWall').hidden && getComputedStyle(navWall).display !== 'none'`));
-  check("privacy sentence", await b.evaluate(`privacyNote.textContent.includes("results after 30 days. Your Wall of Fame and trophies are saved only in this browser on this device.") && privacyNote.textContent.includes("saved on this device for your latest 30 performances.") && privacyNote.textContent.endsWith("An optional stage name can be saved on this device, and it is never sent anywhere.")`));
+  check("privacy sentence", await b.evaluate(`privacyNote.textContent.includes("Your Wall of Fame, trophies and the words of your latest 30 performances.") && privacyNote.textContent.includes("Your stage name. It's never sent anywhere.")`));
   await b.go("wall");
   check("empty state shown", await b.evaluate(`!wallEmpty.hidden && wallEmpty.textContent.includes("Your wall is empty. Take the stage to hang your first playbill.")`));
   check("clear hidden when empty", await b.evaluate(`clearWallBtn.hidden`));

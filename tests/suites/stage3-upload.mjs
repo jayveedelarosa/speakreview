@@ -495,7 +495,7 @@ if (!only || only === "wording") {
     body: document.body.innerText + " " + [...document.querySelectorAll("[aria-label]")].map(e => e.getAttribute("aria-label")).join(" ") + " " + privacyNote.textContent })`);
   check("upload label: or upload a recording", r.label === "or upload a recording");
   check("accept lists audio and video", ["audio/*", "video/*", ".mp3", ".m4a", ".mov", ".mp4", ".webm", ".ogg", ".flac", ".wav", ".opus", ".aac"].every(x => r.accept.split(",").includes(x)), r.accept);
-  check("privacy line", r.privacy.includes("Uploaded files are converted on this device, and only the sound is sent."));
+  check("privacy line", r.privacy.includes("Uploaded files are converted here, so only the sound is sent."));
   const src = (await (await fetch(LIVE + "js/app.js")).text()) + (await (await fetch(LIVE)).text()) + (await (await fetch(LIVE + "css/styles.css")).text());
   check("no MP3-only wording left", !/upload an MP3|your MP3|Uploaded MP3|picked MP3|Drop your MP3|drop an MP3/i.test(src));
   check("no em dashes in site files", !src.includes("—"));

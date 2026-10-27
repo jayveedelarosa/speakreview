@@ -532,7 +532,7 @@ if (!only || only === "look") {
   check("Caveat 600 loaded from Google Fonts (no other new address)", /fonts\.googleapis\.com\/css2\?family=Caveat:wght@600&amp;family=Fraunces/.test(html));
   check("the programme's wording", ["Tonight's programme", "The SpeakReview Players", "Your stage name", "How long your speech should last. Going over is fine.", "Thinking time before recording starts.",
     "Your stage name stays on this device. It is never sent anywhere.", "Write your name", "Remove my name"].every(t => html.includes(t)) && js.includes("Pick a time from"));
-  check("the privacy note mentions the stage name", /An optional stage name can be saved on this device, and it is never sent anywhere\./.test(html));
+  check("the privacy note mentions the stage name", /Your stage name\. It's never sent anywhere\./.test(html));
   check("the stage name never goes into innerHTML", !/innerHTML[^;\n]*(stageName|progName)/.test(js) && !/insertAdjacentHTML[^;\n]*(stageName|progName)/.test(js));
 }
 

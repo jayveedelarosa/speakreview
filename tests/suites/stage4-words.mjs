@@ -245,7 +245,7 @@ if (!only || only === "layout") {
   console.log("\n== wording");
   const t = await open();
   const src = (await (await fetch(LIVE + "js/app.js")).text()) + (await (await fetch(LIVE)).text()) + (await (await fetch(LIVE + "css/styles.css")).text());
-  check("privacy line", await t.evaluate(`privacyNote.textContent.includes("The words of your speech are shown and saved on this device for your latest 30 performances.")`));
+  check("privacy line", await t.evaluate(`privacyNote.textContent.includes("the words of your latest 30 performances.")`));
   check("no em dashes", !src.includes("—"));
   check("no inline style attributes or handlers in index.html", !/\sstyle=|\son[a-z]+=/i.test(await (await fetch(LIVE)).text()));
   check("words never set with innerHTML", !/words[A-Za-z]*\.innerHTML|pbWords\.innerHTML|wordsPanel\.innerHTML/.test(src));

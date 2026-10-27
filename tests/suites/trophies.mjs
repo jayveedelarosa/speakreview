@@ -371,7 +371,7 @@ await test("phones and short laptop", async () => {
 
 await test("privacy text", async () => {
   const b = await page();
-  check("privacy sentence", await b.evaluate(`privacyNote.textContent.includes("results after 30 days. Your Wall of Fame and trophies are saved only in this browser on this device.") && privacyNote.textContent.includes("saved on this device for your latest 30 performances.") && privacyNote.textContent.endsWith("An optional stage name can be saved on this device, and it is never sent anywhere.")`));
+  check("privacy sentence", await b.evaluate(`privacyNote.textContent.includes("Your Wall of Fame, trophies and the words of your latest 30 performances.") && privacyNote.textContent.includes("Your stage name. It's never sent anywhere.")`));
 });
 
 console.log(`\n${failures === 0 ? "ALL PASSED" : failures + " FAILED"}`);

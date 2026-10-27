@@ -572,6 +572,44 @@ textarea,
     font-size: 12px;
     line-height: 1.5;
     text-align: left;
+    max-height: calc(100vh - 72px);
+    overflow-y: auto;
+}
+
+/* Three groups with short lists, 8px apart. The headings use the small gold label style */
+.privacy-group + .privacy-group {
+    margin-top: 8px;
+}
+
+.privacy-head {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+}
+
+.privacy-sub {
+    margin: 0 0 2px;
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.privacy-list {
+    margin: 4px 0 0;
+    padding-left: 16px;
+}
+
+.privacy-note strong {
+    font-weight: 700;
+    color: var(--heading);
+}
+
+.privacy-foot {
+    margin: 8px 0 0;
+    font-size: 11px;
+    color: var(--muted);
 }
 
 /* ---------- Stage ---------- */
