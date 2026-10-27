@@ -3,6 +3,7 @@
 //   note     the note from the producer: focus, Tab, Escape, outside click, the light gone for good, one paper note at a time
 //   device   the device code: made once, kept, sent as device=<code> on every GET /upload-url and nowhere else
 //   rate     "How was the coach tonight?": only for real coaching, the answer, thanks, POST /rating, one retry, kept with the speech
+//   privacy  the three new sentences in the privacy note, and the note still fits on screen
 // Every API call is answered by the fake API stub; nothing reaches AWS.
 import { launch, sleep, LIVE, STUB, RESULT, check, finish, only, shot } from "../lib/page.mjs";
 
@@ -397,6 +398,29 @@ if (!only || only === "rate") {
   await s.evaluate(`saveToWall(${JSON.stringify(sid)}, window.__result); true`);
   check("a second save of the same speech keeps its answer", (await s.evaluate(wallRating(sid))) === "boo");
   await done(s);
+}
+
+// ---------------------------------------------------------------- the privacy note
+const PRIVACY_NEW = [
+  "Each upload sends a random code made by this browser, used only to count how many people come back. It isn't linked to a name, and clearing this site's data resets it.",
+  "Your answer to \"How was the coach tonight?\" is saved with that speech's results and deleted with them after 30 days. A count of the answers is kept.",
+  "The Beta feedback form is run by Google Forms, separately from SpeakReview, and asks for no name or email."
+];
+if (!only || only === "privacy") {
+  for (const [w, h] of [[1280, 800], [1093, 526], [390, 780], [360, 740]]) {
+    const tag = `${w}x${h}`;
+    console.log(`\n== the privacy note (${tag})`);
+    const b = await open({ width: w, height: h });
+    await b.mouse("#privacyBtn");
+    const p = await b.evaluate(`(() => { const r = privacyNote.getBoundingClientRect(); return { text: privacyNote.textContent, open: !privacyNote.hidden,
+      inside: r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth }; })()`);
+    check(`${tag}: the three new sentences are there`, p.open && PRIVACY_NEW.every(t => p.text.includes(t)), p.text);
+    check(`${tag}: still ends with the stage name sentence, no "we", no em dashes`, p.text.endsWith("An optional stage name can be saved on this device, and it is never sent anywhere.")
+      && !/\bwe\b/i.test(p.text) && !p.text.includes("—"));
+    check(`${tag}: the longer note still fits on screen`, p.inside, JSON.stringify(p).slice(-80));
+    await shot(b, `beta-privacy-${tag}`);
+    await done(b);
+  }
 }
 
 finish();

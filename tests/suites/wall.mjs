@@ -64,9 +64,10 @@ async function test(name, fn) {
   try { await fn(); } catch (e) { failures++; console.log("FAIL  threw: " + e.message); }
   while (open.length) await open.pop().close().catch(() => {});
 }
-// Feature set 2 added too_short (stage 3), words (stage 4), filler_flags, fillers_judged and review (stage 5)
+// Feature set 2 added too_short (stage 3), words (stage 4), filler_flags, fillers_judged and review (stage 5);
+// feature set 3 added rating (stage 5, "How was the coach tonight?", null until answered)
 const FIELDS = ["id", "savedAt", "topic", "topic_type", "time_limit_seconds", "speaking_seconds", "source", "cut_off", "too_short", "wpm", "filler_word_total", "filler_word_breakdown", "avg_confidence", "ai_feedback",
-  "words", "filler_flags", "fillers_judged", "review"].sort().join(",");
+  "words", "filler_flags", "fillers_judged", "review", "rating"].sort().join(",");
 
 await test("empty wall, tab and privacy", async () => {
   const b = await page();
