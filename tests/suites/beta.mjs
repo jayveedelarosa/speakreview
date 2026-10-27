@@ -2,6 +2,7 @@
 //   stamp    the Beta stamp after the name (header, and the ticket on the phone Stage), its look, tap area and red light
 //   note     the note from the producer: focus, Tab, Escape, outside click, the light gone for good, one paper note at a time
 //   device   the device code: made once, kept, sent as device=<code> on every GET /upload-url and nowhere else
+//   rate     "How was the coach tonight?": only for real coaching, the answer, thanks, POST /rating, one retry, kept with the speech
 // Every API call is answered by the fake API stub; nothing reaches AWS.
 import { launch, sleep, LIVE, STUB, RESULT, check, finish, only, shot } from "../lib/page.mjs";
 
@@ -270,6 +271,132 @@ if (!only || only === "device") {
   d = await k.evaluate(DEVICE);
   check("blocked: the next visit gets a new code", UUID.test(d.ups[0]) && d.ups[0] !== visit1, JSON.stringify(d));
   await done(k);
+}
+
+// ---------------------------------------------------------------- "How was the coach tonight?"
+const API = "https://jhfndh1s03.execute-api.us-east-1.amazonaws.com";
+const WALL_KEY = "speakreview.wall.v1";
+const LABELS = { bravo: "Bravo!", clap: "Polite clap", boo: "Boo" };
+const RATE = `(() => { const box = coachNotesBody.querySelector(".rate"); if (!box) return null;
+  const btns = [...box.querySelectorAll(".rate-btn")], live = box.querySelector('[role="status"]'), more = box.querySelector(".rate-more"), cs = getComputedStyle(box);
+  return { last: coachNotesBody.lastElementChild === box, group: [box.getAttribute("role"), box.getAttribute("aria-label")], title: box.querySelector(".rate-title").textContent,
+    border: [cs.borderTopStyle, cs.borderTopWidth, cs.borderRadius], labels: btns.map(b => b.textContent.trim()), heights: btns.map(b => Math.round(b.getBoundingClientRect().height)),
+    icons: btns.map(b => { const s = b.querySelector("svg"); return s && s.getAttribute("aria-hidden") === "true" && s.getAttribute("stroke") === "currentColor" && s.getAttribute("stroke-width") === "1.6"; }),
+    verdict: (box.querySelector(".rate-verdict") || {}).textContent || null, strong: (box.querySelector(".rate-verdict strong") || {}).textContent || null,
+    more: more ? [more.href, more.target, more.rel, more.textContent] : null, live: live ? live.textContent : null, focus: document.activeElement === more,
+    xss: !!window.__xss }; })()`;
+const POSTS = `__posts.map(p => ({ url: p.url, method: p.method, type: p.headers["Content-Type"], body: p.body }))`;
+const wallRating = id => `(() => { try { const e = JSON.parse(localStorage.getItem(${JSON.stringify(WALL_KEY)}) || "[]").find(e => e.id === ${JSON.stringify(id)}); return e ? (e.rating ?? null) : "missing"; } catch (err) { return "blocked"; } })()`;
+// Puts the box in view (it is at the end of the notes) and taps one answer
+async function rate(b, rating) {
+  await b.evaluate(`document.getElementById("tabNotes").click(); coachNotesBody.querySelector('.rate-btn[data-rating="${rating}"]').scrollIntoView({ block: "center" }); true`);
+  await sleep(300);
+  await b.mouse(`#coachNotesBody .rate-btn[data-rating="${rating}"]`);
+}
+
+if (!only || only === "rate") {
+  for (const [[w, h], rating] of [[[1280, 800], "bravo"], [[1093, 526], "clap"], [[390, 780], "boo"]]) {
+    const tag = `${w}x${h}`;
+    console.log(`\n== How was the coach tonight? (${tag})`);
+    const b = await open({ width: w, height: h });
+    check(`${tag}: a speech is sent`, await sendAndShow(b));
+    const id = await b.evaluate("backstageSpeech.id");
+    let r = await b.evaluate(RATE);
+    check(`${tag}: at the very end of the Coach's notes, a group named "How was the coach tonight?"`, r && r.last && r.group[0] === "group" && r.group[1] === "How was the coach tonight?" && r.title === "How was the coach tonight?", JSON.stringify(r));
+    check(`${tag}: a dashed box with Bravo! / Polite clap / Boo, each 44px tall with a thin line icon (hidden from screen readers)`, r.border[0] === "dashed" && r.border[2] === "12px"
+      && JSON.stringify(r.labels) === '["Bravo!","Polite clap","Boo"]' && r.heights.every(x => x >= 44) && r.icons.every(Boolean), JSON.stringify(r));
+    await b.evaluate(`coachNotesBody.querySelector(".rate").scrollIntoView({ block: "center" }); true`);
+    await sleep(300);
+    await shot(b, `beta-rate-${tag}`);
+    await rate(b, rating);
+    r = await b.evaluate(RATE);
+    check(`${tag}: ${LABELS[rating]}: the thanks with "Your verdict: ${LABELS[rating]}" replaces the buttons`, r.title === "Thanks for the review!" && r.labels.length === 0
+      && r.verdict === `Your verdict: ${LABELS[rating]}` && r.strong === LABELS[rating], JSON.stringify(r));
+    check(`${tag}: announced politely, focus on "Say more in a short form" (the form, new tab, noopener)`, r.live === `Thanks for the review! Your verdict: ${LABELS[rating]}` && r.focus
+      && r.more[0] === FORM && r.more[1] === "_blank" && /\bnoopener\b/.test(r.more[2]) && r.more[3] === "Say more in a short form", JSON.stringify(r));
+    await b.waitFor("__posts.length >= 1", 3000);
+    const posts = await b.evaluate(POSTS);
+    check(`${tag}: POST /rating with exactly {"speech_id","rating"} as JSON`, posts.length === 1 && posts[0].url === `${API}/rating` && posts[0].method === "POST"
+      && posts[0].type === "application/json" && posts[0].body === JSON.stringify({ speech_id: id, rating }), JSON.stringify(posts));
+    check(`${tag}: saved with that speech on its Wall of Fame entry`, (await b.evaluate(wallRating(id))) === rating);
+    await shot(b, `beta-rate-thanks-${tag}`);
+    // Reopened later: the thanks, not the question, and nothing sent again
+    await b.reload();
+    await b.evaluate(`displayResult(window.__result, ${JSON.stringify(id)}); true`);
+    await sleep(300);
+    r = await b.evaluate(RATE);
+    check(`${tag}: reopening the speech shows the thanks (not announced again), nothing sent`, r && r.title === "Thanks for the review!" && r.strong === LABELS[rating] && r.live === ""
+      && (await b.evaluate("__posts.length")) === 0, JSON.stringify(r));
+    await done(b);
+  }
+
+  console.log("\n== only for real coaching");
+  const b = await open();
+  const cases = [
+    ["real coaching", {}, "s1", true],
+    ["no speech ID (from the console)", {}, null, false],
+    ["too short", { too_short: true, ai_feedback: "That was a little short for the coach." }, "s2", false],
+    ["no notes", { ai_feedback: null }, "s3", false],
+    ["empty notes", { ai_feedback: "   " }, "s4", false],
+    ["AI feedback unavailable", { ai_feedback: "AI feedback unavailable." }, "s5", false],
+    ["ai FEEDBACK unavailable (any case, spaces first)", { ai_feedback: "  ai FEEDBACK unavailable: the coach timed out" }, "s6", false],
+    ["notes that mention it later", { ai_feedback: "Strengths:\n1. Clear. AI feedback unavailable is not the start." }, "s7", true]
+  ];
+  for (const [name, change, id, shows] of cases) {
+    await b.evaluate(`displayResult(Object.assign({}, window.__result, ${JSON.stringify(change)}), ${JSON.stringify(id)}); true`);
+    check(`${name}: ${shows ? "asks" : "no question"}`, (await b.evaluate("!!coachNotesBody.querySelector('.rate')")) === shows);
+  }
+  await done(b);
+
+  console.log("\n== sending fails: one more try, never an error");
+  const f = await open();
+  for (const [name, replies, tries] of [["500 then 200", [500, 200], 2], ["network error twice", ["reject", "reject"], 2], ["429 twice", [429, 429], 2], ["503 then 200", [503], 2],
+    ["404 (results gone)", [404], 1], ["400", [400], 1], ["200", [200], 1]]) {
+    await f.evaluate(`__posts.length = 0; __ratingReplies = ${JSON.stringify(replies)}; true`);
+    await sendAndShow(f);
+    const id = await f.evaluate("backstageSpeech.id");
+    await rate(f, "clap");
+    await sleep(5500);          // the retry comes about 4 seconds later
+    const p = await f.evaluate(POSTS);
+    const r = await f.evaluate(RATE);
+    check(`${name}: ${tries === 2 ? "tried once more" : "not tried again"} (${p.length} sent), the same body`, p.length === tries && p.every(x => x.body === JSON.stringify({ speech_id: id, rating: "clap" })), JSON.stringify(p));
+    check(`${name}: the thanks stays, no error shown`, r.title === "Thanks for the review!" && !(await f.evaluate("!!window.__alerted")) && (await f.evaluate(wallRating(id))) === "clap", JSON.stringify(r));
+  }
+  await sleep(4500);
+  check("never more than one retry", (await f.evaluate("__posts.length")) === 1);
+  await done(f);
+
+  console.log("\n== storage blocked (rating)");
+  const k = await open({ pre: [BLOCK] });
+  await sendAndShow(k);
+  const kid = await k.evaluate("backstageSpeech.id");
+  await rate(k, "bravo");
+  await k.waitFor("__posts.length >= 1", 3000);
+  await k.evaluate(`displayResult(window.__result, ${JSON.stringify(kid)}); true`);
+  const kr = await k.evaluate(RATE);
+  check("blocked: sent, and the speech shows the thanks again for this visit", kr && kr.strong === "Bravo!" && (await k.evaluate("__posts.length")) === 1, JSON.stringify(kr));
+  await done(k);
+
+  console.log("\n== a stored answer is untrusted");
+  const entry = rating => ({ id: "seeded", savedAt: new Date().toISOString(), wpm: 120, ai_feedback: "Strengths:\n1. Clear.", rating });
+  for (const [stored, shows] of [["boo", "Boo"], ["great", null], ["<img src=x onerror=window.__xss=1>", null], [1, null], [{ a: 1 }, null]]) {
+    const c = await open({ pre: [`localStorage.setItem(${JSON.stringify(WALL_KEY)}, ${JSON.stringify(JSON.stringify([entry(stored)]))});`] });
+    await c.evaluate(`displayResult(window.__result, "seeded"); true`);
+    const r = await c.evaluate(RATE);
+    const kept = await c.evaluate(`JSON.parse(localStorage.getItem(${JSON.stringify(WALL_KEY)}) || "[]").length === 1 || wallEntries.some(e => e.id === "seeded")`);
+    check(`stored ${JSON.stringify(stored)}: ${shows ? `the thanks with ${shows}` : "dropped (the question shows), the entry kept"}`,
+      r && !r.xss && kept && (shows ? r.strong === shows : r.title === "How was the coach tonight?"), JSON.stringify(r));
+    await done(c);
+  }
+
+  console.log("\n== saving the speech again keeps the answer");
+  const s = await open();
+  await sendAndShow(s);
+  const sid = await s.evaluate("backstageSpeech.id");
+  await rate(s, "boo");
+  await s.evaluate(`saveToWall(${JSON.stringify(sid)}, window.__result); true`);
+  check("a second save of the same speech keeps its answer", (await s.evaluate(wallRating(sid))) === "boo");
+  await done(s);
 }
 
 finish();

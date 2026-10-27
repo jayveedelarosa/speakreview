@@ -131,8 +131,10 @@ export async function launch({ width = 1280, height = 800, flags = [], mobile = 
       const { requestId, request } = msg.params;
       netCalls.push(request.method + " " + request.url);
       const isS3 = request.url.includes(".s3.");
+      // (the methods and headers answer the CORS preflight of POST /rating, as the real API does)
       send("Fetch.fulfillRequest", { requestId, responseCode: isS3 ? 204 : 200,
-        responseHeaders: [{ name: "Access-Control-Allow-Origin", value: "*" }, { name: "Content-Type", value: "application/json" }],
+        responseHeaders: [{ name: "Access-Control-Allow-Origin", value: "*" }, { name: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
+          { name: "Access-Control-Allow-Headers", value: "content-type" }, { name: "Content-Type", value: "application/json" }],
         body: isS3 ? "" : Buffer.from("{}").toString("base64") }).catch(() => {});
     }
   });

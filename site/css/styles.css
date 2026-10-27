@@ -3791,6 +3791,93 @@ html.settings-lock {
     color: var(--heading);
 }
 
+/* "How was the coach tonight?" at the end of real coaching (feature set 3, stage 5): three thin gold line
+   buttons, then the thanks with the verdict and a link to the short form */
+.rate {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin: 18px 0 4px;
+    padding: 14px 16px;
+    border: 1px dashed rgba(217, 174, 82, 0.45);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.25);
+    text-align: center;
+}
+
+.rate-content {
+    display: contents;
+}
+
+.rate-title {
+    margin: 0;
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 500;
+    line-height: 1.3;
+    color: #FFF6E3;
+}
+
+.rate-btns {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+}
+
+.rate-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid rgba(217, 174, 82, 0.6);
+    border-radius: 999px;
+    background: transparent;
+    color: #F0CF86;
+    font: 700 13px var(--sans);
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.rate-btn:hover,
+.rate-btn:focus-visible {
+    border-color: #F0CF86;
+    background: rgba(217, 174, 82, 0.1);
+}
+
+.rate-btn svg {
+    flex: none;
+}
+
+.rate-verdict {
+    margin: 0;
+    font-size: 12px;
+    color: #BCA992;
+}
+
+.rate-verdict strong {
+    color: #F0CF86;
+}
+
+.rate-more {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    color: #D9AE52;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+    .rate-title {
+        font-size: 16px;
+    }
+}
+
 /* ---------- Replay: the console radio at the top of Your words (the speech just sent) ---------- */
 /* A walnut cabinet: the speaker cloth with the −5s and +5s keys, then the speed knob, the tuning dial and the
    play knob. Each knob has a fixed 56px column, so nothing moves when the speed or the play state changes. */

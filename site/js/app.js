@@ -1291,6 +1291,10 @@ function displayResult(data, speechId = null) {
         coachNotesBody.replaceChildren(tooShortNote(data.ai_feedback));
     } else {
         coachNotesBody.innerHTML = cleanFeedback;
+        // Real coaching for a known speech ends with "How was the coach tonight?" (or its thanks, once answered)
+        if (speechId !== null && speechId !== undefined && realCoaching(data)) {
+            coachNotesBody.append(buildRating(String(speechId), savedRating(String(speechId))));
+        }
     }
     notesHintOnNotes = !tooShort;
     coachNotesBody.scrollTop = 0;
@@ -2300,6 +2304,134 @@ function deviceCode() {
     return deviceCodeThisVisit;
 }
 
+// ---- "How was the coach tonight?" ----
+// At the end of the Coach's notes for real coaching only. One answer per speech: after a tap the buttons give way
+// to the thanks. The answer is saved with that speech on its Wall of Fame entry (or for this visit when storage
+// is blocked), so the speech shows the thanks again later, and it is sent to POST /rating. If sending fails it
+// is tried once more a few seconds later, and nothing is ever shown about it.
+const RATINGS = { bravo: "Bravo!", clap: "Polite clap", boo: "Boo" };
+const RATING_RETRY_MS = 4000;
+const ratingsThisVisit = new Map();    // speech id → answer
+// Thin gold line drawings (fixed strings): a rose, clapping hands, a tomato
+const RATING_ICONS = {
+    bravo: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 12.5V21"></path><path d="M12 17.5c-1.6-1.4-3.4-1.6-4.8-.8 1.2 1.6 3.2 1.9 4.8.8z"></path><path d="M12 12.5c-2.8 0-4.6-1.8-4.6-4.3 0-1.5.7-2.8 1.9-3.6.6 1.2 1.6 1.8 2.7 1.8s2.1-.6 2.7-1.8c1.2.8 1.9 2.1 1.9 3.6 0 2.5-1.8 4.3-4.6 4.3z"></path><path d="M10 7.4c.6.9 3.4.9 4 0"></path></svg>',
+    clap: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 21l-3.5-5.5a2 2 0 0 1 3.3-2.2L9 15V8.5a1.5 1.5 0 0 1 3 0V13"></path><path d="M12 12.5V7a1.5 1.5 0 0 1 3 0v6.5l1.6-1.7a1.8 1.8 0 0 1 2.7 2.4L15 20"></path><path d="M6 4.5l1 1.5M10.5 2.5V4.5M15 4l-1 1.6"></path></svg>',
+    boo: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="14" r="7"></circle><path d="M12 7V4.5"></path><path d="M12 7.2c-1.5-1.6-3.4-1.6-4.4-.9 1.2.4 2.4.9 4.4.9zM12 7.2c1.5-1.6 3.4-1.6 4.4-.9-1.2.4-2.4.9-4.4.9z"></path></svg>'
+};
+
+// Real coaching: not a too-short speech, and notes that aren't empty or "AI feedback unavailable"
+function realCoaching(data) {
+    if (data.too_short === true || typeof data.ai_feedback !== "string") return false;
+    const notes = data.ai_feedback.trim();
+    return notes !== "" && !notes.toLowerCase().startsWith("ai feedback unavailable");
+}
+
+// A stored answer is untrusted: only one of the three counts
+function cleanRating(value) {
+    return typeof value === "string" && Object.hasOwn(RATINGS, value) ? value : null;
+}
+
+function savedRating(speechId) {
+    if (ratingsThisVisit.has(speechId)) return ratingsThisVisit.get(speechId);
+    loadWall();
+    const entry = wallEntries.find(saved => saved.id === speechId);
+    return entry ? entry.rating : null;
+}
+
+// Keeps the answer with that speech on its Wall of Fame entry. Never throws.
+function saveRating(speechId, rating) {
+    ratingsThisVisit.set(speechId, rating);
+    try {
+        loadWall();
+        const entry = wallEntries.find(saved => saved.id === speechId);
+        if (!entry) return;
+        entry.rating = rating;
+        writeWall();
+    } catch (err) {
+        // Storage is blocked or full: it is still kept for this visit
+    }
+}
+
+// Sends the answer. A network error, 429 or 5xx is tried once more; 200, 400 and 404 are final. Nothing is shown.
+async function sendRating(speechId, rating, retry = true) {
+    let status = 0;
+    try {
+        const response = await fetch(`${API_BASE}/rating`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ speech_id: speechId, rating })
+        });
+        status = response.status;
+    } catch (err) {
+        status = 0;
+    }
+    if (retry && (status === 0 || status === 429 || status >= 500)) {
+        setTimeout(() => sendRating(speechId, rating, false), RATING_RETRY_MS);
+    }
+}
+
+// The box at the end of the notes, built with textContent only. saved: the answer already given, or null.
+function buildRating(speechId, saved) {
+    const box = document.createElement("div");
+    box.className = "rate";
+    box.setAttribute("role", "group");
+    box.setAttribute("aria-label", "How was the coach tonight?");
+    // The question or the thanks go in here; the live region beside it stays put so the thanks is announced
+    const content = document.createElement("div");
+    content.className = "rate-content";
+    const live = makeSpan("visually-hidden", "");
+    live.setAttribute("role", "status");
+    box.append(content, live);
+
+    const title = text => {
+        const element = document.createElement("p");
+        element.className = "rate-title";
+        element.textContent = text;
+        return element;
+    };
+
+    const showThanks = rating => {
+        const verdict = document.createElement("p");
+        verdict.className = "rate-verdict";
+        const answer = document.createElement("strong");
+        answer.textContent = RATINGS[rating];
+        verdict.append("Your verdict: ", answer);
+        const more = document.createElement("a");
+        more.className = "rate-more";
+        more.href = FEEDBACK_FORM_URL;
+        more.target = "_blank";
+        more.rel = "noopener";
+        more.textContent = "Say more in a short form";
+        content.replaceChildren(title("Thanks for the review!"), verdict, more);
+        return more;
+    };
+
+    if (saved) {
+        showThanks(saved);
+        return box;
+    }
+    const buttons = document.createElement("div");
+    buttons.className = "rate-btns";
+    Object.entries(RATINGS).forEach(([rating, label]) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "rate-btn";
+        button.dataset.rating = rating;
+        button.innerHTML = RATING_ICONS[rating];       // a fixed string
+        button.append(label);
+        button.addEventListener("click", () => {
+            saveRating(speechId, rating);
+            sendRating(speechId, rating);
+            const more = showThanks(rating);
+            more.focus({ preventScroll: true });       // the button that was tapped is gone
+            live.textContent = `Thanks for the review! Your verdict: ${RATINGS[rating]}`;
+        });
+        buttons.append(button);
+    });
+    content.append(title("How was the coach tonight?"), buttons);
+    return box;
+}
+
 // ---------------------------
 // Wall of Fame: past performances, saved only in this browser
 // ---------------------------
@@ -2394,7 +2526,9 @@ function cleanWallEntry(raw) {
         words: transcript.words,
         filler_flags: transcript.flags ? [...transcript.flags].sort((a, b) => a - b) : null,
         fillers_judged: transcript.flags ? true : null,
-        review: cleanReview(raw.review)
+        review: cleanReview(raw.review),
+        // "How was the coach tonight?": anything but one of the three answers is dropped, the entry kept
+        rating: cleanRating(raw.rating)
     };
     return Object.values(entry).includes(WALL_BAD) ? null : entry;
 }
@@ -2477,6 +2611,7 @@ function writeWall() {
 function saveToWall(fileId, result) {
     try {
         loadWall();              // start from what is saved now (another tab may have added some)
+        const before = wallEntries.find(saved => saved.id === String(fileId));
         const entry = cleanWallEntry({
             id: String(fileId),
             savedAt: new Date().toISOString(),
@@ -2496,7 +2631,8 @@ function saveToWall(fileId, result) {
             words: result.words,
             filler_flags: result.filler_flags,
             fillers_judged: result.fillers_judged,
-            review: result.review
+            review: result.review,
+            rating: before ? before.rating : (ratingsThisVisit.get(String(fileId)) ?? null)    // an answer is never lost
         });
         if (!entry) return false;
         const isNew = !wallEntries.some(saved => saved.id === entry.id);

@@ -56,6 +56,8 @@ export const STUB = `
   // /result can reply in steps before the result: each step is a reply body (for example {} then
   // {"progress": "coach"}), or { status: 404 } for a bare status
   window.__resultSteps = [];
+  window.__posts = [];
+  window.__ratingReplies = [];
   window.alert = () => { window.__alerted = true; };
   const realFetch = window.fetch.bind(window);
   window.fetch = async (url, opts = {}) => {
@@ -64,6 +66,14 @@ export const STUB = `
     const json = obj => new Response(JSON.stringify(obj), { status: 200, headers: { "Content-Type": "application/json" } });
     if (url.includes("/upload-url")) return json({ fileId: "f" + window.__calls.length, upload: { url: "https://public-speaking-coach-jayvee.s3.amazonaws.com/", fields: { key: "k" } } });
     if (url === "https://public-speaking-coach-jayvee.s3.amazonaws.com/") return new Response(null, { status: 204 });
+    // POST /rating: each request is kept in __posts; __ratingReplies gives the next replies (a status, or "reject"
+    // for a network error), 200 when empty
+    if (url.includes("/rating")) {
+      window.__posts.push({ url, method: opts.method || "GET", headers: opts.headers || {}, body: opts.body ?? null, at: Date.now() });
+      const reply = window.__ratingReplies.shift();
+      if (reply === "reject") throw new TypeError("Failed to fetch");
+      return new Response(reply && reply !== 200 ? '{"error":"x"}' : '{"ok":true}', { status: reply || 200, headers: { "Content-Type": "application/json" } });
+    }
     if (url.includes("/result")) {
       const step = window.__resultSteps.shift();
       if (step && typeof step.status === "number") return new Response("{}", { status: step.status, headers: { "Content-Type": "application/json" } });
