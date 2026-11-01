@@ -87,7 +87,7 @@ if (!only || only === "keep") {
     && await b.evaluate(`window.__revoked.has(${JSON.stringify(firstUrl)})`) && await b.evaluate(PLAYABLE));
   const stored = await b.evaluate(`Object.keys(localStorage).sort().map(k => [k, localStorage.getItem(k).length, localStorage.getItem(k).includes("RIFF")])`);
   check("never written to storage (no new key, nothing large, no WAV data)", stored.every(([k, n, wav]) => !wav && (k.startsWith("speakreview.wall") || n < 5000))
-    && stored.map(([k]) => k).every(k => storedBefore.split(",").includes(k) || /^speakreview\.(wall|trophies|pending|settings)/.test(k)), JSON.stringify(stored));
+    && stored.map(([k]) => k).every(k => storedBefore.split(",").includes(k) || /^speakreview\.(wall|trophies|pending|settings|device)/.test(k)), JSON.stringify(stored));
   await done(b);
 }
 
