@@ -228,6 +228,40 @@ if (!only || only === "wall") {
   await done(b);
 }
 
+if (!only || only === "playbill-height") {
+  console.log("\n== the open playbill keeps one height on every tab");
+  // Short notes and a long transcript, so each panel's own content would give a different height
+  const entry = { ...BASE_RESULT, ai_feedback: "Strengths:\n1. Clear.", words: Array.from({ length: 200 }, (_, i) => ["word" + i, i * 40, i * 40 + 30, 95]), filler_flags: [] };
+  for (const [w, h] of [[360, 800], [390, 844], [1024, 640], [1280, 800], [1440, 900]]) {
+    const b = await open({ width: w, height: h });
+    await b.evaluate(`saveToWall("h1", ${JSON.stringify(entry)}); goToView("wall"); true`);
+    await b.settled();
+    await b.evaluate(`wallButtons.get("h1").click(); true`);
+    await sleep(600);
+    const sizes = {};
+    for (const [tab, panel] of [["pbTabNotes", "pbNotes"], ["pbTabWords", "pbWords"], ["pbTabReview", "pbReview"]]) {
+      await b.mouse("#" + tab);
+      await sleep(200);
+      sizes[panel] = await b.evaluate(`[Math.round(${panel}.getBoundingClientRect().height), Math.round(document.querySelector("#playbillDialog .pb-frame").getBoundingClientRect().height)]`);
+    }
+    const [n, wd, r] = [sizes.pbNotes, sizes.pbWords, sizes.pbReview];
+    check(`${w}x${h}: the content area is the same height on Coach's notes, Your words and Review`, Math.abs(n[0] - wd[0]) <= 1 && Math.abs(n[0] - r[0]) <= 1, JSON.stringify(sizes));
+    check(`${w}x${h}: the popup doesn't change size between tabs`, Math.abs(n[1] - wd[1]) <= 1 && Math.abs(n[1] - r[1]) <= 1);
+    await b.evaluate(`pbReview.scrollTop = 1e9; true`);
+    await sleep(150);
+    check(`${w}x${h}: Review is not a small strip, and the whole clipping can be scrolled into view`, r[0] > 120 && await b.evaluate(`pbReview.querySelector(".review").getBoundingClientRect().bottom <= pbReview.getBoundingClientRect().bottom`));
+    if (w === 360) await shot(b, "playbill-review-360x800");
+    if (w === 1280) {
+      await b.evaluate("closeDialog(); true");
+      await b.evaluate(`clearWallBtn.click(); true`);
+      await sleep(400);
+      const small = await b.evaluate(`Math.round(document.querySelector("#clearWallDialog .pb-frame").getBoundingClientRect().height)`);
+      check("the Clear the wall question stays small", small > 0 && small < n[1] / 2, `${small} vs ${n[1]}`);
+    }
+    await done(b);
+  }
+}
+
 if (!only || only === "hint") {
   console.log("\n== the \"Scroll for all notes\" hint");
   const b = await open();

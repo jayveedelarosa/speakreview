@@ -5026,10 +5026,12 @@ html.settings-lock {
     background: rgba(12, 4, 4, 0.8);
 }
 
+/* The open playbill keeps one height, so switching between its tabs never resizes it */
 .pb-frame {
     display: flex;
     flex-direction: column;
     width: min(760px, 100%);
+    height: min(748px, 100%);
     max-height: min(748px, 100%);
     padding: 14px;
     border-radius: 6px;
@@ -5047,7 +5049,7 @@ html.settings-lock {
     position: relative;
     display: flex;
     flex-direction: column;
-    flex: 0 1 auto;
+    flex: 1 1 auto;
     min-height: 0;
     background: #F4E7CC;
     color: #2A1A0E;
@@ -5182,7 +5184,7 @@ html.settings-lock {
 /* Coach's notes: the only part that scrolls, with the same formatting as Backstage.
    The section colors keep their hues, in darker shades that read well on paper. */
 .pb-notes {
-    flex: 1 1 auto;
+    flex: 1 1 0;
     min-height: 90px;
     padding: 18px 36px 40px;
     overflow-y: auto;
@@ -5223,8 +5225,8 @@ html.settings-lock {
 }
 
 .pb-words {
-    flex: 1 1 auto;
-    min-height: 0;
+    flex: 1 1 0;
+    min-height: 90px;
     padding: 16px 36px 0;
 }
 
@@ -5274,7 +5276,7 @@ html.settings-lock {
 /* The playbill's Review tab: the same clipping on the paper, scrolling like the notes */
 .pb-review {
     display: block;
-    flex: 1 1 auto;
+    flex: 1 1 0;
     min-height: 90px;
     padding: 22px 36px 40px;
     overflow-y: auto;
@@ -5398,6 +5400,7 @@ html.settings-lock {
 /* The small "Clear the wall" question */
 .pb-frame-small {
     width: min(460px, 100%);
+    height: auto;
 }
 
 .pb-paper-small {
@@ -7581,11 +7584,15 @@ body.curtains-closed .drape {
         font-size: 15px;
     }
 
+    /* The same minimum as the notes (over the 120px of .words-panel and .review-panel above), so the
+       three tabs stay the same height on short screens too */
     .pb-words {
+        min-height: 80px;
         padding: 12px 16px 0;
     }
 
     .pb-review {
+        min-height: 80px;
         padding: 18px 16px 30px;
     }
 
