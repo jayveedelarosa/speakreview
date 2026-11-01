@@ -23,17 +23,6 @@ Live site: https://speakreview.jayveedelarosa.dev/
 - Answer "How was the coach tonight?" to rate the feedback.
 - Use it on a laptop or a phone.
 
-## Screenshots
-
-| | |
-|---|---|
-| ![The Stage on a laptop, with the topic "Hire me" on a theatre ticket](docs/screenshots/stage-laptop.jpg) | ![Intermission with Act II, Transcribing, now playing](docs/screenshots/intermission.png) |
-| The Stage: the topic on a ticket, the mic and the upload button | Intermission: Act II is writing down every word |
-| ![Backstage with the coach's notes, the stats and The Nightly Review](docs/screenshots/coach-notes.png) | ![The Your words tab with the replay radio and the word "dashboard" highlighted](docs/screenshots/word-replay.png) |
-| Coach's notes, the stats and The Nightly Review | Your words: the replay radio follows the transcript |
-| ![The Stage on a phone, with the topic "Hire me" on a theatre ticket](docs/screenshots/stage-phone.png) | ![The results on a phone](docs/screenshots/phone.png) |
-| The Stage on a phone | The results on a phone |
-
 ## How it works
 
 ![Architecture: the visitor's browser, the website on S3 and CloudFront, the API, the speech pipeline, the data tables and monitoring](docs/architecture.png)
@@ -54,6 +43,17 @@ The five Lambda functions:
 - **SaveRating**: stores the visitor's "How was the coach tonight?" answer.
 
 The Lambda code is kept private and is not in this repository.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![The Stage on a laptop, with the topic "Hire me" on a theatre ticket](docs/screenshots/stage-laptop.jpg) | ![Intermission with Act II, Transcribing, now playing](docs/screenshots/intermission.png) |
+| The Stage: the topic on a ticket, the mic and the upload button | Intermission: Act II is writing down every word |
+| ![Backstage with the coach's notes, the stats and The Nightly Review](docs/screenshots/coach-notes.png) | ![The Your words tab with the replay radio and the word "dashboard" highlighted](docs/screenshots/word-replay.png) |
+| Coach's notes, the stats and The Nightly Review | Your words: the replay radio follows the transcript |
+| ![The Stage on a phone, with the topic "Hire me" on a theatre ticket](docs/screenshots/stage-phone.png) | ![The results on a phone](docs/screenshots/phone.png) |
+| The Stage on a phone | The results on a phone |
 
 ## Security and cost
 
