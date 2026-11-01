@@ -27,7 +27,7 @@ async function capture(width, height, transparent = false) {
   return Buffer.from(r.data, "base64");
 }
 
-// The arch drawn natively at `size` px, centred on a `tile` px square of `bg`
+// The icon drawn natively at `size` px, centred on a `tile` px square of `bg`
 async function icon(tile, size, bg = "transparent") {
   await b.evaluate(`(() => {
     const s = document.documentElement.style;
@@ -63,9 +63,9 @@ const small = [];
 for (const size of [16, 32, 48]) small.push({ size, data: await icon(size, size) });
 save("favicon.ico", ico(small));
 save("apple-touch-icon.png", await icon(180, 135, DARK));          // 75% of the width
-// 64% of the tile keeps the arch's bottom corners inside Android's round (80%) safe zone
-save("icon-192.png", await icon(192, 123, DARK));
-save("icon-512.png", await icon(512, 328, DARK));
+// About 69% of the tile keeps the bubble's top corners (the farthest points) and tail inside Android's round (80%) safe zone
+save("icon-192.png", await icon(192, 132, DARK));
+save("icon-512.png", await icon(512, 353, DARK));
 
 // Check picture: the 16px and 32px icons on a light and a dark tab, real size and 8x (pixels kept square)
 const tabs = [["light tab", "#FFFFFF"], ["dark tab", "#35363A"]];

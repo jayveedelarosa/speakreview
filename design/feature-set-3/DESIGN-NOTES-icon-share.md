@@ -1,24 +1,24 @@
 # Feature set 3, stage 6: icon and share preview
 
 Approved Nov 1. Boards (reference only, never deployed):
-- `F21Icon.dc.html` with `kind="arch"`, shown in `F21IconsShapes.dc.html` (column M): the site icon.
+- `F21Icon.dc.html` with `kind="bubbleshape"`, shown in `F21IconsShapes.dc.html` (column N): the site icon.
 - `F22Share.dc.html` with `kind="split"`, shown in `F22ShareSplit.dc.html`: the share preview picture (1200x630).
 Ignore every other `kind` in those two files (not chosen).
 
-## 1. The icon: "Stage arch"
+## 1. The icon: "Speech bubble"
 
-The icon is its own shape, not a square: a gold theatre arch with red curtains inside and the logo's four gold bars in the middle. The drawing is the `arch` SVG in `F21Icon.dc.html` (viewBox 0 0 64 64). Copy it exactly.
+The icon is its own shape, not a square: a burgundy speech bubble with a gold edge and the logo's four gold bars, transparent around it. The drawing is the `bubbleshape` SVG in `F21Icon.dc.html` (viewBox 0 0 64 64). Copy it exactly.
 
 Files to make (all in `site/`):
-- `favicon.svg`: the arch, transparent background. The main browser tab icon.
+- `favicon.svg`: the bubble, transparent background. The main browser tab icon.
 - `favicon.ico`: 16, 32 and 48 px versions in one file, transparent background (for older browsers and some bookmark menus).
-- `apple-touch-icon.png`: 180x180. iPhones don't allow see-through icons, so put the arch centred on a `#1A0B0A` square, about 75% of the width.
-- `icon-192.png` and `icon-512.png`: for Android "Add to home screen", the arch centred on `#1A0B0A`, about 70% of the width so nothing is cut off when Android puts it on a round tile ("maskable" safe zone).
+- `apple-touch-icon.png`: 180x180. iPhones don't allow see-through icons, so put the bubble centred on a `#1A0B0A` square, about 75% of the width.
+- `icon-192.png` and `icon-512.png`: for Android "Add to home screen", the bubble centred on `#1A0B0A`, about 70% of the width so nothing (the tail and the corners included) is cut off when Android puts it on a round tile ("maskable" safe zone).
 - `manifest.json` (not `.webmanifest`, so S3 serves it with a normal content type): name "SpeakReview", short_name "SpeakReview", start_url "/", display "browser", background_color and theme_color `#1A0B0A`, the two Android icons (the 512 one also as `"purpose": "maskable"`).
 
 In `<head>`: links for all of the above, plus `<meta name="theme-color" content="#1A0B0A">`.
 
-At 16px the arch outline must stay readable on both a light and a dark browser tab (the gold edge does this). Check it.
+At 16px the bubble outline must stay readable on both a light and a dark browser tab (the gold edge does this). Check it.
 
 ## 2. The share preview picture
 
