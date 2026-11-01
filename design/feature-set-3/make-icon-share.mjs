@@ -1,4 +1,4 @@
-// Makes the site icons from icon-source.html with the test tools' Chrome (DESIGN-NOTES-icon-share.md).
+// Makes the site icons (icon-source.html) and the share preview picture (og-image.html) with the test tools' Chrome (DESIGN-NOTES-icon-share.md).
 // Never deployed. Run from anywhere after `cd tests && npm install` once:
 //   node design/feature-set-3/make-icon-share.mjs
 // Writes into site/, plus check pictures of the small icons in tests/.output/shots/ (never committed).
@@ -92,5 +92,14 @@ await b.evaluate(`(() => {
 const box = await b.evaluate("(() => { const r = document.querySelector('.zoom').getBoundingClientRect(); return [Math.ceil(r.width), Math.ceil(r.height)]; })()");
 writeFileSync(join(SHOTS, "icon-check.png"), await capture(box[0], box[1]));
 console.log(`check picture: ${join(SHOTS, "icon-check.png")}`);
+
+// The share preview picture, exactly 1200x630 and under 600 KB, only with the real fonts
+await open("og-image.html");
+const fonts = await b.evaluate(`Promise.all(["600 66px Fraunces", "600 27px Manrope", "800 11px Manrope"].map(f => document.fonts.load(f)))
+  .then(() => ["Fraunces", "Manrope"].filter(f => !document.fonts.check("600 20px " + f)))`);
+if (fonts.length) throw new Error(`og-image.html: fonts not loaded (${fonts.join(", ")}); check the network and run again`);
+const og = await capture(1200, 630);
+if (og.length >= 600 * 1024) throw new Error(`og-image.png is ${Math.round(og.length / 1024)} KB, over 600 KB`);
+save("og-image.png", og);
 
 await b.close();
