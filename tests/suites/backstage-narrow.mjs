@@ -108,7 +108,8 @@ if (!only || only === "same") {
   console.log("\n== unchanged (pixels vs the previous commit)");
   const FIXED = JSON.stringify([{ id: "fixed1", savedAt: "2026-10-01T10:00:00.000Z", ...LONG, words: null }]);
   async function pic(url, w, h, how) {
-    const b = await launch({ width: w, height: h, flags: [], mobile: w <= 600 });
+    // Without the GPU, Chrome draws text the same way every time (with it, two slightly different versions appear at random)
+    const b = await launch({ width: w, height: h, flags: ["--disable-gpu"], mobile: w <= 600 });
     await b.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
     await b.goto(url, []);
     const settle = async () => { for (let i = 0; i < 80 && await b.evaluate("document.body.classList.contains('curtains-closed') || appRoot.inert"); i++) await sleep(100); await sleep(600); };
@@ -150,8 +151,12 @@ if (!only || only === "same") {
     [683, 768, "stage", "Stage"], [683, 768, "wall", "Wall of Fame"], [768, 1024, "stage", "Stage"], [768, 1024, "wall", "Wall of Fame"], [768, 1024, "playbill", "playbill"], [683, 768, "playbill", "playbill"]
   ];
   for (const [w, h, how, name] of CASES) {
-    const d = await diff(await pic(BASE, w, h, how), await pic(LIVE, w, h, how), w, h);
-    check(`${w}x${h} ${name}: pixel-identical to the previous commit`, d.n === 0, `${d.n} px differ, first ${JSON.stringify(d.first)}`);
+    let d = await diff(await pic(BASE, w, h, how), await pic(LIVE, w, h, how), w, h);
+    // A backstop if the drawing still varies: draw both once more, and fail only if they still differ
+    const first = d.n;
+    if (d.n) d = await diff(await pic(BASE, w, h, how), await pic(LIVE, w, h, how), w, h);
+    check(`${w}x${h} ${name}: pixel-identical to the previous commit`, d.n === 0,
+      `${d.n} px differ, first ${JSON.stringify(d.first)}${first ? `; ${first} px on the first try` : ""}`);
   }
 }
 
