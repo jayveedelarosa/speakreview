@@ -572,7 +572,8 @@ textarea,
     font-size: 12px;
     line-height: 1.5;
     text-align: left;
-    max-height: calc(100vh - 72px);
+    /* It starts 116px down on laptops (90px on phones); keep a 12px gap at the bottom of the window */
+    max-height: calc(var(--stable-h) - 128px);
     overflow-y: auto;
 }
 
