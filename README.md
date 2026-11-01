@@ -31,8 +31,8 @@ Live site: https://speakreview.jayveedelarosa.dev/
 | The Stage: the topic on a ticket, the mic and the upload button | Intermission: Act II is writing down every word |
 | ![Backstage with the coach's notes, the stats and The Nightly Review](docs/screenshots/coach-notes.png) | ![The Your words tab with the replay radio and the word "dashboard" highlighted](docs/screenshots/word-replay.png) |
 | Coach's notes, the stats and The Nightly Review | Your words: the replay radio follows the transcript |
-| ![The results on a phone](docs/screenshots/phone.png) | |
-| The results on a phone | |
+| ![The Stage on a phone, with the topic "Hire me" on a theatre ticket](docs/screenshots/stage-phone.png) | ![The results on a phone](docs/screenshots/phone.png) |
+| The Stage on a phone | The results on a phone |
 
 ## How it works
 

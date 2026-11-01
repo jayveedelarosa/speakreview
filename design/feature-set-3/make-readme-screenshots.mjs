@@ -2,6 +2,8 @@
 // Never deployed. No AWS call is made: the page's fetch is replaced by the tests' stub, and Chrome
 // answers any API or S3 address itself (tests/lib/cdp.mjs). Run from anywhere after `cd tests && npm install` once:
 //   node design/feature-set-3/make-readme-screenshots.mjs
+// Shot names after the command make only those shots (no names = all), so the other files stay as they are:
+//   node design/feature-set-3/make-readme-screenshots.mjs stage-phone
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -152,38 +154,60 @@ async function save(b, name) {
   await b.close();
 }
 
+const SHOTS = {
+  // 1. The Stage, with the topic typed
+  "stage-laptop": async () => {
+    const b = await open(1440, 900);
+    await typeTopic(b);
+    await save(b, "stage-laptop");
+  },
+  // 2. Intermission on Act II: the upload is done, and /result keeps answering "not ready"
+  "intermission": async () => {
+    const b = await open(1440, 900);
+    await typeTopic(b);
+    await send(b);
+    await b.waitFor(`document.querySelector('.ib-act[data-act="2"]').dataset.state === "now"`);
+    await sleep(800);
+    await save(b, "intermission");
+  },
+  // 3. Backstage: the coach's notes and the numbers
+  "coach-notes": async () => {
+    const b = await open(1440, 900);
+    await toBackstage(b);
+    await save(b, "coach-notes");
+  },
+  // 4. Your words: the replay radio, and one word highlighted by jumping the replay to it
+  "word-replay": async () => {
+    const b = await open(1440, 900);
+    await toBackstage(b);
+    await b.evaluate("document.getElementById('tabWords').click(); true");
+    await sleep(600);
+    await b.evaluate(`(() => { const w = [...wordsPanel.querySelectorAll("[data-t]")].find(e => e.textContent.startsWith("dashboard")); w.click(); return true; })()`);
+    await sleep(600);
+    await save(b, "word-replay");
+  },
+  // 5. The results on a phone
+  "phone": async () => {
+    const b = await open(390, 844);
+    await toBackstage(b);
+    await save(b, "phone");
+  },
+  // 6. The Stage on a phone, with the topic typed
+  "stage-phone": async () => {
+    const b = await open(390, 844);
+    await typeTopic(b);
+    await save(b, "stage-phone");
+  }
+};
+
+const names = process.argv.slice(2);
+const pick = names.length ? names : Object.keys(SHOTS);
+const unknown = pick.filter(n => !SHOTS[n]);
+if (unknown.length) {
+  console.error(`Unknown shot: ${unknown.join(", ")}. Shots: ${Object.keys(SHOTS).join(", ")}`);
+  process.exit(1);
+}
+
 const server = await startServer({ port: PORT });
-
-// 1. The Stage, with the topic typed
-let b = await open(1440, 900);
-await typeTopic(b);
-await save(b, "stage-laptop");
-
-// 2. Intermission on Act II: the upload is done, and /result keeps answering "not ready"
-b = await open(1440, 900);
-await typeTopic(b);
-await send(b);
-await b.waitFor(`document.querySelector('.ib-act[data-act="2"]').dataset.state === "now"`);
-await sleep(800);
-await save(b, "intermission");
-
-// 3. Backstage: the coach's notes and the numbers
-b = await open(1440, 900);
-await toBackstage(b);
-await save(b, "coach-notes");
-
-// 4. Your words: the replay radio, and one word highlighted by jumping the replay to it
-b = await open(1440, 900);
-await toBackstage(b);
-await b.evaluate("document.getElementById('tabWords').click(); true");
-await sleep(600);
-await b.evaluate(`(() => { const w = [...wordsPanel.querySelectorAll("[data-t]")].find(e => e.textContent.startsWith("dashboard")); w.click(); return true; })()`);
-await sleep(600);
-await save(b, "word-replay");
-
-// 5. The results on a phone
-b = await open(390, 844);
-await toBackstage(b);
-await save(b, "phone");
-
+for (const n of pick) await SHOTS[n]();
 server.close();
