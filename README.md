@@ -10,6 +10,8 @@ SpeakReview is a public speaking practice site. Pick or write a topic, record yo
 
 Live site: https://speakreview.jayveedelarosa.dev/
 
+**Stack:** a plain HTML, CSS and JavaScript front end on S3 and CloudFront, with a serverless, event-driven back end on AWS: API Gateway, Lambda (Python), Amazon Transcribe, Amazon Bedrock (Claude), DynamoDB, CloudWatch and SNS. Deployed with GitHub Actions.
+
 ## Features
 
 - Roll a random topic, write your own (up to 120 characters), or speak freely with no topic.
@@ -27,22 +29,54 @@ Live site: https://speakreview.jayveedelarosa.dev/
 
 ![Architecture: the visitor's browser, the website on S3 and CloudFront, the API, the speech pipeline, the data tables and monitoring](docs/architecture.png)
 
-1. **Open the site.** CloudFront serves the page from a private S3 bucket and adds the security headers.
-2. **Ask for an upload link.** The page calls the API, which checks the daily limits and returns a short-lived upload link.
-3. **Upload the speech.** The browser sends the sound (a WAV file) straight to the uploads bucket.
-4. **Transcription starts.** The new file starts an Amazon Transcribe job, which writes down every word with its timing.
-5. **The coach writes notes.** When the transcript is ready, Amazon Bedrock (Claude) writes the coach's notes, and the result is saved.
-6. **The page gets the notes, and the visitor rates them.** The page checks for the result until it's ready, shows it, and can send back the visitor's rating.
+1. **Open the site.** CloudFront serves the page from a private S3 bucket, and a CloudFront Function adds the security headers.
+2. **Ask for an upload link.** The page calls API Gateway, and a Lambda function checks the daily limits in DynamoDB and returns a short-lived upload link (an S3 presigned POST).
+3. **Upload the speech.** The browser sends the sound (a WAV file) straight to the uploads bucket, without going through the API.
+4. **Transcription starts.** The new file fires an S3 event notification. A Lambda function checks the file and starts an Amazon Transcribe job, which writes down every word with its timing.
+5. **The coach writes notes.** The finished transcript fires a second S3 event notification. A Lambda function sends it to Amazon Bedrock (Claude), checks and cleans the answer, and saves the result in DynamoDB.
+6. **The page gets the notes, and the visitor rates them.** The page checks the API every few seconds until the result is ready, shows it, and can send back the visitor's rating.
 
 The five Lambda functions:
 
-- **GenerateUploadURL**: checks the daily upload limits and returns a short-lived upload link.
-- **StartTranscription**: starts Amazon Transcribe when a new speech arrives.
+- **GenerateUploadURL**: checks the daily upload limits and returns a short-lived presigned upload link.
+- **StartTranscription**: checks each new file and starts Amazon Transcribe.
 - **AnalyzeSpeech**: sends the transcript to Amazon Bedrock for the coach's notes, and saves the result.
 - **GetSpeechResult**: returns the result to the page once it's ready.
 - **SaveRating**: stores the visitor's "How was the coach tonight?" answer.
 
 The Lambda code is kept private and is not in this repository.
+
+## Design decisions
+
+- **Serverless instead of a server.** Traffic is small and comes in bursts, so pay-per-use services fit best: the cost stays near zero when nobody is using the site, and there is no server to patch or keep running.
+- **Uploads go straight to S3.** The browser uploads with a presigned POST instead of sending the file through API Gateway and Lambda. That avoids their request size limits and saves Lambda time. The link only accepts one audio file of the expected type and size, and it expires after 5 minutes.
+- **An event-driven pipeline.** S3 event notifications start each step only when there is work to do: a new upload starts transcription, and a finished transcript starts the coaching. Nothing sits waiting or checking for new files.
+- **Check before paying.** Before starting Transcribe, StartTranscription reads only the start of the file (an S3 range request) to confirm it is real audio under the length limit, and deletes anything that isn't. Each Transcribe job is named after the speech, so a repeated event can't pay for the same file twice.
+- **Polling instead of a live connection.** A result takes under a minute, so the page simply asks for it every few seconds. That is simpler and cheaper than a WebSocket API, and because results are stored, the visitor can switch tabs or close the page and come back.
+- **Limits that can't be raced.** Daily upload limits use a single DynamoDB conditional update that checks and counts in one step, so two requests at the same moment can't both slip past the limit. Visitors are counted by a scrambled (hashed) version of their IP address, never the real one, and the counters expire on their own (DynamoDB TTL).
+- **Amazon Bedrock instead of OpenAI.** The coaching first ran on OpenAI. Moving it to Bedrock replaced a stored API key with IAM permissions, kept speech data inside my own AWS account and put everything on one bill.
+- **Never trust the AI's answer as it comes.** AnalyzeSpeech checks the model's reply, repairs or rescues it when the format breaks, and cleans the text before saving, so a messy answer doesn't break the page.
+- **Security headers at the edge.** A CloudFront Function adds the headers to every response, so the S3 bucket only has to hold plain static files.
+
+## Security and cost
+
+- The website bucket is private and only reachable through CloudFront.
+- Strict security headers from a CloudFront Function: a content security policy with no inline scripts, no inline styles and no eval, plus a permissions policy.
+- API Gateway throttling (rate limits) on each route.
+- A daily upload limit for each visitor and an overall daily limit, kept in DynamoDB.
+- Presigned upload links that expire after 5 minutes and only accept one audio file of an allowed type and size.
+- Input checks on the page (for example, recordings up to 10 minutes and topics up to 120 characters), with the limits enforced again on the server. Uploaded files are checked again before transcription, and anything invalid is deleted.
+- Data deletes itself: speech audio after 7 days (S3 lifecycle rule) and results after 30 days (DynamoDB TTL).
+- CloudWatch alarms send email alerts through SNS.
+- GitHub Actions deploys with a short-lived AWS role through OIDC, so no access keys are stored anywhere.
+- Every service is pay-per-use, so the cost stays near zero when nobody is using it.
+
+## Built with
+
+- **Front end:** plain HTML, CSS and JavaScript, with no frameworks or build step. Fonts from Google Fonts.
+- **AWS:** S3, CloudFront (with CloudFront Functions), API Gateway (HTTP API), Lambda (Python), Amazon Transcribe, Amazon Bedrock (Claude), DynamoDB, CloudWatch (logs, alarms and Logs Insights) and SNS.
+- **Deploys:** GitHub Actions with OIDC, whenever the site's files change.
+- **Tests:** Node.js driving headless Google Chrome through the DevTools protocol, with a fake API so the tests never touch AWS.
 
 ## Screenshots
 
@@ -54,26 +88,6 @@ The Lambda code is kept private and is not in this repository.
 | Coach's notes, the stats and The Nightly Review | Your words: the replay radio follows the transcript |
 | ![The Stage on a phone, with the topic "Hire me" on a theatre ticket](docs/screenshots/stage-phone.png) | ![The results on a phone](docs/screenshots/phone.png) |
 | The Stage on a phone | The results on a phone |
-
-## Security and cost
-
-- The website bucket is private and only served through CloudFront.
-- Strict security headers: a content security policy with no inline scripts, no inline styles and no eval, plus a permissions policy.
-- Rate limits on the API.
-- A daily upload limit for each visitor and an overall daily limit.
-- Short-lived upload links.
-- Input checks on the page (for example, recordings up to 10 minutes and topics up to 120 characters), with the limits enforced again on the server.
-- Speech audio is deleted automatically after 7 days, and results after 30 days.
-- CloudWatch alarms send email alerts.
-- Deploys log in to AWS with a short-lived role from GitHub Actions, so no access keys are stored.
-- Every service is pay-per-use, so the cost stays near zero when nobody is using it.
-
-## Built with
-
-- **Front end:** plain HTML, CSS and JavaScript, with no frameworks or build step. Fonts from Google Fonts.
-- **AWS:** S3, CloudFront, API Gateway, Lambda, Amazon Transcribe, Amazon Bedrock (Claude), DynamoDB, CloudWatch and SNS.
-- **Deploys:** GitHub Actions, whenever the site's files change.
-- **Tests:** Node.js driving headless Google Chrome through the DevTools protocol, with a fake API so the tests never touch AWS.
 
 ## Privacy and limits
 
@@ -93,11 +107,13 @@ The feedback form is run by Google Forms, separately from SpeakReview, and asks 
 ## Known limitations
 
 - It's in beta, so things may change.
+- Speeches are transcribed as US English, so other languages and strong accents may not come out well.
 - Your history lives only in the browser you used, and is lost if you clear the site's data.
 - There are daily upload limits.
 - Speeches can be up to 10 minutes long, and recordings must be at least 15 seconds. Files picked for upload can be up to 200 MB on a laptop and 100 MB on a phone.
 - The replay only works for the speech you just gave. Recordings are never saved, so past shows can be read but not played.
 - The transcript and the AI feedback can be wrong.
+- The AWS resources were set up in the console rather than with infrastructure as code.
 
 ## What I learned
 
