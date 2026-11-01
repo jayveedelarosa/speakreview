@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Icon source (rendered by make-icon-share.mjs)</title>
+<!-- Never deployed. make-icon-share.mjs sets --tile, --icon and --bg for each file it makes:
+     the arch (site/favicon.svg) centred on a --tile square, drawn --icon wide. -->
+<style>
+:root { --tile: 64px; --icon: 64px; --bg: transparent; }
+html, body { margin: 0; background: transparent; overflow: hidden; }
+[hidden] { display: none !important; }
+.tile { width: var(--tile); height: var(--tile); display: grid; place-items: center; background: var(--bg); }
+.tile img { display: block; width: var(--icon); height: var(--icon); }
+.zoom { display: none; width: max-content; align-items: end; gap: 16px; padding: 16px; background: #808080; font: 600 13px system-ui, sans-serif; color: #fff; }
+.zoom.on { display: flex; }
+.zoom figure { margin: 0; display: grid; gap: 6px; justify-items: center; }
+.zoom img { image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<div class="tile"><img src="../../site/favicon.svg" alt=""></div>
+<div class="zoom"></div>
+</body>
+</html>

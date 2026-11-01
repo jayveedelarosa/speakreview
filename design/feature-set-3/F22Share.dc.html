@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Share preview image (1200x630)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&amp;family=Manrope:wght@500;600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1200px; height: 630px; position: relative; overflow: hidden; font-family: Manrope, system-ui, sans-serif; background: #1A0B0A">
+
+<sc-if value="{{isStage}}" hint-placeholder-val="{{true}}">
+<div aria-hidden="true" style="position: absolute; inset: 0; background: radial-gradient(ellipse 38% 70% at 50% 18%, rgba(255,226,170,0.30), rgba(255,226,170,0.06) 55%, rgba(0,0,0,0) 75%), radial-gradient(ellipse 60% 60% at 50% 40%, #3A1E14, #1A0B0A 70%)"></div>
+<div aria-hidden="true" style="position: absolute; top: 0; bottom: 0; left: 0; width: 190px; box-shadow: inset -3px 0 0 #D9AE52, 12px 0 40px rgba(0,0,0,0.6); background: linear-gradient(90deg, rgba(0,0,0,0.3), rgba(0,0,0,0) 40%, rgba(0,0,0,0.4)), repeating-linear-gradient(90deg, #4A0812 0, #8C1426 18px, #B8283A 30px, #8C1426 42px, #4A0812 60px)"></div>
+<div aria-hidden="true" style="position: absolute; top: 0; bottom: 0; right: 0; width: 190px; box-shadow: inset 3px 0 0 #D9AE52, -12px 0 40px rgba(0,0,0,0.6); background: linear-gradient(270deg, rgba(0,0,0,0.3), rgba(0,0,0,0) 40%, rgba(0,0,0,0.4)), repeating-linear-gradient(270deg, #4A0812 0, #8C1426 18px, #B8283A 30px, #8C1426 42px, #4A0812 60px)"></div>
+<div aria-hidden="true" style="position: absolute; top: 0; left: 0; right: 0; height: 54px; border-bottom: 3px solid #D9AE52; background: repeating-linear-gradient(90deg, #4A0812 0, #8C1426 10px, #B8283A 17px, #8C1426 24px, #4A0812 34px)"></div>
+<div aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 120px; border-top: 3px solid #B8893A; background: repeating-linear-gradient(90deg, rgba(0,0,0,0.18) 0 2px, rgba(0,0,0,0) 2px 150px), linear-gradient(180deg, #8A5A2E, #5E3A1C)"></div>
+<div style="position: absolute; left: 190px; right: 190px; top: 110px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 18px">
+<div style="display: flex; align-items: center; gap: 18px">
+<svg width="74" height="74" viewBox="0 0 28 28" fill="none" aria-hidden="true"><rect x="3" y="11" width="3" height="6" rx="1.5" fill="#D9AE52"></rect><rect x="9" y="6" width="3" height="16" rx="1.5" fill="#D9AE52"></rect><rect x="15" y="3" width="3" height="22" rx="1.5" fill="#D9AE52"></rect><rect x="21" y="9" width="3" height="10" rx="1.5" fill="#D9AE52"></rect></svg>
+<span style="font-family: Fraunces, Georgia, serif; font-size: 104px; font-weight: 600; letter-spacing: -0.02em; color: #FFF6E3; text-shadow: 0 6px 30px rgba(0,0,0,0.6)">Speak<span style="color: #D9AE52">Review</span></span>
+<span style="align-self: flex-start; margin-top: 14px; padding: 4px 12px; border: 5px double #D9AE52; border-radius: 4px; color: #F0CF86; font: 800 20px Manrope, system-ui, sans-serif; letter-spacing: 0.22em; transform: rotate(-6deg)">BETA</span>
+</div>
+<span style="font-family: Fraunces, Georgia, serif; font-size: 40px; font-weight: 500; color: #F6E4CC">Step up to the mic. Get notes from your coach.</span>
+<span style="font-size: 22px; font-weight: 600; color: #D9AE52; letter-spacing: 0.04em">Free beta · Record or upload a speech, up to 10 minutes</span>
+</div>
+</sc-if>
+
+<sc-if value="{{isTicket}}" hint-placeholder-val="{{false}}">
+<div aria-hidden="true" style="position: absolute; inset: 0; background: radial-gradient(ellipse 60% 70% at 50% 45%, #3A1E14, #140806 75%)"></div>
+<div aria-hidden="true" style="position: absolute; top: 0; left: 0; right: 0; height: 40px; border-bottom: 3px solid #D9AE52; background: repeating-linear-gradient(90deg, #4A0812 0, #8C1426 10px, #B8283A 17px, #8C1426 24px, #4A0812 34px)"></div>
+<div style="position: absolute; left: 70px; top: 70px; display: flex; align-items: center; gap: 10px">
+<svg width="34" height="34" viewBox="0 0 28 28" fill="none" aria-hidden="true"><rect x="3" y="11" width="3" height="6" rx="1.5" fill="#D9AE52"></rect><rect x="9" y="6" width="3" height="16" rx="1.5" fill="#D9AE52"></rect><rect x="15" y="3" width="3" height="22" rx="1.5" fill="#D9AE52"></rect><rect x="21" y="9" width="3" height="10" rx="1.5" fill="#D9AE52"></rect></svg>
+<span style="font-family: Fraunces, Georgia, serif; font-size: 34px; font-weight: 600; color: #FFF6E3">Speak<span style="color: #D9AE52">Review</span></span>
+</div>
+<div style="position: absolute; left: 110px; top: 150px; width: 980px; height: 380px; transform: rotate(-2deg); display: flex; border-radius: 8px; background: repeating-linear-gradient(0deg, rgba(110,80,40,0.035) 0 1px, rgba(0,0,0,0) 1px 5px), linear-gradient(180deg, #F2E3C2, #E2CB9C); box-shadow: 0 30px 60px rgba(0,0,0,0.7), inset 0 0 0 3px rgba(122,18,34,0.35), inset 0 0 0 9px rgba(0,0,0,0), inset 0 0 40px rgba(120,80,30,0.25)">
+<div style="flex: 1; padding: 46px 50px; display: flex; flex-direction: column; gap: 16px; border-right: 4px dotted rgba(122,18,34,0.55)">
+<span style="font-size: 20px; font-weight: 800; letter-spacing: 0.24em; text-transform: uppercase; color: #7A1222">Tonight's show</span>
+<span style="font-family: Fraunces, Georgia, serif; font-size: 84px; font-weight: 600; line-height: 1.02; color: #3A2010">Your speech, reviewed.</span>
+<span style="font-size: 26px; font-weight: 600; color: #6A4A2C">Coach's notes · Replay · The Nightly Review</span>
+</div>
+<div style="width: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px">
+<span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 18px; color: #6A4A2C">No. 0347</span>
+<span style="font-size: 30px; font-weight: 800; letter-spacing: 0.3em; color: #7A1222; writing-mode: vertical-rl; transform: rotate(180deg)">ADMIT ONE</span>
+<span style="padding: 4px 12px; border: 5px double #7A1222; border-radius: 4px; color: #7A1222; font: 800 20px Manrope, system-ui, sans-serif; letter-spacing: 0.2em; transform: rotate(-6deg)">FREE BETA</span>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isMirror}}" hint-placeholder-val="{{false}}">
+<div aria-hidden="true" style="position: absolute; inset: 0; background: repeating-linear-gradient(90deg, #3A0E14 0 150px, #2A080D 150px 153px), #3A0E14"></div>
+<div style="position: absolute; left: 140px; top: 60px; width: 920px; height: 510px; box-sizing: border-box; padding: 26px; border-radius: 22px; background: linear-gradient(160deg, #B07A44, #8A5A2E 45%, #6E4522); box-shadow: 0 30px 70px rgba(0,0,0,0.65)">
+<div style="height: 100%; box-sizing: border-box; border-radius: 10px; padding: 46px 64px; display: flex; flex-direction: column; justify-content: center; gap: 26px; background: linear-gradient(155deg, rgba(255,255,255,0.06), rgba(255,255,255,0) 35%), #1E0F0C; box-shadow: inset 0 0 60px rgba(0,0,0,0.55)">
+<div style="display: flex; align-items: center; gap: 16px">
+<svg width="56" height="56" viewBox="0 0 28 28" fill="none" aria-hidden="true"><rect x="3" y="11" width="3" height="6" rx="1.5" fill="#D9AE52"></rect><rect x="9" y="6" width="3" height="16" rx="1.5" fill="#D9AE52"></rect><rect x="15" y="3" width="3" height="22" rx="1.5" fill="#D9AE52"></rect><rect x="21" y="9" width="3" height="10" rx="1.5" fill="#D9AE52"></rect></svg>
+<span style="font-family: Fraunces, Georgia, serif; font-size: 76px; font-weight: 600; color: #FFF6E3">Speak<span style="color: #D9AE52">Review</span></span>
+<span style="margin-left: 10px; padding: 3px 10px; border: 5px double #D9AE52; border-radius: 4px; color: #F0CF86; font: 800 18px Manrope, system-ui, sans-serif; letter-spacing: 0.22em; transform: rotate(-6deg)">BETA</span>
+</div>
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="3">
+<div style="display: flex; align-items: baseline; gap: 22px"><span style="font-family: Fraunces, Georgia, serif; font-size: 44px; color: #D9AE52">{{s.n}}</span><span style="font-size: 34px; font-weight: 600; color: #F6E4CC">{{s.t}}</span></div>
+</sc-for>
+</div>
+</div>
+<sc-for list="{{bulbs}}" as="b" hint-placeholder-count="30"><span aria-hidden="true" style="position: absolute; width: 18px; height: 18px; border-radius: 999px; background: radial-gradient(circle at 40% 35%, #FFFFFF, #FFDFA0 60%); box-shadow: 0 0 16px 5px rgba(255,200,120,0.6); {{b.pos}}"></span></sc-for>
+</sc-if>
+
+
+<sc-if value="{{is_marquee}}" hint-placeholder-val="{{false}}">
+<div aria-hidden="true" style="position: absolute; inset: 0; background: radial-gradient(ellipse 70% 60% at 50% 45%, #3A1E14, #0E0605 75%)"></div>
+<div style="position: absolute; left: 110px; top: 95px; width: 980px; height: 440px; box-sizing: border-box; padding: 34px; border-radius: 18px; background: linear-gradient(160deg, #8A5A2E, #4A2A14 55%, #6E4522); box-shadow: 0 30px 70px rgba(0,0,0,0.7), inset 0 0 0 2px rgba(240,207,134,0.4)">
+<div style="height: 100%; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: linear-gradient(180deg, #1C0E0B, #0F0705); box-shadow: inset 0 0 30px rgba(0,0,0,0.8); text-align: center">
+<span style="font-size: 26px; font-weight: 800; letter-spacing: 0.4em; color: #F0CF86">NOW SHOWING</span>
+<span style="font-family: Fraunces, Georgia, serif; font-size: 112px; font-weight: 700; letter-spacing: 0.04em; line-height: 1; color: #FFF6E3; text-shadow: 0 0 24px rgba(255,214,140,0.45)">YOUR SPEECH</span>
+<span style="font-size: 26px; font-weight: 600; color: #D8C6AE">with notes from your coach</span>
+<div style="display: flex; align-items: center; gap: 14px; margin-top: 8px"><svg width="34" height="34" viewBox="0 0 28 28" fill="none" aria-hidden="true"><rect x="3" y="11" width="3" height="6" rx="1.5" fill="#D9AE52"></rect><rect x="9" y="6" width="3" height="16" rx="1.5" fill="#D9AE52"></rect><rect x="15" y="3" width="3" height="22" rx="1.5" fill="#D9AE52"></rect><rect x="21" y="9" width="3" height="10" rx="1.5" fill="#D9AE52"></rect></svg><span style="font-family: Fraunces, Georgia, serif; font-size: 34px; font-weight: 600; color: #FFF6E3">Speak<span style="color: #D9AE52">Review</span></span><span style="padding: 3px 11px; border: 5px double #D9AE52; border-radius: 4px; color: #F0CF86; font: 800 15px Manrope, system-ui, sans-serif; letter-spacing: 0.22em; transform: rotate(-6deg)">BETA</span></div>
+</div>
+</div>
+<sc-for list="{{mbulbs}}" as="b" hint-placeholder-count="40"><span aria-hidden="true" style="position: absolute; width: 16px; height: 16px; border-radius: 999px; background: radial-gradient(circle at 40% 35%, #FFFFFF, #FFDFA0 60%); box-shadow: 0 0 14px 5px rgba(255,200,120,0.65); {{b.pos}}"></span></sc-for>
+</sc-if>
+
+<sc-if value="{{is_playbill}}" hint-placeholder-val="{{false}}">
+<div aria-hidden="true" style="position: absolute; inset: 0; background: radial-gradient(ellipse 70% 70% at 50% 40%, #3A1E14, #140806 75%)"></div>
+<div aria-hidden="true" style="position: absolute; top: 0; left: 0; right: 0; height: 40px; border-bottom: 3px solid #D9AE52; background: repeating-linear-gradient(90deg, #4A0812 0, #8C1426 10px, #B8283A 17px, #8C1426 24px, #4A0812 34px)"></div>
+<div style="position: absolute; left: 300px; top: 72px; width: 600px; height: 520px; box-sizing: border-box; padding: 22px; transform: rotate(-1.5deg); background: repeating-linear-gradient(0deg, rgba(110,80,40,0.035) 0 1px, rgba(0,0,0,0) 1px 5px), linear-gradient(180deg, #F7ECD3, #EAD9B6); box-shadow: 0 30px 60px rgba(0,0,0,0.7), inset 0 0 40px rgba(120,80,30,0.2); color: #2A1A0E">
+<span aria-hidden="true" style="position: absolute; top: -10px; left: 50%; margin-left: -10px; width: 20px; height: 20px; border-radius: 999px; background: radial-gradient(circle at 35% 35%, #F5D891, #8C6224); box-shadow: 0 3px 6px rgba(0,0,0,0.5)"></span>
+<div style="height: 100%; box-sizing: border-box; border: 2px solid #2A1A0E; display: flex; flex-direction: column">
+<div style="padding: 20px 26px 16px; border-bottom: 2px solid #2A1A0E; text-align: center; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 16px; font-weight: 800; letter-spacing: 0.24em; color: #7A1222">THE SPEAKREVIEW PLAYERS</span>
+<span style="font-family: Fraunces, Georgia, serif; font-size: 54px; font-weight: 600">Tonight's programme</span>
+</div>
+<sc-for list="{{acts}}" as="a" hint-placeholder-count="3"><div style="display: flex; align-items: baseline; gap: 18px; padding: 18px 26px; border-bottom: 1px solid rgba(42,26,14,0.35)"><span style="width: 90px; font-size: 18px; font-weight: 800; letter-spacing: 0.16em; color: #7A1222">{{a.k}}</span><span style="font-family: Fraunces, Georgia, serif; font-size: 30px; font-weight: 500">{{a.t}}</span></div></sc-for>
+<div style="margin-top: auto; padding: 16px 26px; display: flex; align-items: center; justify-content: space-between"><span style="font-size: 17px; font-weight: 600; color: #5A4330">speakreview.jayveedelarosa.dev</span><span style="padding: 3px 11px; border: 5px double #7A1222; border-radius: 4px; color: #7A1222; font: 800 16px Manrope, system-ui, sans-serif; letter-spacing: 0.22em; transform: rotate(-6deg)">FREE BETA</span></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{is_radio}}" hint-placeholder-val="{{false}}">
+<div aria-hidden="true" style="position: absolute; inset: 0; background: radial-gradient(ellipse 60% 80% at 70% 50%, #3A1E14, #140806 75%)"></div>
+<div aria-hidden="true" style="position: absolute; top: 0; left: 0; right: 0; height: 40px; border-bottom: 3px solid #D9AE52; background: repeating-linear-gradient(90deg, #4A0812 0, #8C1426 10px, #B8283A 17px, #8C1426 24px, #4A0812 34px)"></div>
+<div style="position: absolute; left: 70px; top: 150px; width: 470px; display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; align-items: center; gap: 12px"><svg width="40" height="40" viewBox="0 0 28 28" fill="none" aria-hidden="true"><rect x="3" y="11" width="3" height="6" rx="1.5" fill="#D9AE52"></rect><rect x="9" y="6" width="3" height="16" rx="1.5" fill="#D9AE52"></rect><rect x="15" y="3" width="3" height="22" rx="1.5" fill="#D9AE52"></rect><rect x="21" y="9" width="3" height="10" rx="1.5" fill="#D9AE52"></rect></svg><span style="font-family: Fraunces, Georgia, serif; font-size: 44px; font-weight: 600; color: #FFF6E3">Speak<span style="color: #D9AE52">Review</span></span></div>
+<span style="font-family: Fraunces, Georgia, serif; font-size: 64px; font-weight: 600; line-height: 1.05; color: #FFF6E3">Hear it back. See every word.</span>
+<span style="font-size: 24px; font-weight: 600; color: #D8C6AE">Coach's notes for every speech. Free beta.</span>
+</div>
+<div style="position: absolute; left: 600px; top: 150px; width: 540px; height: 330px; box-sizing: border-box; padding: 24px; border-radius: 26px; display: flex; flex-direction: column; gap: 18px; background: repeating-linear-gradient(100deg, rgba(255,255,255,0.035) 0 3px, rgba(0,0,0,0) 3px 14px), linear-gradient(180deg, #8E5428, #5E3215 60%, #4A2610); box-shadow: inset 0 2px 0 rgba(255,220,170,0.25), 0 30px 60px rgba(0,0,0,0.65)">
+<div style="height: 110px; border-radius: 8px; border: 4px solid #C9A25A; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse 70% 80% at 50% 50%, rgba(255,196,107,0.7), rgba(255,170,70,0.2) 60%, rgba(0,0,0,0) 85%), repeating-linear-gradient(90deg, rgba(60,30,10,0.35) 0 2px, rgba(0,0,0,0) 2px 6px), repeating-linear-gradient(0deg, rgba(60,30,10,0.2) 0 2px, rgba(0,0,0,0) 2px 5px), #D8BF8A"><span style="font-family: Fraunces, Georgia, serif; font-style: italic; font-weight: 600; font-size: 40px; color: #5A2A10; transform: rotate(-3deg)">SpeakReview</span></div>
+<div style="display: flex; align-items: center; gap: 22px">
+<span style="width: 74px; height: 74px; border-radius: 999px; border: 3px solid #3A2010; background: radial-gradient(circle at 38% 30%, #FFE9AE, #D9AE52 45%, #8C6224)"></span>
+<div style="position: relative; flex: 1; height: 100px; border-radius: 8px; border: 4px solid #C9A25A; background: linear-gradient(180deg, #24180C, #120A05); display: flex; align-items: center; gap: 4px; padding: 0 12px">
+<sc-for list="{{rbars}}" as="b" hint-placeholder-count="30"><span style="flex: 1; border-radius: 3px; {{b.s}}"></span></sc-for>
+<span style="position: absolute; top: 6px; bottom: 6px; left: 46%; width: 4px; background: #FF5A3C; box-shadow: 0 0 10px 2px rgba(255,90,60,0.8)"></span>
+</div>
+<span style="width: 74px; height: 74px; border-radius: 999px; border: 3px solid #3A2010; background: radial-gradient(circle at 38% 30%, #FFE9AE, #D9AE52 45%, #8C6224)"></span>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{is_split}}" hint-placeholder-val="{{false}}">
+<div aria-hidden="true" style="position: absolute; inset: 0; background: #1A0B0A"></div>
+<div style="position: absolute; left: 0; top: 0; bottom: 0; width: 600px; box-sizing: border-box; padding: 70px 60px; display: flex; flex-direction: column; justify-content: center; gap: 22px; background: radial-gradient(ellipse 80% 60% at 0% 0%, rgba(140,20,38,0.35), rgba(0,0,0,0) 70%), #1A0B0A">
+<div style="display: flex; align-items: center; gap: 9px"><svg width="26" height="26" viewBox="0 0 28 28" fill="none" aria-hidden="true"><rect x="3" y="11" width="3" height="6" rx="1.5" fill="#D9AE52"></rect><rect x="9" y="6" width="3" height="16" rx="1.5" fill="#D9AE52"></rect><rect x="15" y="3" width="3" height="22" rx="1.5" fill="#D9AE52"></rect><rect x="21" y="9" width="3" height="10" rx="1.5" fill="#D9AE52"></rect></svg><span style="font-family: Fraunces, Georgia, serif; font-size: 30px; font-weight: 600; color: #FFF6E3">Speak<span style="color: #D9AE52">Review</span></span><span style="padding: 3px 11px; border: 5px double #D9AE52; border-radius: 4px; color: #F0CF86; font: 800 11px Manrope, system-ui, sans-serif; letter-spacing: 0.22em; transform: rotate(-6deg)">BETA</span></div>
+<span style="font-family: Fraunces, Georgia, serif; font-size: 66px; font-weight: 600; line-height: 1.06; color: #FFF6E3">Practice your speech with an AI coach.</span>
+<sc-for list="{{ticks}}" as="t" hint-placeholder-count="3"><div style="display: flex; align-items: center; gap: 14px; font-size: 27px; font-weight: 600; color: #F1E2CC"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#D9AE52" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>{{t}}</div></sc-for>
+</div>
+<div style="position: absolute; left: 600px; top: 0; right: 0; bottom: 0; overflow: hidden; background: radial-gradient(ellipse 50% 70% at 50% 20%, rgba(255,226,170,0.35), rgba(255,226,170,0.05) 60%, rgba(0,0,0,0) 80%), #241009">
+<div aria-hidden="true" style="position: absolute; top: 0; bottom: 0; left: 0; width: 120px; box-shadow: inset -3px 0 0 #D9AE52; background: repeating-linear-gradient(90deg, #4A0812 0, #8C1426 16px, #B8283A 26px, #8C1426 36px, #4A0812 52px)"></div>
+<div aria-hidden="true" style="position: absolute; top: 0; bottom: 0; right: 0; width: 120px; box-shadow: inset 3px 0 0 #D9AE52; background: repeating-linear-gradient(270deg, #4A0812 0, #8C1426 16px, #B8283A 26px, #8C1426 36px, #4A0812 52px)"></div>
+<div aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 150px; border-top: 4px solid #B8893A; background: repeating-linear-gradient(90deg, rgba(0,0,0,0.18) 0 2px, rgba(0,0,0,0) 2px 120px), linear-gradient(180deg, #8A5A2E, #5E3A1C)"></div>
+<svg aria-hidden="true" viewBox="0 0 200 260" style="position: absolute; left: 50%; bottom: 150px; margin-left: -120px; width: 240px; height: 312px; overflow: visible">
+<defs>
+<radialGradient id="shMicGrille" cx="38%" cy="32%" r="70%"><stop offset="0" stop-color="#FFFFFF"></stop><stop offset="0.45" stop-color="#C9CCD3"></stop><stop offset="1" stop-color="#5E6168"></stop></radialGradient>
+<linearGradient id="shMicBody" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#2A2A2E"></stop><stop offset="0.45" stop-color="#5A5B61"></stop><stop offset="1" stop-color="#1A1A1D"></stop></linearGradient>
+</defs>
+<circle cx="100" cy="68" r="80" fill="rgba(217,174,82,0.30)"></circle>
+<path d="M74 118 L126 118 L112 196 L88 196 Z" fill="url(#shMicBody)"></path>
+<rect x="68" y="108" width="64" height="14" rx="5" fill="#B9BCC3"></rect>
+<circle cx="100" cy="68" r="50" fill="url(#shMicGrille)"></circle>
+<circle cx="100" cy="68" r="50" fill="none" stroke="#8E9198" stroke-width="3"></circle>
+<circle cx="100" cy="68" r="40" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"></circle>
+<circle cx="100" cy="68" r="30" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1.5"></circle>
+<circle cx="100" cy="68" r="20" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"></circle>
+<path d="M54 68 H146 M100 22 V114" stroke="rgba(0,0,0,0.10)" stroke-width="1.5"></path>
+<ellipse cx="82" cy="46" rx="17" ry="9" fill="rgba(255,255,255,0.6)" transform="rotate(-25 82 46)"></ellipse>
+<rect x="91" y="194" width="18" height="16" rx="3" fill="#2B2B2F"></rect>
+<rect x="97" y="208" width="6" height="52" fill="#3A3A3F"></rect>
+</svg>
+<div aria-hidden="true" style="position: absolute; left: 50%; bottom: 143px; margin-left: -80px; width: 160px; height: 18px; border-radius: 50%; background: radial-gradient(ellipse at 50% 40%, #4A4A50, #1A1A1D 70%); box-shadow: 0 6px 14px rgba(0,0,0,0.6)"></div>
+</div>
+</sc-if>
+
+<sc-if value="{{is_minimal}}" hint-placeholder-val="{{false}}">
+<div aria-hidden="true" style="position: absolute; inset: 0; background: radial-gradient(ellipse 60% 70% at 50% 40%, #8C1426, #3A0A12 70%, #1E0508)"></div>
+<div aria-hidden="true" style="position: absolute; inset: 24px; border: 2px solid rgba(217,174,82,0.55); border-radius: 18px"></div>
+<div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; text-align: center">
+<svg width="110" height="110" viewBox="0 0 28 28" fill="none" aria-hidden="true"><rect x="3" y="11" width="3" height="6" rx="1.5" fill="#D9AE52"></rect><rect x="9" y="6" width="3" height="16" rx="1.5" fill="#D9AE52"></rect><rect x="15" y="3" width="3" height="22" rx="1.5" fill="#D9AE52"></rect><rect x="21" y="9" width="3" height="10" rx="1.5" fill="#D9AE52"></rect></svg>
+<div style="display: flex; align-items: center; gap: 18px"><span style="font-family: Fraunces, Georgia, serif; font-size: 96px; font-weight: 600; color: #FFF6E3">Speak<span style="color: #D9AE52">Review</span></span><span style="padding: 3px 11px; border: 5px double #D9AE52; border-radius: 4px; color: #F0CF86; font: 800 18px Manrope, system-ui, sans-serif; letter-spacing: 0.22em; transform: rotate(-6deg)">BETA</span></div>
+<span style="font-family: Fraunces, Georgia, serif; font-size: 42px; font-weight: 500; color: #F6E4CC">Your speech, reviewed.</span>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":"enum","options":["stage","ticket","mirror","marquee","playbill","radio","split","minimal"],"default":"stage"},"$preview":{"width":1200,"height":630}}'>
+class Component extends DCLogic {
+renderVals() {
+const kind = ['stage', 'ticket', 'mirror', 'marquee', 'playbill', 'radio', 'split', 'minimal'].indexOf(this.props.kind) >= 0 ? this.props.kind : 'stage';
+const bulbs = [];
+for (let i = 0; i < 12; i++) bulbs.push({ pos: 'left: ' + (170 + i * 78) + 'px; top: 64px;' });
+for (let i = 0; i < 12; i++) bulbs.push({ pos: 'left: ' + (170 + i * 78) + 'px; top: 548px;' });
+for (let i = 0; i < 5; i++) { bulbs.push({ pos: 'left: 143px; top: ' + (140 + i * 80) + 'px;' }); bulbs.push({ pos: 'left: 1039px; top: ' + (140 + i * 80) + 'px;' }); }
+const mbulbs = [];
+for (let i = 0; i < 16; i++) { mbulbs.push({ pos: 'left: ' + (128 + i * 61) + 'px; top: 104px;' }); mbulbs.push({ pos: 'left: ' + (128 + i * 61) + 'px; top: 510px;' }); }
+for (let i = 0; i < 6; i++) { mbulbs.push({ pos: 'left: 119px; top: ' + (160 + i * 62) + 'px;' }); mbulbs.push({ pos: 'left: 1065px; top: ' + (160 + i * 62) + 'px;' }); }
+const rbars = [];
+for (let i = 0; i < 26; i++) { const h = 20 + Math.round(60 * Math.abs(Math.sin(i * 0.9) * 0.6 + Math.sin(i * 0.37) * 0.4)); rbars.push({ s: 'height: ' + h + 'px; background: ' + (i < 12 ? '#FFC46B; box-shadow: 0 0 6px rgba(255,180,80,0.7)' : 'rgba(255,196,107,0.25)') + ';' }); }
+return {
+is_marquee: kind === 'marquee', is_playbill: kind === 'playbill', is_radio: kind === 'radio', is_split: kind === 'split', is_minimal: kind === 'minimal',
+mbulbs: mbulbs, rbars: rbars,
+acts: [{ k: 'ACT I', t: 'You speak, up to 10 minutes' }, { k: 'ACT II', t: 'Every word, written down' }, { k: 'ACT III', t: 'Notes from your coach' }],
+ticks: ['Record or upload a speech', 'Get notes from your coach', 'Replay it, word by word'],
+isStage: kind === 'stage', isTicket: kind === 'ticket', isMirror: kind === 'mirror',
+bulbs: bulbs,
+steps: [{ n: '1', t: 'Record or upload a speech' }, { n: '2', t: 'Get notes from your coach' }, { n: '3', t: 'Replay it, word by word' }]
+};
+}
+}
+</script>
+</body>
+</html>

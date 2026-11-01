@@ -10,7 +10,8 @@ import { SITE } from "./paths.mjs";
 
 export const CSP = "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self'; media-src 'self' blob:; connect-src 'self' https://jhfndh1s03.execute-api.us-east-1.amazonaws.com https://public-speaking-coach-jayvee.s3.amazonaws.com https://public-speaking-coach-jayvee.s3.us-east-1.amazonaws.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests";
 export const PP = "camera=(), microphone=(self), geolocation=(), payment=(), usb=()";
-const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".ico": "image/x-icon" };
+const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".ico": "image/x-icon",
+  ".svg": "image/svg+xml", ".png": "image/png", ".json": "application/json" };
 
 // Resolves with the server once it listens
 export function startServer({ root = SITE, port = 8765, csp = true } = {}) {

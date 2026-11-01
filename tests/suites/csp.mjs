@@ -36,6 +36,26 @@ console.log("\n== start state (hidden attribute)");
 check("#waitNote hidden and not shown", await b.evaluate("waitNote.hidden") && !(await visible("#waitNote")));
 check("#result hidden and not shown", await b.evaluate("resultBox.hidden") && !(await visible("#result")));
 check("no style attribute in the served HTML", await b.evaluate("fetch('/').then(r => r.text()).then(t => !/\sstyle=/i.test(t))"));
+
+console.log("\n== icons");
+const icons = await b.evaluate(`Promise.all([...document.querySelectorAll("link[rel='icon'], link[rel='apple-touch-icon'], link[rel='manifest']")]
+  .map(l => fetch(l.href).then(r => ({ rel: l.rel, href: l.getAttribute("href"), status: r.status, type: r.headers.get("content-type") })))
+  .concat(["icon-192.png", "icon-512.png"].map(h => fetch(h).then(r => ({ rel: "manifest icon", href: h, status: r.status, type: r.headers.get("content-type") })))))`);
+const ICON_TYPES = { "favicon.ico": "image/x-icon", "favicon.svg": "image/svg+xml", "apple-touch-icon.png": "image/png",
+  "manifest.json": "application/json", "icon-192.png": "image/png", "icon-512.png": "image/png" };
+check("every icon link is in the head once", icons.length === 6 && Object.keys(ICON_TYPES).every(f => icons.filter(i => i.href === f).length === 1), icons.map(i => i.href).join(", "));
+for (const i of icons) check(`${i.href} served with its type`, i.status === 200 && i.type === ICON_TYPES[i.href], `${i.status} ${i.type}`);
+const icoSizes = await b.evaluate(`fetch("favicon.ico").then(r => r.arrayBuffer()).then(a => {
+  const v = new DataView(a);
+  return v.getUint16(2, true) === 1 ? Array.from({ length: v.getUint16(4, true) }, (_, i) => v.getUint8(6 + 16 * i)) : [];
+})`);
+check("favicon.ico holds 16, 32 and 48", icoSizes.join() === "16,32,48", icoSizes.join());
+const mf = await b.evaluate(`fetch("manifest.json").then(r => r.json())`);
+check("manifest.json fields", mf.name === "SpeakReview" && mf.short_name === "SpeakReview" && mf.start_url === "/" && mf.display === "browser"
+  && mf.background_color === "#1A0B0A" && mf.theme_color === "#1A0B0A", JSON.stringify(mf));
+check("manifest icons: 192, 512 and 512 maskable", JSON.stringify(mf.icons.map(i => [i.src, i.sizes, i.purpose || "any"]))
+  === JSON.stringify([["icon-192.png", "192x192", "any"], ["icon-512.png", "512x512", "any"], ["icon-512.png", "512x512", "maskable"]]));
+check("one theme-color", await b.evaluate(`[...document.querySelectorAll("meta[name='theme-color']")].map(m => m.content).join() === "#1A0B0A"`));
 await b.click("#navBackstage");
 await b.waitFor("currentView === 'backstage' && !document.body.classList.contains('curtains-closed')", 5000);
 await sleep(900);
