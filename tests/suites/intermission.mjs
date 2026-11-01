@@ -12,7 +12,7 @@ const FAKE = ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-str
 const KEEP = "Keep this page open until your recording is sent.";
 const WAIT_LAPTOP = "Usually under a minute. You can switch tabs or close the page: your notes will be waiting.";
 const WAIT_PHONE = "Usually under a minute. You can switch apps or close the page: your notes will be waiting.";
-const PAGE_TITLE = "SpeakReview | AI Speech Feedback";
+const PAGE_TITLE = "SpeakReview: practice your speech with an AI coach";
 const READY_TITLE = "Your notes are ready · SpeakReview";
 
 // Holds the S3 upload until the test lets it go (so Act I can be seen), records /result call times and

@@ -56,6 +56,28 @@ check("manifest.json fields", mf.name === "SpeakReview" && mf.short_name === "Sp
 check("manifest icons: 192, 512 and 512 maskable", JSON.stringify(mf.icons.map(i => [i.src, i.sizes, i.purpose || "any"]))
   === JSON.stringify([["icon-192.png", "192x192", "any"], ["icon-512.png", "512x512", "any"], ["icon-512.png", "512x512", "maskable"]]));
 check("one theme-color", await b.evaluate(`[...document.querySelectorAll("meta[name='theme-color']")].map(m => m.content).join() === "#1A0B0A"`));
+
+console.log("\n== title and share tags");
+const TITLE = "SpeakReview: practice your speech with an AI coach";
+const DESC = "Record or upload a speech and get coach's notes, a word-by-word replay and a nightly review. Free while in beta.";
+const IMG = "https://speakreview.jayveedelarosa.dev/og-image.png";
+const ALT = "SpeakReview: practice your speech with an AI coach. A microphone on a theatre stage.";
+const TAGS = { "name=description": DESC, "property=og:type": "website", "property=og:site_name": "SpeakReview",
+  "property=og:url": "https://speakreview.jayveedelarosa.dev/", "property=og:title": TITLE, "property=og:description": DESC,
+  "property=og:image": IMG, "property=og:image:width": "1200", "property=og:image:height": "630", "property=og:image:alt": ALT,
+  "name=twitter:card": "summary_large_image", "name=twitter:title": TITLE, "name=twitter:description": DESC,
+  "name=twitter:image": IMG, "name=twitter:image:alt": ALT };
+const metas = await b.evaluate(`[...document.querySelectorAll("title, meta[name], meta[property]")]
+  .map(m => m.tagName === "TITLE" ? ["title", m.textContent] : [m.hasAttribute("property") ? "property=" + m.getAttribute("property") : "name=" + m.name, m.content])`);
+check("one title, the new one", JSON.stringify(metas.filter(m => m[0] === "title")) === JSON.stringify([["title", TITLE]]));
+for (const [key, value] of Object.entries(TAGS)) {
+  const found = metas.filter(m => m[0] === key);
+  check(`${key} once, as designed`, found.length === 1 && found[0][1] === value, JSON.stringify(found));
+}
+check("no other og: or twitter: tags", metas.every(m => !/=(og|twitter):/.test(m[0]) || m[0] in TAGS), metas.map(m => m[0]).join(", "));
+const og = await b.evaluate(`fetch("og-image.png").then(async r => { const a = await r.arrayBuffer(); const v = new DataView(a);
+  return { status: r.status, type: r.headers.get("content-type"), bytes: a.byteLength, w: v.getUint32(16), h: v.getUint32(20) }; })`);
+check("og-image.png is 1200x630 PNG under 600 KB", og.status === 200 && og.type === "image/png" && og.w === 1200 && og.h === 630 && og.bytes < 600 * 1024, JSON.stringify(og));
 await b.click("#navBackstage");
 await b.waitFor("currentView === 'backstage' && !document.body.classList.contains('curtains-closed')", 5000);
 await sleep(900);
